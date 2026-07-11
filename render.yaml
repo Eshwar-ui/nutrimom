@@ -1,0 +1,62 @@
+# Render Blueprint — API (NestJS) + managed Postgres.
+# Connect this repo once at https://dashboard.render.com → New → Blueprint.
+# After that, every push to `master` auto-deploys the API (autoDeploy: true).
+# Fill the `sync: false` vars in the Render dashboard (they are secrets / per-env).
+
+databases:
+  - name: nutrimom-db
+    databaseName: nutrimom
+    user: nutrimom
+    plan: free
+    region: singapore # closest free region to India users
+
+services:
+  - type: web
+    name: nutrimom-api
+    runtime: node
+    plan: free
+    region: singapore # must match the database region for private networking
+    branch: master
+    autoDeploy: true
+    healthCheckPath: /
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @nutrimom/shared build &&
+      pnpm --filter api exec prisma generate &&
+      pnpm --filter api build
+    # migrate deploy is idempotent (no-op when there are no pending migrations),
+    # so running it on start is safe on the free plan (no preDeploy hook there).
+    startCommand: >-
+      pnpm --filter api exec prisma migrate deploy &&
+      pnpm --filter api start:prod
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Postgres — both point at the same instance (Render PG is unpooled).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nutrimom-db
+          property: connectionString
+      - key: DIRECT_URL
+        fromDatabase:
+          name: nutrimom-db
+          property: connectionString
+      # Auth secrets — generated once by Render, then held stable.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # Set these in the Render dashboard:
+      - key: CORS_ORIGIN
+        sync: false # your Vercel web URL, e.g. https://nutrimom.vercel.app
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false # optional — for the seeded admin login
+      - key: ADMIN_PASSWORD
+        sync: false # optional

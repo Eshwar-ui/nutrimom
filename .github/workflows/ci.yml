@@ -1,0 +1,53 @@
+name: CI
+
+# Gate for the native-integration deploys: Vercel (web) and Render (api) each
+# deploy on push via their own GitHub apps. This workflow lint/typechecks/builds
+# so a red check is visible on the commit/PR if something is broken.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Shared types are a workspace dep — build them before typechecking the apps.
+      - name: Build shared package
+        run: pnpm --filter @nutrimom/shared build
+
+      - name: Generate Prisma client
+        run: pnpm --filter api exec prisma generate
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Build
+        run: pnpm -r build
+        env:
+          # Placeholders so `next build` succeeds without real infra in CI.
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_test_placeholder
