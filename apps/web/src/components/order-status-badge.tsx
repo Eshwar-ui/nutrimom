@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@nutrimom/shared";
+import { orderStatusLabel, type OrderStatus, type PaymentMethod } from "@nutrimom/shared";
 import { cn } from "@/lib/utils";
 
 const styles: Record<OrderStatus, string> = {
@@ -9,15 +9,13 @@ const styles: Record<OrderStatus, string> = {
   CANCELLED: "bg-muted text-muted-foreground",
 };
 
-const labels: Record<OrderStatus, string> = {
-  PENDING: "Awaiting payment",
-  PAID: "Paid",
-  SHIPPED: "Shipped",
-  DELIVERED: "Delivered",
-  CANCELLED: "Cancelled",
-};
-
-export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+export function OrderStatusBadge({
+  status,
+  paymentMethod,
+}: {
+  status: OrderStatus;
+  paymentMethod?: PaymentMethod;
+}) {
   return (
     <span
       className={cn(
@@ -25,7 +23,7 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
         styles[status],
       )}
     >
-      {labels[status]}
+      {orderStatusLabel(status, paymentMethod)}
     </span>
   );
 }

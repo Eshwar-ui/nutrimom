@@ -46,10 +46,10 @@ export default function AdminOrdersPage() {
               <Card key={order.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div><p className="font-semibold text-foreground">#{order.id.slice(-8).toUpperCase()}</p><p className="mt-1 text-sm text-muted-foreground">{order.shippingAddress.fullName}</p></div>
-                  <OrderStatusBadge status={order.status} />
+                  <OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} />
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                  <span className="font-semibold text-foreground">{formatPaise(order.totalInPaise)}</span>
+                  <span className="font-semibold text-foreground">{formatPaise(order.totalInPaise)}<span className="ml-2 text-xs font-normal text-muted-foreground">{order.paymentMethod === "COD" ? "COD" : "Online"}</span></span>
                   {statusSelect(order)}
                 </div>
               </Card>
@@ -58,14 +58,15 @@ export default function AdminOrdersPage() {
 
           <Card className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[640px] text-sm">
-              <thead><tr className="border-b border-border text-left text-muted-foreground"><Th>Order</Th><Th>Customer</Th><Th>Total</Th><Th>Status</Th><Th>Update</Th></tr></thead>
+              <thead><tr className="border-b border-border text-left text-muted-foreground"><Th>Order</Th><Th>Customer</Th><Th>Total</Th><Th>Payment</Th><Th>Status</Th><Th>Update</Th></tr></thead>
               <tbody>
                 {orders.map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0">
                     <Td className="font-medium text-foreground">#{order.id.slice(-8).toUpperCase()}</Td>
                     <Td>{order.shippingAddress.fullName}</Td>
                     <Td>{formatPaise(order.totalInPaise)}</Td>
-                    <Td><OrderStatusBadge status={order.status} /></Td>
+                    <Td>{order.paymentMethod === "COD" ? "COD" : "Online"}</Td>
+                    <Td><OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} /></Td>
                     <Td>{statusSelect(order)}</Td>
                   </tr>
                 ))}

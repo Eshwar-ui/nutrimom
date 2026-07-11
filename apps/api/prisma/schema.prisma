@@ -45,6 +45,11 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentMethod {
+  COD // Cash on Delivery — the active method
+  ONLINE // Razorpay — kept for a future rollout
+}
+
 enum NotificationType {
   LISTING_APPROVED
   LISTING_REJECTED
@@ -131,10 +136,11 @@ model Order {
   id                String      @id @default(cuid())
   buyer             User        @relation(fields: [buyerId], references: [id])
   buyerId           String
-  status            OrderStatus @default(PENDING)
+  status            OrderStatus   @default(PENDING)
+  paymentMethod     PaymentMethod @default(COD)
   totalInPaise      Int
   shippingAddress   Json
-  razorpayOrderId   String?     @unique
+  razorpayOrderId   String?       @unique
   razorpayPaymentId String?
   items             OrderItem[]
   reviews           Review[]

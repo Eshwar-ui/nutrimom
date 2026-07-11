@@ -8,11 +8,9 @@ import {
   formatPaise,
   shippingAddressSchema,
   type Order,
-  type RazorpayOrderResponse,
   type ShippingAddress,
 } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
-import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore, cartSubtotal } from "@/lib/cart-store";
 import { Container, Card, Input, Label } from "@/components/ui/primitives";
@@ -61,42 +59,14 @@ export default function CheckoutPage() {
     try {
       const order = await authedRequest<Order>("/orders", {
         method: "POST",
-        body: { listingIds: items.map((i) => i.listingId), shippingAddress: address },
-      });
-      const rzp = await authedRequest<RazorpayOrderResponse>("/payments/razorpay/order", {
-        method: "POST",
-        body: { orderId: order.id },
-      });
-      await loadRazorpay();
-      openRazorpay({
-        key: rzp.keyId,
-        amount: rzp.amountInPaise,
-        currency: rzp.currency,
-        name: "The Nurture Moms",
-        description: `Order ${order.id.slice(-6).toUpperCase()}`,
-        order_id: rzp.razorpayOrderId,
-        prefill: { name: user.name, email: user.email },
-        theme: { color: "#4f7c5a" },
-        handler: async (resp) => {
-          try {
-            await authedRequest("/payments/razorpay/verify", {
-              method: "POST",
-              body: {
-                orderId: order.id,
-                razorpayOrderId: resp.razorpay_order_id,
-                razorpayPaymentId: resp.razorpay_payment_id,
-                razorpaySignature: resp.razorpay_signature,
-              },
-            });
-            clear();
-            router.push(`/orders/${order.id}`);
-          } catch {
-            setError("We received your payment but couldn't confirm the order. Please contact support.");
-            setSubmitting(false);
-          }
+        body: {
+          listingIds: items.map((i) => i.listingId),
+          shippingAddress: address,
+          paymentMethod: "COD",
         },
-        modal: { ondismiss: () => setSubmitting(false) },
       });
+      clear();
+      router.push(`/orders/${order.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Checkout failed");
       setSubmitting(false);
@@ -138,6 +108,26 @@ export default function CheckoutPage() {
               <Input {...register("country")} />
             </Field>
           </div>
+
+          <h2 className="mt-8 font-display text-xl font-semibold text-foreground">Payment method</h2>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-start gap-3 rounded-2xl border-2 border-primary bg-primary/5 p-4">
+              <span className="mt-0.5 grid h-5 w-5 place-items-center rounded-full border-2 border-primary">
+                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+              </span>
+              <div>
+                <p className="font-medium text-foreground">Cash on Delivery</p>
+                <p className="text-sm text-muted-foreground">Pay in cash when your order is handed over.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-2xl border border-border bg-muted/30 p-4 opacity-70">
+              <span className="mt-0.5 h-5 w-5 rounded-full border-2 border-border-control/60" />
+              <div>
+                <p className="font-medium text-muted-foreground">Online payment (UPI / cards)</p>
+                <p className="text-sm text-muted-foreground">Coming soon.</p>
+              </div>
+            </div>
+          </div>
         </Card>
 
         <Card className="h-fit p-6 lg:sticky lg:top-32">
@@ -157,17 +147,17 @@ export default function CheckoutPage() {
           </div>
           {error && <p className="mt-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
           <Button type="submit" size="lg" className="mt-6 w-full" disabled={submitting}>
-            {submitting ? "Processing…" : `Pay ${formatPaise(subtotal)}`}
+            {submitting ? "Placing order…" : "Place order"}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Secured by Razorpay. Availability and the final amount are checked before payment.
+            Cash on Delivery — pay {formatPaise(subtotal)} when your order arrives. Availability is checked before your order is confirmed.
           </p>
         </Card>
       </form>
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
-          <div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Pay securely</p><p className="text-lg font-bold text-foreground">{formatPaise(subtotal)}</p></div>
-          <button type="submit" form="checkout-form" disabled={submitting} className="inline-flex h-12 items-center rounded-full bg-primary px-7 font-semibold text-primary-foreground disabled:opacity-50">{submitting ? "Processing…" : "Continue"}</button>
+          <div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Cash on Delivery</p><p className="text-lg font-bold text-foreground">{formatPaise(subtotal)}</p></div>
+          <button type="submit" form="checkout-form" disabled={submitting} className="inline-flex h-12 items-center rounded-full bg-primary px-7 font-semibold text-primary-foreground disabled:opacity-50">{submitting ? "Placing…" : "Place order"}</button>
         </div>
       </div>
     </Container>

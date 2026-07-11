@@ -55,6 +55,52 @@ export const OrderStatus = {
 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
+export const PaymentMethod = {
+  COD: "COD", // Cash on Delivery — the active method
+  ONLINE: "ONLINE", // Razorpay — kept for a future rollout
+} as const;
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const paymentMethodLabels: Record<PaymentMethod, string> = {
+  COD: "Cash on Delivery",
+  ONLINE: "Online payment",
+};
+
+/**
+ * A COD order is confirmed the moment it's placed (no payment gate), so a
+ * PENDING COD order reads as "placed" rather than "awaiting payment".
+ */
+export function orderStatusLabel(
+  status: OrderStatus,
+  paymentMethod?: PaymentMethod,
+): string {
+  if (status === OrderStatus.PENDING && paymentMethod === PaymentMethod.COD) {
+    return "Order placed";
+  }
+  switch (status) {
+    case OrderStatus.PENDING:
+      return "Awaiting payment";
+    case OrderStatus.PAID:
+      return "Paid";
+    case OrderStatus.SHIPPED:
+      return "Shipped";
+    case OrderStatus.DELIVERED:
+      return "Delivered";
+    case OrderStatus.CANCELLED:
+      return "Cancelled";
+  }
+}
+
+/** COD orders are considered confirmed once placed; online orders once paid. */
+export function isOrderConfirmed(
+  status: OrderStatus,
+  paymentMethod?: PaymentMethod,
+): boolean {
+  if (status === OrderStatus.CANCELLED) return false;
+  if (paymentMethod === PaymentMethod.COD) return true;
+  return status !== OrderStatus.PENDING;
+}
+
 export const NotificationType = {
   LISTING_APPROVED: "LISTING_APPROVED",
   LISTING_REJECTED: "LISTING_REJECTED",
@@ -85,13 +131,20 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 export type RefreshInput = z.infer<typeof refreshSchema>;
 
+// Phone/WhatsApp number: accept an optional country code and common separators
+// (spaces, hyphens, parens), then require 10–15 digits once normalised. Blocks
+// junk like "++++----" that the old loose char-class regex let through.
+export const phoneNumberSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => /^\d{10,15}$/.test(value.replace(/[\s\-()]/g, "").replace(/^\+/, "")),
+    "Enter a valid phone number, e.g. +91 98765 43210",
+  );
+
 export const profileUpdateSchema = z.object({
   name: z.string().min(2).max(80).optional(),
-  whatsappNumber: z
-    .string()
-    .regex(/^[0-9+\-\s]{8,20}$/, "Enter a valid phone number")
-    .optional()
-    .or(z.literal("")),
+  whatsappNumber: phoneNumberSchema.optional().or(z.literal("")),
   city: z.string().max(80).optional().or(z.literal("")),
   bio: z.string().max(400).optional().or(z.literal("")),
 });
@@ -168,11 +221,7 @@ export const listingInputSchema = z
     ]),
     images: z.array(z.string().url()).min(1).max(10),
     // Optional: updates the seller's profile contact if provided.
-    whatsappNumber: z
-      .string()
-      .regex(/^[0-9+\-\s]{8,20}$/)
-      .optional()
-      .or(z.literal("")),
+    whatsappNumber: phoneNumberSchema.optional().or(z.literal("")),
   })
   .refine(
     (v) =>
@@ -303,7 +352,7 @@ export interface Review {
 
 export const shippingAddressSchema = z.object({
   fullName: z.string().min(2).max(120),
-  phone: z.string().min(6).max(20),
+  phone: phoneNumberSchema,
   line1: z.string().min(2).max(200),
   line2: z.string().max(200).optional().or(z.literal("")),
   city: z.string().min(1).max(80),
@@ -318,6 +367,9 @@ export type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 export const createOrderSchema = z.object({
   listingIds: z.array(z.string().min(1)).min(1).max(20),
   shippingAddress: shippingAddressSchema,
+  paymentMethod: z
+    .enum([PaymentMethod.COD, PaymentMethod.ONLINE])
+    .default(PaymentMethod.COD),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
@@ -333,6 +385,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   status: OrderStatus;
+  paymentMethod: PaymentMethod;
   totalInPaise: number;
   shippingAddress: ShippingAddress;
   items: OrderItem[];

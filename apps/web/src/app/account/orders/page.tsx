@@ -7,13 +7,14 @@ import { formatPaise, type Order } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Card } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 
 export default function OrdersPage() {
   const { ready } = useRequireAuth();
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, isError, refetch } = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => authedRequest<Order[]>("/orders"),
     enabled: ready,
@@ -27,6 +28,8 @@ export default function OrdersPage() {
 
       {isLoading ? (
         <PageSkeleton rows={3} />
+      ) : isError ? (
+        <StatePanel tone="error" title="Couldn't load your orders" description="Something went wrong reaching the marketplace. Check your connection and try again." action={<Button variant="outline" onClick={() => refetch()}>Try again</Button>} />
       ) : !orders || orders.length === 0 ? (
         <StatePanel title="No orders yet" description="When you buy a treasure, its payment and handover progress will appear here." action={<Link href="/listings" className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground">Start shopping</Link>} />
       ) : (
@@ -39,7 +42,7 @@ export default function OrdersPage() {
                     <p className="font-medium text-foreground">
                       #{order.id.slice(-8).toUpperCase()}
                     </p>
-                    <OrderStatusBadge status={order.status} />
+                    <OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} />
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {new Date(order.createdAt).toLocaleDateString("en-IN", {
