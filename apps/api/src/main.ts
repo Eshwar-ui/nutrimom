@@ -9,8 +9,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService<Env, true>);
 
+  // CORS_ORIGIN may be a comma-separated allowlist, so the stable production
+  // domain and any Vercel preview URLs can all be permitted without a redeploy.
+  const allowedOrigins = config
+    .get('CORS_ORIGIN', { infer: true })
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: config.get('CORS_ORIGIN', { infer: true }),
+    origin: allowedOrigins,
     credentials: true,
   });
 

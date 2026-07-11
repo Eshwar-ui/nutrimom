@@ -49,7 +49,8 @@ services:
         generateValue: true
       # Set these in the Render dashboard:
       - key: CORS_ORIGIN
-        sync: false # your Vercel web URL, e.g. https://nutrimom.vercel.app
+        sync: false # your Vercel web URL(s), comma-separated, no trailing slash
+        # e.g. https://nutrimom.vercel.app,https://web-sage-ten-z6ut2ocum8.vercel.app
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
