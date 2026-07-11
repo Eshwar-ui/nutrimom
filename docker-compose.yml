@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nutrimom-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nutrimom
+      POSTGRES_PASSWORD: nutrimom
+      POSTGRES_DB: nutrimom
+    ports:
+      - "5432:5432"
+    volumes:
+      - nutrimom-db-data:/var/lib/postgresql/data
+
+volumes:
+  nutrimom-db-data:

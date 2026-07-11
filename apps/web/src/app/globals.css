@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+/*
+  DESIGN TOKENS — the single swap-in point for the brand palette.
+  Change the raw values in :root (and the dark overrides) to re-theme.
+  Every component reads these through Tailwind utilities.
+*/
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-gold: var(--gold);
+
+  /* Soft pastel tints — playful category tiles & section washes. */
+  --color-cream: #fff8f2;
+  --color-blush: var(--blush);
+  --color-lavender: var(--lavender);
+  --color-sky: var(--sky);
+  --color-sage: var(--sage);
+  --color-beige: var(--beige);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-control: var(--border-control);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+  --radius-3xl: 2.25rem;
+}
+
+:root {
+  /* Brand palette — soft, warm, nurturing (blush / sage / cream + coral & gold). */
+  --background: #fdf6ee; /* cream */
+  --foreground: #241c18; /* warm near-black */
+  --surface: #ffffff;
+  --surface-2: #f6ece0;
+
+  --primary: #456f50; /* forest green — grounding CTA / brand */
+  --primary-foreground: #fdf6ee;
+  --accent: #ef8377; /* coral — warm pop */
+  --accent-foreground: #3a2318; /* deep brown, for AA contrast on coral */
+  --accent-text: #a94740;
+  --danger: #a43f39;
+  --danger-foreground: #fffaf5;
+  --gold: #d8a84c; /* mustard gold */
+
+  --muted: #f3e9dd;
+  --muted-foreground: #75645a;
+  --border: #ecdecd;
+  --border-control: #9a8371;
+  --ring: #ef8377;
+
+  --blush: #f7c6d0;
+  --lavender: #d9c8f2;
+  --sky: #cfe8f9;
+  --sage: #a8c3a0;
+  --beige: #efdcc8;
+
+  /* Tinted diffusion shadows — depth without clutter. */
+  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
+    0 18px 40px -22px color-mix(in oklab, var(--primary) 30%, transparent);
+  --shadow-lift: 0 2px 4px color-mix(in oklab, var(--foreground) 8%, transparent),
+    0 30px 60px -24px color-mix(in oklab, var(--primary) 38%, transparent);
+}
+
+[data-theme="dark"] {
+  --background: #1b1613;
+  --foreground: #f5ece3;
+  --surface: #241d18;
+  --surface-2: #2e251f;
+
+  --primary: #8fc79b; /* lifted sage-green for dark bg */
+  --primary-foreground: #14100d;
+  --accent: #f4a196;
+  --accent-foreground: #14100d;
+  --accent-text: #ffb4aa;
+  --danger: #f28b82;
+  --danger-foreground: #1b1613;
+  --gold: #e2b768;
+
+  --muted: #2e251f;
+  --muted-foreground: #b3a596;
+  --border: #3a2f27;
+  --border-control: #8c7768;
+  --ring: #f4a196;
+
+  --blush: #f7c6d0;
+  --lavender: #d9c8f2;
+  --sky: #cfe8f9;
+  --sage: #a8c3a0;
+  --beige: #efdcc8;
+
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 18px 40px -22px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5),
+    0 30px 60px -24px rgba(0, 0, 0, 0.7);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    scroll-margin-block: 6rem;
+  }
+
+  a, button, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Fine grain overlay for tactile, premium surface texture. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+}
+
+/* Reusable expressive helpers */
+@utility card-shadow {
+  box-shadow: var(--shadow-soft);
+}
+
+@utility card-shadow-lift {
+  box-shadow: var(--shadow-lift);
+}
+
+/* Flat marker highlight — used sparingly on a single word. No gradient. */
+@utility ink-underline {
+  background-color: color-mix(in oklab, var(--gold) 40%, transparent);
+  border-radius: 0.15em;
+  padding: 0 0.1em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes sticker-wobble {
+  0% { transform: rotate(-8deg); }
+  30% { transform: rotate(-15deg) scale(1.06); }
+  60% { transform: rotate(-3deg) scale(1.03); }
+  100% { transform: rotate(-8deg); }
+}
+
+/* Printable order receipts — strip chrome, keep just the content. */
+@media print {
+  header, footer {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: var(--border-control);
+  }
+}

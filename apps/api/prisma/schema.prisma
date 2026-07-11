@@ -1,0 +1,194 @@
+// Prisma schema for The Nurture Moms — a preloved baby & maternity marketplace.
+// Money is stored as integer paise everywhere — never floats.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CUSTOMER // can buy and sell
+  ADMIN
+}
+
+enum Condition {
+  NEW // new with tags / never used
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum DeliveryOption {
+  PICKUP
+  DELIVERY
+  BOTH
+}
+
+enum ListingStatus {
+  PENDING // awaiting admin approval
+  APPROVED // live and buyable
+  REJECTED
+  RESERVED // temporarily held for a buyer
+  SOLD
+}
+
+enum OrderStatus {
+  PENDING // created, awaiting payment
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum NotificationType {
+  LISTING_APPROVED
+  LISTING_REJECTED
+  ITEM_SOLD // to the seller
+  ORDER_PLACED // to the admin
+  ORDER_CANCELLED // to the seller
+}
+
+model User {
+  id                            String         @id @default(cuid())
+  email                         String         @unique
+  passwordHash                  String
+  name                          String
+  role                          Role           @default(CUSTOMER)
+  // Seller profile
+  whatsappNumber                String?
+  city                          String?
+  bio                           String?
+  isSellerVerified              Boolean        @default(false)
+  sellerVerificationRequestedAt DateTime?
+  listings                      Listing[]
+  orders                        Order[]
+  wishlist                      WishlistItem[]
+  notifications                 Notification[]
+  reviewsWritten                Review[]       @relation("ReviewsWritten")
+  reviewsReceived               Review[]       @relation("ReviewsReceived")
+  createdAt                     DateTime       @default(now())
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  listings Listing[]
+}
+
+model Listing {
+  id                   String         @id @default(cuid())
+  title                String
+  description          String
+  seller               User           @relation(fields: [sellerId], references: [id])
+  sellerId             String
+  category             Category       @relation(fields: [categoryId], references: [id])
+  categoryId           String
+  condition            Condition
+  originalPriceInPaise Int? // what the seller paid new
+  sellingPriceInPaise  Int
+  purchaseDate         DateTime?
+  usageDuration        String? // free text, e.g. "6 months"
+  reasonForSelling     String?
+  city                 String
+  deliveryOption       DeliveryOption @default(PICKUP)
+  images               String[] // up to 10, enforced in app
+  status               ListingStatus  @default(PENDING)
+  isFeatured           Boolean        @default(false)
+  // Optional reservation hold
+  reservedById         String?
+  reservedUntil        DateTime?
+  orderItems           OrderItem[]
+  wishlistedBy         WishlistItem[]
+  reviews              Review[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([isFeatured])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([userId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  buyer             User        @relation(fields: [buyerId], references: [id])
+  buyerId           String
+  status            OrderStatus @default(PENDING)
+  totalInPaise      Int
+  shippingAddress   Json
+  razorpayOrderId   String?     @unique
+  razorpayPaymentId String?
+  items             OrderItem[]
+  reviews           Review[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([buyerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id               String  @id @default(cuid())
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String
+  // Restrict: a listing that has been ordered can never be hard-deleted.
+  listing          Listing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  listingId        String
+  listingTitle     String // snapshot at purchase
+  sellerId         String // snapshot — who gets paid / notified
+  unitPriceInPaise Int // snapshot (selling price)
+  image            String?
+
+  @@index([orderId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      NotificationType
+  message   String
+  listingId String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+}
+
+// A buyer rates the seller of one purchased listing, once per order line.
+model Review {
+  id         String   @id @default(cuid())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId  String
+  reviewer   User     @relation("ReviewsWritten", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+  seller     User     @relation("ReviewsReceived", fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId   String
+  rating     Int // 1-5
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@unique([orderId, listingId])
+  @@index([sellerId])
+  @@index([listingId])
+}
