@@ -17,13 +17,14 @@ import { Reveal } from "@/components/reveal";
 import { HeroWave } from "@/components/section-wave";
 import { ListingCard } from "@/components/listing-card";
 import {
-  WhyPreloved,
+  ShopYourWay,
   TrustSafety,
   Testimonials,
 } from "@/components/home-sections";
 import { Newsletter } from "@/components/newsletter";
 import { JourneyLine } from "@/components/journey-line";
 import { DecorativeElement } from "@/components/decorative-element";
+import { PlayfulBackground } from "@/components/playful-background";
 import { cn } from "@/lib/utils";
 
 const chipTints = [
@@ -33,6 +34,9 @@ const chipTints = [
   "bg-lavender/70 text-[#4a3170]",
   "bg-beige text-[#6b4a2a]",
 ];
+
+// Punchy leading dots for the category rail — cycle warm/brand tones.
+const dotColors = ["bg-accent", "bg-gold", "bg-primary"];
 
 const categoryArt: Record<string, string> = {
   "baby-clothes": "/images/category-baby-clothes.png",
@@ -97,7 +101,6 @@ export default async function HomePage() {
         <picture>
           <source media="(min-width: 1024px)" srcSet="/images/nutrimom-playful-mama-banner-extended.png" />
           <source media="(min-width: 768px)" srcSet="/hero-images/bg-tablet.png" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hero-images/bg-mobile.png"
             alt="Moms sharing preloved baby essentials"
@@ -130,7 +133,8 @@ export default async function HomePage() {
       {/* Category tiles — plain shared cream, tucked up under the banner so the
           seam is cream-on-cream and disappears. */}
       {categories.length > 0 && (
-        <section className="relative -mt-8 overflow-hidden bg-background pt-8">
+        <section className="relative isolate -mt-8 overflow-hidden bg-background pt-8">
+          <PlayfulBackground variant="market" />
           <DecorativeElement
             src="/images/bg-element-leaf-sprig.png"
             className="-left-16 top-16 hidden w-48 -rotate-12 opacity-35 sm:block"
@@ -143,17 +147,18 @@ export default async function HomePage() {
             src="/images/bg-element-peach-onesie.png"
             className="bottom-8 right-[9%] hidden w-28 -rotate-6 opacity-35 lg:block"
           />
-          <Container className="relative pb-16 pt-10">
+          <Container className="relative z-[1] pb-16 pt-10">
             <CategoryTiles visual={visualCategories} extra={extraCategories} />
           </Container>
         </section>
       )}
 
-      {/* Why preloved — value proposition */}
-      <WhyPreloved />
+      {/* Shop your way — functional catalog entry points (budget, condition, search) */}
+      <ShopYourWay />
 
       {/* Featured */}
-      <section className="relative overflow-hidden">
+      <section className="relative isolate overflow-hidden">
+        <PlayfulBackground variant="fresh" />
         <DecorativeElement
           src="/images/bg-element-blush-swash.png"
           className="-left-44 top-2 hidden w-[38rem] opacity-25 lg:block"
@@ -166,20 +171,30 @@ export default async function HomePage() {
           src="/images/bg-element-folded-clothes.png"
           className="right-[5%] top-8 hidden w-32 rotate-3 opacity-30 lg:block"
         />
-        <Container className="relative py-14">
+        <Container className="relative z-[1] py-14">
           {categories.length > 0 && (
-            <div className="mb-8 -mt-1 overflow-hidden">
-              <div className="flex w-max animate-[marquee_28s_linear_infinite] gap-3 hover:[animation-play-state:paused]">
-                {[...categories, ...categories].map((c, i) => (
-                  <span
-                    key={i}
-                    className="whitespace-nowrap rounded-full border-2 border-dashed border-border px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground/70"
-                  >
-                    {c.name}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <nav
+              aria-label="Browse by category"
+              className="mb-8 -mt-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)]"
+            >
+              <ul className="flex w-max animate-[marquee_30s_linear_infinite] gap-3 hover:[animation-play-state:paused]">
+                {[...categories, ...categories].map((c, i) => {
+                  const dupe = i >= categories.length;
+                  return (
+                    <li key={i} aria-hidden={dupe || undefined}>
+                      <Link
+                        href={`/listings?category=${c.slug}`}
+                        tabIndex={dupe ? -1 : undefined}
+                        className="group inline-flex items-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-surface/70 px-4 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground transition-[transform,color,border-color,background-color] duration-300 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-surface hover:text-foreground"
+                      >
+                        <span className={cn("h-1.5 w-1.5 rounded-full transition-transform duration-300 group-hover:scale-150", dotColors[i % dotColors.length])} />
+                        {c.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
           )}
 
           <div className="mb-9 flex items-end justify-between">
@@ -275,7 +290,8 @@ export default async function HomePage() {
       <Testimonials />
 
       {/* CTA band */}
-      <section className="relative overflow-hidden bg-primary text-primary-foreground">
+      <section className="relative isolate overflow-hidden bg-primary text-primary-foreground">
+        <PlayfulBackground variant="cta" />
         <DecorativeElement
           src="/images/bg-element-blush-swash.png"
           className="-left-40 -top-20 w-[34rem] opacity-20"
@@ -289,7 +305,7 @@ export default async function HomePage() {
           className="bottom-3 right-[22%] hidden w-28 rotate-6 opacity-25 lg:block"
         />
         <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
-        <Container className="relative grid gap-8 py-16 md:grid-cols-[2fr_auto_1fr] md:items-center">
+        <Container className="relative z-[1] grid gap-8 py-16 md:grid-cols-[2fr_auto_1fr] md:items-center">
           <h2 className="font-display text-3xl font-semibold leading-tight text-primary-foreground md:text-4xl">
             Got outgrown gear gathering dust? Turn it into someone&apos;s
             treasure.
@@ -333,8 +349,16 @@ function CategoryTiles({
             <Reveal key={c.id} delay={i * 0.04}>
               <Link
                 href={`/listings?category=${c.slug}`}
-                className="group flex h-full flex-col items-center rounded-[2rem] border-2 border-border bg-surface p-4 text-center card-shadow transition-transform hover:-translate-y-1"
+                className="group relative flex h-full flex-col items-center overflow-hidden rounded-[2rem] border-2 border-border bg-surface p-4 text-center card-shadow transition-transform hover:-translate-y-1"
               >
+                <span
+                  aria-hidden
+                  className="absolute left-4 top-4 h-5 w-10 -rotate-6 rounded-[4px] border border-white/60 bg-background/60 shadow-sm backdrop-blur-sm"
+                />
+                <span
+                  aria-hidden
+                  className="absolute right-5 top-5 h-3 w-3 rounded-full bg-gold/75 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-125"
+                />
                 <span className="grid aspect-square w-full place-items-center overflow-hidden rounded-[1.5rem] bg-cream">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

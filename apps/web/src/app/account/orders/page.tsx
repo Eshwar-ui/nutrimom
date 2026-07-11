@@ -6,7 +6,8 @@ import { ChevronRight } from "lucide-react";
 import { formatPaise, type Order } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
-import { Container, Card } from "@/components/ui/primitives";
+import { Card } from "@/components/ui/primitives";
+import { PageHeader } from "@/components/ui/page-header";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 
@@ -18,20 +19,18 @@ export default function OrdersPage() {
     enabled: ready,
   });
 
-  if (!ready) return <Container className="py-16"><PageSkeleton rows={3} /></Container>;
+  if (!ready) return <PageSkeleton rows={3} />;
 
   return (
-    <Container className="max-w-3xl py-14">
-      <h1 className="font-display text-4xl font-semibold text-foreground">
-        My orders
-      </h1>
+    <div className="space-y-8">
+      <PageHeader title="My orders" description="Track payment and handover progress on everything you've bought." />
 
       {isLoading ? (
-        <PageSkeleton rows={3} className="mt-8" />
+        <PageSkeleton rows={3} />
       ) : !orders || orders.length === 0 ? (
-        <StatePanel className="mt-8" title="No orders yet" description="When you buy a treasure, its payment and handover progress will appear here." action={<Link href="/listings" className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground">Start shopping</Link>} />
+        <StatePanel title="No orders yet" description="When you buy a treasure, its payment and handover progress will appear here." action={<Link href="/listings" className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground">Start shopping</Link>} />
       ) : (
-        <div className="mt-8 space-y-3">
+        <div className="space-y-3">
           {orders.map((order) => (
             <Link key={order.id} href={`/orders/${order.id}`}>
               <Card className="flex items-center justify-between gap-4 p-5 transition-transform hover:-translate-y-0.5">
@@ -62,6 +61,6 @@ export default function OrdersPage() {
           ))}
         </div>
       )}
-    </Container>
+    </div>
   );
 }

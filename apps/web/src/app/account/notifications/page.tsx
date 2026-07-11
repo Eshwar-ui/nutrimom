@@ -6,7 +6,8 @@ import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag } from "lucide-reac
 import type { Notification, NotificationType } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
-import { Container, Card } from "@/components/ui/primitives";
+import { Card } from "@/components/ui/primitives";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
@@ -34,27 +35,28 @@ export default function NotificationsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  if (!ready) return <Container className="py-16"><PageSkeleton rows={4} /></Container>;
+  if (!ready) return <PageSkeleton rows={4} />;
 
   const unread = (data ?? []).filter((n) => !n.read).length;
 
   return (
-    <Container className="max-w-3xl py-14">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-4xl font-semibold text-foreground">Notifications</h1>
-        {unread > 0 && (
+    <div className="space-y-8">
+      <PageHeader
+        title="Notifications"
+        description="Updates on your orders, listings and seller activity."
+        actions={unread > 0 && (
           <Button variant="outline" size="sm" onClick={() => readAll.mutate()} className="gap-1.5">
             <CheckCheck className="h-4 w-4" /> Mark all read
           </Button>
         )}
-      </div>
+      />
 
       {isLoading ? (
-        <PageSkeleton rows={4} className="mt-8" />
+        <PageSkeleton rows={4} />
       ) : !data || data.length === 0 ? (
-        <StatePanel className="mt-8" title="Nothing new" description="Updates about your orders, listings and seller activity will appear here." />
+        <StatePanel title="Nothing new" description="Updates about your orders, listings and seller activity will appear here." />
       ) : (
-        <div className="mt-8 space-y-2">
+        <div className="space-y-2">
           {data.map((n) => {
             const Icon = icons[n.type];
             const body = (
@@ -89,6 +91,6 @@ export default function NotificationsPage() {
           })}
         </div>
       )}
-    </Container>
+    </div>
   );
 }

@@ -6,7 +6,8 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatPaise, type Listing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
-import { Container, Card } from "@/components/ui/primitives";
+import { Card } from "@/components/ui/primitives";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ListingStatusBadge } from "@/components/listing-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
@@ -40,17 +41,18 @@ export default function MyListingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["my-listings"] }),
   });
 
-  if (!ready) return <Container className="py-16"><PageSkeleton rows={4} /></Container>;
+  if (!ready) return <PageSkeleton rows={4} />;
 
   return (
-    <Container className="max-w-4xl py-12">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="font-display text-4xl font-semibold text-foreground">My listings</h1>
-        <Link href="/sell" className={buttonVariants()}><Plus className="h-4 w-4" /> New listing</Link>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="My listings"
+        description="Everything you've put up for sale, and how it's doing."
+        actions={<Link href="/sell" className={buttonVariants()}><Plus className="h-4 w-4" /> New listing</Link>}
+      />
 
       {stats && (
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile label="Live" value={stats.approved} />
           <StatTile label="Sold" value={stats.sold} />
           <StatTile label="Pending review" value={stats.pending} />
@@ -87,7 +89,7 @@ export default function MyListingsPage() {
           ))}
         </div>
       )}
-    </Container>
+    </div>
   );
 }
 

@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Package, Tag, Heart, LogOut, Bell, BadgeCheck, ShieldCheck } from "lucide-react";
+import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   profileUpdateSchema,
@@ -14,7 +13,7 @@ import {
 import { authedRequest } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useRequireAuth } from "@/lib/use-auth";
-import { Container, Card, Input, Label, Textarea } from "@/components/ui/primitives";
+import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
@@ -22,7 +21,6 @@ import { PageHeader } from "@/components/ui/page-header";
 export default function AccountPage() {
   const { ready, user } = useRequireAuth();
   const setUser = useAuthStore((s) => s.setUser);
-  const logout = useAuthStore((s) => s.logout);
   const [saved, setSaved] = useState(false);
   const qc = useQueryClient();
 
@@ -45,7 +43,7 @@ export default function AccountPage() {
       },
     });
 
-  if (!ready || !user) return <Container className="py-16"><PageSkeleton rows={4} /></Container>;
+  if (!ready || !user) return <PageSkeleton rows={4} />;
 
   const onSubmit = async (dto: ProfileUpdateInput) => {
     const updated = await authedRequest<AuthUser>("/users/me", { method: "PATCH", body: dto });
@@ -54,32 +52,11 @@ export default function AccountPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const tiles = [
-    { href: "/account/listings", icon: Tag, label: "My listings", sub: "Manage what you sell" },
-    { href: "/account/orders", icon: Package, label: "My orders", sub: "Track your purchases" },
-    { href: "/wishlist", icon: Heart, label: "Wishlist", sub: "Saved treasures" },
-    { href: "/account/notifications", icon: Bell, label: "Notifications", sub: "Updates on your orders & listings" },
-  ];
-
   return (
-    <Container className="max-w-5xl py-12 sm:py-14">
-      <PageHeader title="My account" description="Manage your marketplace activity, seller profile and saved finds." />
+    <div className="space-y-6">
+      <PageHeader title="Profile" description="Manage your seller profile and marketplace trust." />
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <Link key={t.href} href={t.href}>
-            <Card className="h-full p-5 transition-transform hover:-translate-y-0.5">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary">
-                <t.icon className="h-5 w-5" />
-              </div>
-              <p className="mt-3 font-medium text-foreground">{t.label}</p>
-              <p className="text-sm text-muted-foreground">{t.sub}</p>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      <Card className="mt-4 flex items-center gap-4 p-6">
+      <Card className="flex items-center gap-4 p-6">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           {user.isSellerVerified ? <BadgeCheck className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
         </span>
@@ -111,7 +88,7 @@ export default function AccountPage() {
         )}
       </Card>
 
-      <Card className="mt-4 p-6">
+      <Card className="p-6">
         <h2 className="font-display text-xl font-semibold text-foreground">Profile &amp; seller details</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Your WhatsApp and city help buyers reach you about your listings.
@@ -139,16 +116,13 @@ export default function AccountPage() {
             <Label htmlFor="profile-bio">Short bio</Label>
             <Textarea id="profile-bio" {...register("bio")} rows={3} placeholder="A line about you as a seller…" />
           </div>
-          <div className="flex items-center gap-3 sm:col-span-2">
+          <div className="sm:col-span-2">
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving…" : saved ? "Saved ✓" : "Save profile"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={logout} className="gap-1.5">
-              <LogOut className="h-4 w-4" /> Sign out
             </Button>
           </div>
         </form>
       </Card>
-    </Container>
+    </div>
   );
 }

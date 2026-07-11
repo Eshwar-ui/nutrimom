@@ -13,7 +13,7 @@ export function DecorativeElement({
       aria-hidden="true"
       src={src}
       alt=""
-      className={`pointer-events-none absolute select-none ${className}`}
+      className={`pointer-events-none absolute z-0 select-none ${className}`}
     />
   );
 }

@@ -78,6 +78,30 @@ const sellers = [
     isSellerVerified: false,
     bio: "First-time seller, happy to share more photos on request.",
   },
+  {
+    email: "meera@nurture.local",
+    name: "Meera Iyer",
+    city: "Chennai",
+    whatsappNumber: "+91 94440 27158",
+    isSellerVerified: true,
+    bio: "Careful with my little one's things — everything is clean and complete.",
+  },
+  {
+    email: "aisha@nurture.local",
+    name: "Aisha Qureshi",
+    city: "Mumbai",
+    whatsappNumber: "+91 98200 61294",
+    isSellerVerified: true,
+    bio: "Decluttering after baby number two. Pickup easy in the western suburbs.",
+  },
+  {
+    email: "nisha@nurture.local",
+    name: "Nisha Verma",
+    city: "Delhi",
+    whatsappNumber: "+91 98110 43827",
+    isSellerVerified: false,
+    bio: "Happy to share extra photos or a video call before you buy.",
+  },
 ];
 
 type SeedListing = {
@@ -311,6 +335,57 @@ const listings: SeedListing[] = [
     status: ListingStatus.PENDING,
     desc: "Six-drawer dresser that doubles as a changing station. Solid and roomy; some surface wear on top.",
   },
+
+  // ---- Extra stock so each popular category has siblings (related products) ----
+
+  // Feeding essentials
+  { title: "Dr. Brown's Anti-Colic Bottle Set (6)", categorySlug: "feeding-essentials", sellerEmail: "meera@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 2800, sellingRupees: 1100, city: "Chennai", delivery: DeliveryOption.BOTH, usageDuration: "4 months", reason: "Baby moved to sippy cups", desc: "Full anti-colic set with wide-neck bottles. Sanitised; new teats included in original packing." },
+  { title: "Munchkin Bottle Steriliser & Dryer", categorySlug: "feeding-essentials", sellerEmail: "aisha@nurture.local", condition: Condition.GOOD, originalRupees: 4500, sellingRupees: 1900, city: "Mumbai", delivery: DeliveryOption.PICKUP, usageDuration: "8 months", reason: "Done with bottles", desc: "Electric steriliser and dryer combo. Descaled and cleaned; works perfectly." },
+  { title: "Silicone Weaning Bowls & Spoons (8pc)", categorySlug: "feeding-essentials", sellerEmail: "nisha@nurture.local", condition: Condition.NEW, originalRupees: 1600, sellingRupees: 950, city: "Delhi", delivery: DeliveryOption.DELIVERY, reason: "Duplicate gift", status: ListingStatus.APPROVED, featured: true, desc: "Brand-new suction bowls with soft-tip spoons. Never used, still boxed." },
+  { title: "Philips Avent Fast Bottle Warmer", categorySlug: "feeding-essentials", sellerEmail: "ananya@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 3200, sellingRupees: 1500, city: "Bengaluru", delivery: DeliveryOption.BOTH, usageDuration: "6 months", reason: "Switched to room-temp feeds", desc: "Warms milk evenly in minutes. Barely used, all parts intact." },
+
+  // Strollers
+  { title: "Babyhug Symphony Stroller Pram", categorySlug: "strollers", sellerEmail: "meera@nurture.local", condition: Condition.GOOD, originalRupees: 9500, sellingRupees: 3800, city: "Chennai", delivery: DeliveryOption.PICKUP, usageDuration: "1 year", reason: "Baby prefers walking", desc: "Reversible handle, reclining seat and canopy. Wheels smooth; light fabric wear." },
+  { title: "Luvlap Sunshine Stroller — Red", categorySlug: "strollers", sellerEmail: "nisha@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 6000, sellingRupees: 2600, city: "Delhi", delivery: DeliveryOption.BOTH, usageDuration: "5 months", reason: "Gifted a travel system", status: ListingStatus.APPROVED, featured: true, desc: "Lightweight three-position recline stroller with 5-point harness. Like new." },
+  { title: "R for Rabbit Pocket Stroller (Cabin)", categorySlug: "strollers", sellerEmail: "aisha@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 8000, sellingRupees: 3900, city: "Mumbai", delivery: DeliveryOption.DELIVERY, usageDuration: "7 months", reason: "Bought a jogger", desc: "Ultra-compact cabin-friendly fold. Aeroplane approved. Minimal use." },
+  { title: "Joie Nitro Lightweight Stroller", categorySlug: "strollers", sellerEmail: "ananya@nurture.local", condition: Condition.GOOD, originalRupees: 11000, sellingRupees: 4700, city: "Bengaluru", delivery: DeliveryOption.PICKUP, usageDuration: "1.5 years", reason: "Toddler outgrew it", desc: "One-hand fold, large canopy and basket. Well maintained with minor scuffs." },
+
+  // Baby clothes
+  { title: "Winter Fleece Rompers Bundle (6–12m)", categorySlug: "baby-clothes", sellerEmail: "nisha@nurture.local", condition: Condition.GOOD, originalRupees: 2800, sellingRupees: 950, city: "Delhi", delivery: DeliveryOption.DELIVERY, usageDuration: "One winter", reason: "Outgrown", desc: "Six warm fleece rompers with fold-over mittens. Cosy and clean, gentle wash wear." },
+  { title: "Carter's Baby Girl Dresses (5)", categorySlug: "baby-clothes", sellerEmail: "meera@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 3500, sellingRupees: 1400, city: "Chennai", delivery: DeliveryOption.BOTH, usageDuration: "3 months", reason: "Grew too fast", desc: "Five party-ready dresses, sizes 9–12m. Barely worn, no stains." },
+  { title: "Newborn Mittens, Caps & Socks Set", categorySlug: "baby-clothes", sellerEmail: "aisha@nurture.local", condition: Condition.NEW, originalRupees: 1200, sellingRupees: 700, city: "Mumbai", delivery: DeliveryOption.DELIVERY, reason: "Extra shower gift", desc: "Unused newborn accessory set in soft cotton. Tags still on." },
+  { title: "Ethnic Wear Set for Toddler (1–2y)", categorySlug: "baby-clothes", sellerEmail: "fatima@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 2600, sellingRupees: 1100, city: "Hyderabad", delivery: DeliveryOption.PICKUP, usageDuration: "Festive season", reason: "Outgrown", featured: true, desc: "Two festive kurta sets worn once each for functions. Immaculate." },
+
+  // Toys
+  { title: "Fisher-Price Rock-a-Stack & Cups", categorySlug: "toys", sellerEmail: "ananya@nurture.local", condition: Condition.GOOD, originalRupees: 1500, sellingRupees: 500, city: "Bengaluru", delivery: DeliveryOption.PICKUP, usageDuration: "10 months", reason: "Outgrown", desc: "Classic stacking ring and nesting cups. All pieces present, cleaned." },
+  { title: "Wooden Activity Cube — 5-in-1", categorySlug: "toys", sellerEmail: "meera@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 3800, sellingRupees: 1600, city: "Chennai", delivery: DeliveryOption.BOTH, usageDuration: "6 months", reason: "Baby lost interest", featured: true, desc: "Bead maze, shapes, gears and clock in solid wood. Sturdy and spotless." },
+  { title: "Soft Plush Toy Bundle (6 pieces)", categorySlug: "toys", sellerEmail: "aisha@nurture.local", condition: Condition.GOOD, originalRupees: 2200, sellingRupees: 700, city: "Mumbai", delivery: DeliveryOption.DELIVERY, usageDuration: "1 year", reason: "Too many toys", desc: "Six cuddly plush toys, freshly machine-washed. Great cot companions." },
+  { title: "Musical Baby Gym & Play Mat", categorySlug: "toys", sellerEmail: "nisha@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 4200, sellingRupees: 1900, city: "Delhi", delivery: DeliveryOption.PICKUP, usageDuration: "5 months", reason: "Baby crawling now", desc: "Padded play mat with hanging toys and lights-and-sounds arch. Like new." },
+  { title: "Mega Bloks First Builders Bag (80pc)", categorySlug: "toys", sellerEmail: "ritika@nurture.local", condition: Condition.GOOD, originalRupees: 2600, sellingRupees: 900, city: "Pune", delivery: DeliveryOption.BOTH, usageDuration: "1.5 years", reason: "Moved to smaller bricks", desc: "Eighty chunky building blocks in the storage bag. Full count, wiped clean." },
+
+  // Car seats
+  { title: "Infant Car Seat with Base — Grey", categorySlug: "car-seats", sellerEmail: "meera@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 9000, sellingRupees: 4200, city: "Chennai", delivery: DeliveryOption.BOTH, usageDuration: "8 months", reason: "Baby outgrew infant seat", featured: true, desc: "Rear-facing infant seat with click-in base. Never in an accident, covers washed." },
+  { title: "Chicco KeyFit 30 Car Seat", categorySlug: "car-seats", sellerEmail: "aisha@nurture.local", condition: Condition.GOOD, originalRupees: 13000, sellingRupees: 5500, city: "Mumbai", delivery: DeliveryOption.PICKUP, usageDuration: "1 year", reason: "Upgraded to convertible", desc: "Trusted infant seat with easy-install base. Some wear on fabric, fully functional." },
+  { title: "Booster Car Seat (Group 2/3)", categorySlug: "car-seats", sellerEmail: "nisha@nurture.local", condition: Condition.GOOD, originalRupees: 5500, sellingRupees: 2100, city: "Delhi", delivery: DeliveryOption.DELIVERY, usageDuration: "1.5 years", reason: "Child grew taller", desc: "High-back booster with adjustable headrest. Clean and sturdy." },
+  { title: "Britax Convertible Car Seat", categorySlug: "car-seats", sellerEmail: "ananya@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 17000, sellingRupees: 7800, city: "Bengaluru", delivery: DeliveryOption.BOTH, usageDuration: "1 year", reason: "Second car seat spare", desc: "Rear and forward facing with steel frame. Excellent condition, no accidents." },
+
+  // High chairs
+  { title: "Chicco Polly Highchair — Grey", categorySlug: "high-chairs", sellerEmail: "meera@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 8500, sellingRupees: 3600, city: "Chennai", delivery: DeliveryOption.PICKUP, usageDuration: "9 months", reason: "Baby moved to booster", featured: true, desc: "Multi-recline, height-adjustable chair with dishwasher-safe tray. Great shape." },
+  { title: "Foldable Portable Feeding Chair", categorySlug: "high-chairs", sellerEmail: "aisha@nurture.local", condition: Condition.GOOD, originalRupees: 3200, sellingRupees: 1200, city: "Mumbai", delivery: DeliveryOption.BOTH, usageDuration: "1 year", reason: "Space saving", desc: "Compact fold-flat high chair, ideal for travel. Wipes clean, minor scuffs." },
+  { title: "Booster Seat with Tray (Clip-on)", categorySlug: "high-chairs", sellerEmail: "nisha@nurture.local", condition: Condition.GOOD, originalRupees: 2400, sellingRupees: 850, city: "Delhi", delivery: DeliveryOption.DELIVERY, usageDuration: "10 months", reason: "Outgrown", desc: "Straps to a dining chair with removable tray. Sturdy and cleaned." },
+  { title: "IKEA Antilop High Chair + Tray", categorySlug: "high-chairs", sellerEmail: "ritika@nurture.local", condition: Condition.GOOD, originalRupees: 1800, sellingRupees: 700, city: "Pune", delivery: DeliveryOption.PICKUP, usageDuration: "1 year", reason: "Decluttering", desc: "The famously easy-to-clean high chair with tray. Legs wipe off in seconds." },
+
+  // Baby carriers
+  { title: "Ring Sling Carrier — Organic Cotton", categorySlug: "baby-carriers", sellerEmail: "meera@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 3500, sellingRupees: 1400, city: "Chennai", delivery: DeliveryOption.DELIVERY, usageDuration: "4 months", reason: "Prefer structured carrier", desc: "Breathable handwoven ring sling. Freshly washed, no snags." },
+  { title: "Luvlap 4-in-1 Baby Carrier", categorySlug: "baby-carriers", sellerEmail: "nisha@nurture.local", condition: Condition.GOOD, originalRupees: 2600, sellingRupees: 900, city: "Delhi", delivery: DeliveryOption.BOTH, usageDuration: "8 months", reason: "No longer needed", featured: true, desc: "Four carry positions with padded straps. Buckles solid, light wear." },
+  { title: "Structured Hip Seat Carrier", categorySlug: "baby-carriers", sellerEmail: "aisha@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 4200, sellingRupees: 1800, city: "Mumbai", delivery: DeliveryOption.PICKUP, usageDuration: "6 months", reason: "Baby walking", desc: "Ergonomic hip seat with lumbar support and storage pocket. Barely used." },
+  { title: "Stretchy Wrap Carrier — Grey", categorySlug: "baby-carriers", sellerEmail: "ananya@nurture.local", condition: Condition.GOOD, originalRupees: 2800, sellingRupees: 1000, city: "Bengaluru", delivery: DeliveryOption.DELIVERY, usageDuration: "5 months", reason: "Moved to buckle carrier", desc: "Soft newborn wrap, machine washed. Ideal for the first few months." },
+
+  // Books
+  { title: "Usborne That's Not My... Series (6)", categorySlug: "books", sellerEmail: "meera@nurture.local", condition: Condition.GOOD, originalRupees: 3000, sellingRupees: 1200, city: "Chennai", delivery: DeliveryOption.DELIVERY, usageDuration: "1 year", reason: "Read and outgrown", featured: true, desc: "Six touchy-feely board books, a bedtime favourite. Corners loved but intact." },
+  { title: "Cloth Books for Infants (Set of 4)", categorySlug: "books", sellerEmail: "aisha@nurture.local", condition: Condition.LIKE_NEW, originalRupees: 1400, sellingRupees: 650, city: "Mumbai", delivery: DeliveryOption.BOTH, usageDuration: "6 months", reason: "Outgrown", desc: "Crinkly soft cloth books, machine washable. Great for tummy time." },
+  { title: "Bedtime Story Collection (10 books)", categorySlug: "books", sellerEmail: "nisha@nurture.local", condition: Condition.GOOD, originalRupees: 3500, sellingRupees: 1300, city: "Delhi", delivery: DeliveryOption.DELIVERY, usageDuration: "2 years", reason: "Making shelf space", desc: "Ten illustrated hardcover stories. A couple of gently dog-eared pages." },
+  { title: "Peek-a-Boo Flap Books Bundle", categorySlug: "books", sellerEmail: "ritika@nurture.local", condition: Condition.GOOD, originalRupees: 2000, sellingRupees: 800, city: "Pune", delivery: DeliveryOption.PICKUP, usageDuration: "1 year", reason: "Outgrown", desc: "Sturdy lift-the-flap books, all flaps present and working." },
 ];
 
 async function main() {
@@ -365,30 +440,36 @@ async function main() {
     },
   });
 
-  // Only create listings on a fresh database to stay idempotent.
-  if ((await prisma.listing.count()) === 0) {
-    for (const l of listings) {
-      await prisma.listing.create({
-        data: {
-          title: l.title,
-          description: l.desc,
-          categoryId: categoryBySlug.get(l.categorySlug)!,
-          sellerId: sellerByEmail.get(l.sellerEmail)!,
-          condition: l.condition,
-          originalPriceInPaise: l.originalRupees
-            ? l.originalRupees * 100
-            : null,
-          sellingPriceInPaise: l.sellingRupees * 100,
-          usageDuration: l.usageDuration,
-          reasonForSelling: l.reason,
-          city: l.city,
-          deliveryOption: l.delivery,
-          images: img(l.categorySlug, 3),
-          status: l.status ?? ListingStatus.APPROVED,
-          isFeatured: l.featured ?? false,
-        },
-      });
-    }
+  // Additive & idempotent: create each listing only if its title isn't
+  // already present, so re-seeding tops up new items without duplicating.
+  let created = 0;
+  for (const l of listings) {
+    const exists = await prisma.listing.findFirst({
+      where: { title: l.title },
+      select: { id: true },
+    });
+    if (exists) continue;
+    await prisma.listing.create({
+      data: {
+        title: l.title,
+        description: l.desc,
+        categoryId: categoryBySlug.get(l.categorySlug)!,
+        sellerId: sellerByEmail.get(l.sellerEmail)!,
+        condition: l.condition,
+        originalPriceInPaise: l.originalRupees
+          ? l.originalRupees * 100
+          : null,
+        sellingPriceInPaise: l.sellingRupees * 100,
+        usageDuration: l.usageDuration,
+        reasonForSelling: l.reason,
+        city: l.city,
+        deliveryOption: l.delivery,
+        images: img(l.categorySlug, 3),
+        status: l.status ?? ListingStatus.APPROVED,
+        isFeatured: l.featured ?? false,
+      },
+    });
+    created++;
   }
 
   // Keep sample imagery relevant when the design assets evolve.
@@ -400,7 +481,7 @@ async function main() {
   }
 
   console.log(
-    `Seeded ${categories.length} categories, ${sellers.length} sellers, ${listings.length} listings, admin=${adminEmail}`,
+    `Seeded ${categories.length} categories, ${sellers.length} sellers, ${created} new listing(s) added (${listings.length} defined), admin=${adminEmail}`,
   );
 }
 

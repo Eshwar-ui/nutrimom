@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -56,6 +56,19 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const accountCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Hover intent: open instantly, close on a short delay so crossing into the
+  // panel (or a brief mouse-out) doesn't dismiss it. Click/keyboard still work.
+  const openAccount = () => {
+    if (accountCloseTimer.current) clearTimeout(accountCloseTimer.current);
+    setAccountOpen(true);
+  };
+  const scheduleCloseAccount = () => {
+    if (accountCloseTimer.current) clearTimeout(accountCloseTimer.current);
+    accountCloseTimer.current = setTimeout(() => setAccountOpen(false), 140);
+  };
   const count = useCartStore(cartCount);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -79,16 +92,32 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   useEffect(() => {
-    if (!searchOpen && !menuOpen) return;
+    if (!searchOpen && !menuOpen && !accountOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSearchOpen(false);
         setMenuOpen(false);
+        setAccountOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, menuOpen]);
+  }, [searchOpen, menuOpen, accountOpen]);
+  // Close the account dropdown when clicking anywhere outside it.
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [accountOpen]);
+  // Clear any pending hover-close timer on unmount.
+  useEffect(() => () => {
+    if (accountCloseTimer.current) clearTimeout(accountCloseTimer.current);
+  }, []);
 
   const submitSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -189,48 +218,7 @@ export function SiteHeader() {
 
             {hydrated && user ? (
               <>
-                {user.role === "ADMIN" && (
-                  <Link href="/admin" aria-label="Admin" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden sm:inline-flex")}>
-                    <LayoutDashboard className="h-4 w-4" />
-                  </Link>
-                )}
-                <Link href="/account" aria-label="My account" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1.5")}>
-                  <User className="h-4 w-4" />
-                  <span className="hidden lg:inline">{user.name.split(" ")[0]}</span>
-                </Link>
-                <Link href="/account/notifications" aria-label="Notifications" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}>
-                  <Bell className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
-                      {unreadCount}
-                    </span>
-                  )}
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Log out"
-                  className="hidden sm:inline-flex"
-                  onClick={logout}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-
-                {/* Wishlist + cart — only once signed in */}
-                <Link href="/wishlist" aria-label="Wishlist" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden sm:inline-flex")}>
-                  <Heart className="h-5 w-5" />
-                  {wishCount > 0 && (
-                    <motion.span
-                      key={wishCount}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 600, damping: 14 }}
-                      className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground"
-                    >
-                      {wishCount}
-                    </motion.span>
-                  )}
-                </Link>
+                {/* Cart — accent, always visible */}
                 <Link href="/cart" aria-label="Cart" data-fly-cart-target className={cn(buttonVariants({ variant: "accent", size: "icon" }), "relative")}>
                   <ShoppingBag className="h-5 w-5" />
                   {count > 0 && (
@@ -246,10 +234,92 @@ export function SiteHeader() {
                   )}
                 </Link>
 
-                {/* Secondary CTA */}
+                {/* Primary sell CTA */}
                 <Link href="/sell" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-1 hidden gap-1.5 sm:inline-flex")}>
                   <Tag className="h-4 w-4" /> Sell an item
                 </Link>
+
+                {/* Profile — avatar chip that reveals wishlist, notifications & sign out on hover/click */}
+                <div
+                  ref={accountRef}
+                  className="relative ml-1.5"
+                  onMouseEnter={openAccount}
+                  onMouseLeave={scheduleCloseAccount}
+                >
+                  <button
+                    type="button"
+                    aria-label="Account menu"
+                    aria-haspopup="menu"
+                    aria-expanded={accountOpen}
+                    onClick={() => { setAccountOpen((o) => !o); setSearchOpen(false); }}
+                    className={cn(
+                      "group flex items-center gap-2 rounded-full border py-1 pl-1 pr-2.5 transition-[transform,background-color,border-color] duration-200 active:scale-[0.97]",
+                      accountOpen
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-border bg-surface/70 backdrop-blur-sm hover:border-primary/40 hover:bg-surface",
+                    )}
+                  >
+                    <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/12 text-xs font-bold uppercase text-primary">
+                      {user.name[0]}
+                      {unreadCount > 0 && (
+                        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-background" />
+                      )}
+                    </span>
+                    <span className="hidden max-w-[7rem] truncate text-sm font-semibold text-foreground lg:inline">
+                      {user.name.split(" ")[0]}
+                    </span>
+                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-200", accountOpen && "rotate-180")} />
+                  </button>
+
+                  <AnimatePresence>
+                    {accountOpen && (
+                      <motion.div
+                        role="menu"
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                        transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ transformOrigin: "top right" }}
+                        className="absolute right-0 top-full z-50 w-60 pt-2"
+                      >
+                       <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
+                        <div className="flex items-center gap-3 border-b border-border px-3 py-3">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/12 text-sm font-bold uppercase text-primary">
+                            {user.name[0]}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                        <div className="pt-1.5">
+                          <Link role="menuitem" href="/account" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+                            <User className="h-4 w-4 text-muted-foreground" /> My account
+                          </Link>
+                          <Link role="menuitem" href="/wishlist" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+                            <Heart className="h-4 w-4 text-muted-foreground" /> Wishlist
+                            {wishCount > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-bold text-muted-foreground">{wishCount}</span>}
+                          </Link>
+                          <Link role="menuitem" href="/account/notifications" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+                            <Bell className="h-4 w-4 text-muted-foreground" /> Notifications
+                            {unreadCount > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-accent-foreground">{unreadCount}</span>}
+                          </Link>
+                          {user.role === "ADMIN" && (
+                            <Link role="menuitem" href="/admin" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+                              <LayoutDashboard className="h-4 w-4 text-muted-foreground" /> Admin
+                            </Link>
+                          )}
+                        </div>
+                        <div className="mt-1.5 border-t border-border pt-1.5">
+                          <button role="menuitem" type="button" onClick={() => { logout(); setAccountOpen(false); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-danger transition-colors hover:bg-danger/10">
+                            <LogOut className="h-4 w-4" /> Log out
+                          </button>
+                        </div>
+                       </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </>
             ) : (
               <>
