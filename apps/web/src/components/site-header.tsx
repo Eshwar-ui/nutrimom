@@ -114,7 +114,7 @@ export function SiteHeader() {
       <header
         className={cn(
           "border-b transition-colors duration-300",
-          scrolled
+          scrolled || menuOpen
             ? "border-border/60 bg-background/80 backdrop-blur-xl"
             : "border-transparent bg-transparent",
         )}
