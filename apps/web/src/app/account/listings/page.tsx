@@ -7,7 +7,7 @@ import { formatPaise, type Listing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Container, Card } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ListingStatusBadge } from "@/components/listing-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 
@@ -46,7 +46,7 @@ export default function MyListingsPage() {
     <Container className="max-w-4xl py-12">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="font-display text-4xl font-semibold text-foreground">My listings</h1>
-        <Link href="/sell"><Button><Plus className="h-4 w-4" /> New listing</Button></Link>
+        <Link href="/sell" className={buttonVariants()}><Plus className="h-4 w-4" /> New listing</Link>
       </div>
 
       {stats && (
@@ -78,9 +78,7 @@ export default function MyListingsPage() {
               </div>
               <ListingStatusBadge status={l.status} />
               <div className="flex gap-1">
-                <Link href={`/account/listings/${l.id}/edit`}>
-                  <Button variant="ghost" size="icon" aria-label="Edit"><Pencil className="h-4 w-4" /></Button>
-                </Link>
+                <Link href={`/account/listings/${l.id}/edit`} aria-label="Edit" className={buttonVariants({ variant: "ghost", size: "icon" })}><Pencil className="h-4 w-4" /></Link>
                 <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => remove.mutate(l.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>

@@ -29,8 +29,6 @@ export function ListingCard({ listing }: { listing: Listing }) {
   const wished = useWishlistStore((s) => s.ids.includes(listing.id));
   const toggleWish = useWishlistStore((s) => s.toggle);
 
-  const isNew =
-    Date.now() - new Date(listing.createdAt).getTime() < 14 * 864e5;
   const discount = listing.originalPriceInPaise
     ? Math.round(
         (1 - listing.sellingPriceInPaise / listing.originalPriceInPaise) * 100,
@@ -91,22 +89,17 @@ export function ListingCard({ listing }: { listing: Listing }) {
           >
             {conditionLabels[listing.condition]}
           </span>
-          {isNew && (
-            <span className="rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold text-[#5c4410]">
-              Just in
-            </span>
-          )}
         </span>
       </Link>
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="min-w-0 flex flex-1 flex-col overflow-hidden p-4">
         <Link href={`/listings/${listing.id}`}>
           <h3 className="line-clamp-2 font-display text-lg font-semibold leading-snug text-foreground">
             {listing.title}
           </h3>
         </Link>
 
-        <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+        <div className="mt-1.5 flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground">
           <MapPin className="h-3 w-3" /> {listing.city}
           <span className="mx-1">·</span>
           <span className="inline-flex items-center gap-0.5">
@@ -117,16 +110,16 @@ export function ListingCard({ listing }: { listing: Listing }) {
           </span>
         </div>
 
-        <div className="mt-3 flex items-end gap-2">
-          <span className="text-xl font-bold text-foreground">
+        <div className="mt-3 flex min-w-0 items-end gap-2">
+          <span className="text-lg font-bold text-foreground sm:text-xl">
             {formatPaise(listing.sellingPriceInPaise)}
           </span>
           {discount > 0 && (
             <>
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="hidden text-sm text-muted-foreground line-through sm:inline">
                 {formatPaise(listing.originalPriceInPaise!)}
               </span>
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accent">
+              <span className="hidden rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accent-text sm:inline">
                 -{discount}%
               </span>
             </>

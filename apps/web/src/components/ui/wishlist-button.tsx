@@ -5,15 +5,14 @@ import { motion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Deterministic-ish spread for the burst hearts (client-only, so random is fine).
-function makeBurst() {
-  return Array.from({ length: 6 }, () => ({
-    x: (Math.random() - 0.5) * 46,
-    y: -16 - Math.random() * 30,
-    r: (Math.random() - 0.5) * 70,
-    delay: Math.random() * 0.05,
-  }));
-}
+const burstHearts = [
+  { x: -22, y: -30, r: -28, delay: 0 },
+  { x: -11, y: -44, r: 18, delay: 0.02 },
+  { x: 4, y: -36, r: -12, delay: 0.01 },
+  { x: 20, y: -28, r: 32, delay: 0.04 },
+  { x: -18, y: -20, r: -42, delay: 0.03 },
+  { x: 14, y: -47, r: 24, delay: 0.05 },
+];
 
 export function WishlistButton({
   wished,
@@ -65,7 +64,7 @@ export function WishlistButton({
           key={burst}
           className="pointer-events-none absolute inset-0 grid place-items-center"
         >
-          {makeBurst().map((p, i) => (
+          {burstHearts.map((p, i) => (
             <motion.span
               key={i}
               className="absolute text-accent"

@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type AuthResponse, type RegisterInput } from "@nutrimom/shared";
 import { request, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { Container, Card, Input, Label } from "@/components/ui/primitives";
+import { Container, Card, Input, Label, PasswordInput } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 
 export default function RegisterPage() {
@@ -51,7 +51,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <Label htmlFor="register-password">Password</Label>
-            <Input id="register-password" type="password" autoComplete="new-password" aria-invalid={!!errors.password} aria-describedby="register-password-help register-password-error" {...register("password")} placeholder="At least 8 characters" />
+            <PasswordInput id="register-password" autoComplete="new-password" aria-invalid={!!errors.password} aria-describedby="register-password-help register-password-error" {...register("password")} placeholder="At least 8 characters" />
             <p id="register-password-help" className="mt-1.5 text-xs text-muted-foreground">Use 8–72 characters.</p>
             {errors.password && <p id="register-password-error" className="mt-1.5 text-xs text-danger">{errors.password.message}</p>}
           </div>

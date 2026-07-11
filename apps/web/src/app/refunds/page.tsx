@@ -1,13 +1,13 @@
 import { Container } from "@/components/ui/primitives";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 
-export const metadata = { title: "Refund & Cancellation Policy" };
+export const metadata = { title: "Refund & Cancellation Policy", robots: { index: false, follow: false } };
 
 export default function RefundsPage() {
   return (
     <Container className="max-w-3xl py-14">
       <h1 className="font-display text-4xl font-semibold text-foreground">Refund &amp; Cancellation Policy</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Last updated: [DATE]</p>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: 11 July 2026</p>
       <LegalPlaceholderBanner />
 
       <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
@@ -15,9 +15,9 @@ export default function RefundsPage() {
           <h2 className="mb-1.5 font-display text-lg font-semibold text-foreground">1. Cancelling an order</h2>
           <p>
             You can cancel an order yourself from{" "}
-            <a href="/account/orders" className="text-accent hover:underline">My orders</a>{" "}
+            <a href="/account/orders" className="text-accent-text hover:underline">My orders</a>{" "}
             any time before it has been marked shipped. Once shipped, contact the
-            seller directly or reach [SUPPORT EMAIL] to arrange a return.
+            seller directly and use the Contact page to document the issue.
           </p>
         </section>
         <section>
@@ -50,8 +50,8 @@ export default function RefundsPage() {
         <section>
           <h2 className="mb-1.5 font-display text-lg font-semibold text-foreground">5. How to request a refund</h2>
           <p>
-            Email [SUPPORT EMAIL] with your order number and reason. See our{" "}
-            <a href="/contact" className="text-accent hover:underline">Contact page</a>{" "}
+            Use the Contact page with your order number and reason. See our{" "}
+            <a href="/contact" className="text-accent-text hover:underline">Contact page</a>{" "}
             for other ways to reach us.
           </p>
         </section>

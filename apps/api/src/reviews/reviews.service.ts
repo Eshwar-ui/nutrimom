@@ -28,7 +28,7 @@ export class ReviewsService {
     if (!order) throw new NotFoundException('Order not found');
     if (order.buyerId !== buyerId) throw new ForbiddenException();
     if (!REVIEWABLE_ORDER_STATUSES.includes(order.status as never)) {
-      throw new BadRequestException('This order can\'t be reviewed yet');
+      throw new BadRequestException("This order can't be reviewed yet");
     }
 
     const item = order.items.find((i) => i.listingId === input.listingId);
@@ -62,13 +62,14 @@ export class ReviewsService {
   async listForSeller(sellerId: string): Promise<Review[]> {
     const rows = await this.prisma.review.findMany({
       where: { sellerId },
-      include: { listing: { select: { title: true } }, reviewer: { select: { name: true } } },
+      include: {
+        listing: { select: { title: true } },
+        reviewer: { select: { name: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    return rows.map((r) =>
-      this.toDto(r, r.listing.title, r.reviewer.name),
-    );
+    return rows.map((r) => this.toDto(r, r.listing.title, r.reviewer.name));
   }
 
   async summaryForSeller(
@@ -86,7 +87,14 @@ export class ReviewsService {
   }
 
   private toDto(
-    row: { id: string; orderId: string; listingId: string; rating: number; comment: string | null; createdAt: Date },
+    row: {
+      id: string;
+      orderId: string;
+      listingId: string;
+      rating: number;
+      comment: string | null;
+      createdAt: Date;
+    },
     listingTitle: string,
     reviewerName: string | undefined,
   ): Review {

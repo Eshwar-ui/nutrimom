@@ -6,9 +6,9 @@ export function LegalPlaceholderBanner() {
     <div className="mb-8 flex gap-3 rounded-2xl border-2 border-dashed border-gold/50 bg-gold/10 p-4 text-sm">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
       <p className="text-foreground">
-        <span className="font-semibold">Placeholder content.</span> The bracketed
-        details below need your real business information, and this page should be
-        reviewed by a lawyer before going live — it is not legal advice.
+        <span className="font-semibold">Pre-launch legal draft.</span> Business,
+        grievance and support contact details still require the operator&apos;s verified
+        information and legal review before this page can be indexed.
       </p>
     </div>
   );

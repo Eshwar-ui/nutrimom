@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { motion } from "framer-motion";
 
 // Brand palette confetti — coral, forest, gold, blush, sky, sage.
@@ -8,21 +7,21 @@ const COLORS = ["#ef8377", "#4f7c5a", "#d8a84c", "#f7c6d0", "#cfe8f9", "#a8c3a0"
 
 /** One-shot celebratory confetti. Render it (client-side) on a success moment. */
 export function Confetti({ count = 46 }: { count?: number }) {
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: count }, (_, i) => ({
+  const random = (seed: number) => {
+    const value = Math.sin(seed * 12.9898) * 43758.5453;
+    return value - Math.floor(value);
+  };
+  const pieces = Array.from({ length: count }, (_, i) => ({
         id: i,
-        left: Math.random() * 100,
+        left: random(i + 1) * 100,
         color: COLORS[i % COLORS.length],
-        size: 6 + Math.random() * 9,
-        delay: Math.random() * 0.3,
-        duration: 1.9 + Math.random() * 1.5,
-        rotate: (Math.random() - 0.5) * 720,
-        drift: (Math.random() - 0.5) * 170,
-        round: Math.random() > 0.5,
-      })),
-    [count],
-  );
+        size: 6 + random(i + 2) * 9,
+        delay: random(i + 3) * 0.3,
+        duration: 1.9 + random(i + 4) * 1.5,
+        rotate: (random(i + 5) - 0.5) * 720,
+        drift: (random(i + 6) - 0.5) * 170,
+        round: random(i + 7) > 0.5,
+      }));
 
   return (
     <div

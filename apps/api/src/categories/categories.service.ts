@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Category, CategoryInput } from '@nutrimom/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,7 +23,9 @@ export class CategoriesService {
       return await this.prisma.category.create({ data: input });
     } catch (err) {
       if (isUniqueSlugError(err)) {
-        throw new BadRequestException('A category with that slug already exists');
+        throw new BadRequestException(
+          'A category with that slug already exists',
+        );
       }
       throw err;
     }
@@ -30,14 +36,18 @@ export class CategoriesService {
       return await this.prisma.category.update({ where: { id }, data: input });
     } catch (err) {
       if (isUniqueSlugError(err)) {
-        throw new BadRequestException('A category with that slug already exists');
+        throw new BadRequestException(
+          'A category with that slug already exists',
+        );
       }
       throw new NotFoundException('Category not found');
     }
   }
 
   async remove(id: string): Promise<{ id: string }> {
-    const listingCount = await this.prisma.listing.count({ where: { categoryId: id } });
+    const listingCount = await this.prisma.listing.count({
+      where: { categoryId: id },
+    });
     if (listingCount > 0) {
       throw new BadRequestException(
         `${listingCount} listing(s) still use this category — move or remove them first`,

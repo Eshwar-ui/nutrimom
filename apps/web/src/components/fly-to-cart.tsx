@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
@@ -13,9 +13,8 @@ interface Flight extends FlyDetail {
 
 export function FlyToCart() {
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => setReady(true), []);
+  const nextId = useRef(0);
+  const ready = useSyncExternalStore(() => () => undefined, () => true, () => false);
 
   useEffect(() => {
     const onFly = (e: Event) => {
@@ -23,7 +22,7 @@ export function FlyToCart() {
       const target = document.querySelector("[data-fly-cart-target]");
       if (!target) return; // no cart icon (e.g. signed out) — skip the animation
       const t = target.getBoundingClientRect();
-      const id = Date.now() + Math.random();
+      const id = ++nextId.current;
       setFlights((f) => [
         ...f,
         { ...detail, id, to: { x: t.left + t.width / 2, y: t.top + t.height / 2 } },

@@ -1,22 +1,22 @@
 import { Container } from "@/components/ui/primitives";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 
-export const metadata = { title: "Terms & Conditions" };
+export const metadata = { title: "Terms & Conditions", robots: { index: false, follow: false } };
 
 export default function TermsPage() {
   return (
     <Container className="max-w-3xl py-14">
       <h1 className="font-display text-4xl font-semibold text-foreground">Terms &amp; Conditions</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Last updated: [DATE]</p>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: 11 July 2026</p>
       <LegalPlaceholderBanner />
 
       <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
         <section>
           <h2 className="mb-1.5 font-display text-lg font-semibold text-foreground">1. Who we are</h2>
           <p>
-            [LEGAL ENTITY NAME], a company registered in India (CIN: [CIN NUMBER]),
-            with its registered office at [REGISTERED ADDRESS], operates the website
-            [WEBSITE URL] (&quot;the Platform&quot;) under the brand The Nurture Moms.
+            The marketplace operator runs this Platform under the brand The Nurture Moms.
+            Its verified legal name, registration number, registered office and public
+            website address must be inserted after legal review and before launch.
           </p>
         </section>
         <section>
@@ -50,14 +50,14 @@ export default function TermsPage() {
           <p>
             Online payments are processed by Razorpay Software Private Limited. The
             Platform does not store your card or bank details. See our{" "}
-            <a href="/refunds" className="text-accent hover:underline">Refund &amp; Cancellation Policy</a>{" "}
+            <a href="/refunds" className="text-accent-text hover:underline">Refund &amp; Cancellation Policy</a>{" "}
             for how order cancellations are handled.
           </p>
         </section>
         <section>
           <h2 className="mb-1.5 font-display text-lg font-semibold text-foreground">6. Limitation of liability</h2>
           <p>
-            To the maximum extent permitted by law, [LEGAL ENTITY NAME] is not liable
+            To the maximum extent permitted by law, the marketplace operator is not liable
             for the condition, safety, or legality of items listed by third-party
             sellers, or for disputes between buyers and sellers arising from a
             transaction.
@@ -73,8 +73,8 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-1.5 font-display text-lg font-semibold text-foreground">8. Contact</h2>
           <p>
-            Questions about these terms can be sent to [SUPPORT EMAIL] — see our{" "}
-            <a href="/contact" className="text-accent hover:underline">Contact page</a>.
+            Questions about these terms can be raised through our{" "}
+            <a href="/contact" className="text-accent-text hover:underline">Contact page</a>.
           </p>
         </section>
       </div>

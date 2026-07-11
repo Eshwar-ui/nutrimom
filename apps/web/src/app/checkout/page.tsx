@@ -155,7 +155,7 @@ export default function CheckoutPage() {
             <span className="font-medium text-foreground">Total</span>
             <span className="text-xl font-bold text-foreground">{formatPaise(subtotal)}</span>
           </div>
-          {error && <p className="mt-4 rounded-xl bg-accent/10 px-4 py-3 text-sm text-accent">{error}</p>}
+          {error && <p className="mt-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
           <Button type="submit" size="lg" className="mt-6 w-full" disabled={submitting}>
             {submitting ? "Processing…" : `Pay ${formatPaise(subtotal)}`}
           </Button>

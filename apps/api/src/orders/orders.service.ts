@@ -41,7 +41,9 @@ export class OrdersService {
     });
 
     if (listings.length !== ids.length) {
-      throw new BadRequestException('One or more items are no longer available');
+      throw new BadRequestException(
+        'One or more items are no longer available',
+      );
     }
     for (const l of listings) {
       if (l.status !== 'APPROVED') {
@@ -62,8 +64,7 @@ export class OrdersService {
         buyerId,
         status: 'PENDING',
         totalInPaise,
-        shippingAddress:
-          input.shippingAddress as unknown as Prisma.InputJsonValue,
+        shippingAddress: input.shippingAddress,
         items: {
           create: listings.map((l) => ({
             listingId: l.id,
@@ -172,7 +173,7 @@ export class OrdersService {
 function toOrderDto(row: OrderRow): Order {
   return {
     id: row.id,
-    status: row.status as OrderStatus,
+    status: row.status,
     totalInPaise: row.totalInPaise,
     shippingAddress: row.shippingAddress as unknown as ShippingAddress,
     razorpayOrderId: row.razorpayOrderId,

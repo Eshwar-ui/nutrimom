@@ -1,13 +1,13 @@
 import { Container } from "@/components/ui/primitives";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 
-export const metadata = { title: "Privacy Policy" };
+export const metadata = { title: "Privacy Policy", robots: { index: false, follow: false } };
 
 export default function PrivacyPage() {
   return (
     <Container className="max-w-3xl py-14">
       <h1 className="font-display text-4xl font-semibold text-foreground">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Last updated: [DATE]</p>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: 11 July 2026</p>
       <LegalPlaceholderBanner />
 
       <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
@@ -57,10 +57,8 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-1.5 font-display text-lg font-semibold text-foreground">6. Grievance Officer</h2>
           <p>
-            [GRIEVANCE OFFICER NAME]<br />
-            [LEGAL ENTITY NAME]<br />
-            [REGISTERED ADDRESS]<br />
-            Email: [GRIEVANCE OFFICER EMAIL]
+            The marketplace operator must publish the appointed Grievance Officer,
+            registered address and verified grievance email before public launch.
           </p>
         </section>
       </div>

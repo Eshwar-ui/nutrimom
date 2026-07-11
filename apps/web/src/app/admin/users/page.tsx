@@ -6,6 +6,7 @@ import type { AdminUser } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/states";
 
 export default function AdminUsersPage() {
   const qc = useQueryClient();
@@ -22,9 +23,9 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-3xl font-semibold text-foreground">Users</h1>
+      <header className="mb-7"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">People and trust</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Users</h1><p className="mt-2 text-muted-foreground">Review seller verification requests and marketplace activity.</p></header>
       {isLoading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <PageSkeleton rows={4} />
       ) : (
         <Card className="divide-y divide-border">
           {(data ?? []).map((u) => (

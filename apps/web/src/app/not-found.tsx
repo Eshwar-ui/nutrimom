@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Container } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata = { title: "Page not found" };
 
@@ -18,8 +18,8 @@ export default function NotFound() {
         It may have sold, been taken down, or the link might be off. Let&apos;s get you back to shopping.
       </p>
       <div className="mt-6 flex gap-3">
-        <Link href="/listings"><Button>Shop preloved</Button></Link>
-        <Link href="/"><Button variant="outline">Go home</Button></Link>
+        <Link href="/listings" className={buttonVariants()}>Shop preloved</Link>
+        <Link href="/" className={buttonVariants({ variant: "outline" })}>Go home</Link>
       </div>
     </Container>
   );

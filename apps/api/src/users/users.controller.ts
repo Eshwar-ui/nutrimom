@@ -1,4 +1,12 @@
-import { Body, Controller, Get, NotFoundException, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { profileUpdateSchema, type ProfileUpdateInput } from '@nutrimom/shared';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import {

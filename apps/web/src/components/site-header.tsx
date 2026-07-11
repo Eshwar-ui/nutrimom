@@ -16,24 +16,31 @@ import {
   X,
   Bell,
   Menu,
+  ChevronDown,
 } from "lucide-react";
 import type { Notification } from "@nutrimom/shared";
-import { Logo } from "./logo";
-import { Button } from "./ui/button";
+import { Logo, LogoEmblem } from "./logo";
+import { Button, buttonVariants } from "./ui/button";
 import { useCartStore, cartCount } from "@/lib/cart-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { useWishlistStore } from "@/lib/wishlist-store";
 import { authedRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
-import { ThemeToggle } from "@/components/theme-toggle";
 
-const navLinks = [
+// Shop dropdown — "Shop all" plus a curated set of category shortcuts.
+const shopLinks = [
   { href: "/listings", label: "Shop all" },
   { href: "/categories/strollers", label: "Strollers" },
   { href: "/categories/baby-clothes", label: "Baby Clothes" },
   { href: "/categories/maternity-wear", label: "Maternity Wear" },
   { href: "/categories/toys", label: "Toys" },
+];
+
+const pageLinks = [
+  { href: "/about", label: "About" },
+  { href: "/blog", label: "Blog" },
+  { href: "/contact", label: "Contact" },
 ];
 
 const ticker = [
@@ -68,7 +75,6 @@ export function SiteHeader() {
   // Transparent over the hero at the top; frosted-solid once scrolled.
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -128,10 +134,35 @@ export function SiteHeader() {
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          <Logo className="shrink-0" />
+          <Link href="/" aria-label="The Nurture Moms home" className="shrink-0 sm:hidden"><LogoEmblem badgeClassName="h-9 w-9" /></Link>
+          <Logo className="hidden shrink-0 sm:inline-flex" />
 
           <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
-            {navLinks.map((l) => (
+            {/* Shop — links to the catalog, reveals category shortcuts on
+                hover or keyboard focus (focus-within keeps it accessible). */}
+            <div className="group relative">
+              <Link
+                href="/listings"
+                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Shop
+                <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
+              </Link>
+              <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
+                  {shopLinks.map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                    >
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {pageLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -156,29 +187,19 @@ export function SiteHeader() {
               <Search className="h-5 w-5" />
             </Button>
 
-            <ThemeToggle />
-
             {hydrated && user ? (
               <>
                 {user.role === "ADMIN" && (
-                  <Link href="/admin">
-                    <Button variant="ghost" size="icon" aria-label="Admin">
-                      <LayoutDashboard className="h-4 w-4" />
-                    </Button>
+                  <Link href="/admin" aria-label="Admin" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden sm:inline-flex")}>
+                    <LayoutDashboard className="h-4 w-4" />
                   </Link>
                 )}
-                <Link href="/account">
-                  <Button variant="ghost" size="sm" className="gap-1.5">
-                    <User className="h-4 w-4" />
-                    <span className="hidden lg:inline">
-                      {user.name.split(" ")[0]}
-                    </span>
-                  </Button>
+                <Link href="/account" aria-label="My account" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1.5")}>
+                  <User className="h-4 w-4" />
+                  <span className="hidden lg:inline">{user.name.split(" ")[0]}</span>
                 </Link>
-                <Link href="/account/notifications" className="relative">
-                  <Button variant="ghost" size="icon" aria-label="Notifications">
-                    <Bell className="h-4 w-4" />
-                  </Button>
+                <Link href="/account/notifications" aria-label="Notifications" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}>
+                  <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
                       {unreadCount}
@@ -189,16 +210,15 @@ export function SiteHeader() {
                   variant="ghost"
                   size="icon"
                   aria-label="Log out"
+                  className="hidden sm:inline-flex"
                   onClick={logout}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
 
                 {/* Wishlist + cart — only once signed in */}
-                <Link href="/wishlist" className="relative">
-                  <Button variant="ghost" size="icon" aria-label="Wishlist">
-                    <Heart className="h-5 w-5" />
-                  </Button>
+                <Link href="/wishlist" aria-label="Wishlist" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden sm:inline-flex")}>
+                  <Heart className="h-5 w-5" />
                   {wishCount > 0 && (
                     <motion.span
                       key={wishCount}
@@ -211,15 +231,8 @@ export function SiteHeader() {
                     </motion.span>
                   )}
                 </Link>
-                <Link href="/cart" className="relative">
-                  <Button
-                    variant="accent"
-                    size="icon"
-                    aria-label="Cart"
-                    data-fly-cart-target
-                  >
-                    <ShoppingBag className="h-5 w-5" />
-                  </Button>
+                <Link href="/cart" aria-label="Cart" data-fly-cart-target className={cn(buttonVariants({ variant: "accent", size: "icon" }), "relative")}>
+                  <ShoppingBag className="h-5 w-5" />
                   {count > 0 && (
                     <motion.span
                       key={count}
@@ -234,25 +247,19 @@ export function SiteHeader() {
                 </Link>
 
                 {/* Secondary CTA */}
-                <Link href="/sell" className="ml-1 hidden sm:block">
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <Tag className="h-4 w-4" /> Sell an item
-                  </Button>
+                <Link href="/sell" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-1 hidden gap-1.5 sm:inline-flex")}>
+                  <Tag className="h-4 w-4" /> Sell an item
                 </Link>
               </>
             ) : (
               <>
                 {/* Secondary CTA */}
-                <Link href="/sell" className="hidden sm:block">
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <Tag className="h-4 w-4" /> Sell an item
-                  </Button>
+                <Link href="/sell" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden gap-1.5 sm:inline-flex")}>
+                  <Tag className="h-4 w-4" /> Sell an item
                 </Link>
                 {/* Primary CTA */}
-                <Link href="/login" className="ml-1">
-                  <Button size="sm" className="gap-1.5">
-                    <User className="h-4 w-4" /> Sign in
-                  </Button>
+                <Link href="/login" className={cn(buttonVariants({ size: "sm" }), "ml-1 gap-1.5")}>
+                  <User className="h-4 w-4" /> Sign in
                 </Link>
               </>
             )}
@@ -296,7 +303,8 @@ export function SiteHeader() {
             className="absolute inset-x-0 top-full overflow-hidden border-b border-border bg-background/95 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] lg:hidden"
           >
             <nav className="mx-auto flex w-full max-w-7xl flex-col gap-1 px-5 py-4 sm:px-8">
-              {navLinks.map((l) => (
+              <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Shop</p>
+              {shopLinks.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
@@ -306,10 +314,27 @@ export function SiteHeader() {
                   {l.label}
                 </Link>
               ))}
-              <Link href="/sell" onClick={() => setMenuOpen(false)} className="mt-2">
-                <Button className="w-full gap-1.5">
-                  <Tag className="h-4 w-4" /> Sell an item
-                </Button>
+              <div className="my-2 border-t border-border" />
+              {pageLinks.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                  {l.label}
+                </Link>
+              ))}
+              {hydrated && user && (
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
+                  {user.role === "ADMIN" && <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Admin</Link>}
+                  <Link href="/account/notifications" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Notifications</Link>
+                  <Link href="/wishlist" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Wishlist</Link>
+                  <button type="button" onClick={() => { logout(); setMenuOpen(false); }} className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger/10">Log out</button>
+                </div>
+              )}
+              <Link href="/sell" onClick={() => setMenuOpen(false)} className={cn(buttonVariants(), "mt-2 w-full gap-1.5")}>
+                <Tag className="h-4 w-4" /> Sell an item
               </Link>
             </nav>
           </motion.div>

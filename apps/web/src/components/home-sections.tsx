@@ -23,9 +23,9 @@ const valueProps = [
   {
     icon: BadgePercent,
     tint: "bg-primary text-primary-foreground",
-    stat: "70%",
-    title: "off, on average",
-    body: "Real savings on gear they'll outgrow in a season anyway — not a clearance-rack gimmick.",
+    stat: "Reuse",
+    title: "before buying new",
+    body: "Compare each listing’s price and condition before deciding what works for your family.",
     rotate: "lg:-rotate-2",
     tape: "left-10 -rotate-6",
     span: "sm:col-span-2 lg:col-span-2 lg:row-span-2",
@@ -34,8 +34,8 @@ const valueProps = [
   {
     icon: BadgeCheck,
     tint: "bg-sage/60",
-    title: "Gently checked",
-    body: "Every listing is condition-graded, so you know exactly what arrives.",
+    title: "Condition made clear",
+    body: "Each seller selects a condition grade and adds photos and notes for buyers to review.",
     rotate: "lg:rotate-1",
     tape: "right-8 rotate-3",
     span: "lg:col-span-1 lg:row-span-1",
@@ -64,14 +64,14 @@ export function WhyPreloved() {
   return (
     <Container className="py-14">
       <div className="mb-9 max-w-2xl">
-        <p className="text-sm font-bold uppercase tracking-widest text-accent">
+        <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
           Why preloved
         </p>
         <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
           Loved gear, loved prices, loved planet
         </h2>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
+      <div className="grid grid-flow-dense grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
         {valueProps.map((v, i) => (
           <Reveal key={v.title} delay={i * 0.07} className={v.span}>
             <div
@@ -162,7 +162,7 @@ export function TrustSafety() {
     <section className="overflow-hidden bg-surface-2 py-16">
       <Container>
         <div className="mb-10 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-widest text-accent">
+          <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
             Peace of mind
           </p>
           <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
@@ -221,9 +221,9 @@ function GuaranteePill({
 const testimonials = [
   {
     quote:
-      "I kitted out my newborn's whole nursery for less than one new stroller. The pram I got looks barely used.",
-    name: "Ananya Reddy",
-    location: "Bengaluru",
+      "Review every photo, condition grade, included accessory, and reason for selling before you commit.",
+    name: "Inspect the details",
+    location: "Before checkout",
     paper: "bg-blush/45",
     sticker: "bg-blush text-[#7a2447]",
     icon: Heart,
@@ -232,9 +232,9 @@ const testimonials = [
   },
   {
     quote:
-      "Sold my daughter's outgrown clothes in a weekend and the payout landed before I'd even done the school run.",
-    name: "Meera Nair",
-    location: "Kochi",
+      "Use the seller profile and listing history for context. Ask about anything the listing does not answer.",
+    name: "Know the seller",
+    location: "Before payment",
     paper: "bg-sky/50",
     sticker: "bg-sky text-[#215172]",
     icon: Star,
@@ -243,9 +243,9 @@ const testimonials = [
   },
   {
     quote:
-      "The condition grading is spot on. 'Like new' really meant like new — I was genuinely surprised.",
-    name: "Ritika Shah",
-    location: "Pune",
+      "Confirm pickup or delivery, timing, packaging, and safety-critical product history before handover.",
+    name: "Plan the handover",
+    location: "Before delivery",
     paper: "bg-sage/45",
     sticker: "bg-sage text-[#2f5236]",
     icon: Sparkles,
@@ -266,14 +266,14 @@ export function Testimonials() {
     >
       <Container className="relative">
       <div className="mb-14 max-w-2xl">
-        <p className="text-sm font-bold uppercase tracking-widest text-accent">
-          Loved by moms
+        <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
+          Buy with context
         </p>
         <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
-          Straight from the group chat
+          A considered secondhand rhythm
         </h2>
       </div>
-      <div className="grid gap-9 md:grid-cols-3 md:gap-6">
+      <div className="grid gap-6 pb-8 pt-4 md:grid-cols-3">
         {testimonials.map((t, i) => (
           <Reveal key={t.name} delay={i * 0.1} className={t.lift}>
             <figure
@@ -299,11 +299,6 @@ export function Testimonials() {
                 &rdquo;
               </span>
 
-              <div className="flex gap-0.5 text-gold">
-                {Array.from({ length: 5 }).map((_, s) => (
-                  <Star key={s} className="h-4 w-4 fill-current" strokeWidth={0} />
-                ))}
-              </div>
               <blockquote className="relative mt-4 flex-1 font-display text-lg leading-relaxed text-foreground">
                 {t.quote}
               </blockquote>

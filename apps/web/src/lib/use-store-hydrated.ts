@@ -4,7 +4,12 @@ import { useSyncExternalStore } from "react";
 import { useAuthStore } from "./auth-store";
 import { useCartStore } from "./cart-store";
 
-type PersistedStore = Pick<typeof useAuthStore, "persist">;
+type PersistedStore = {
+  persist: {
+    hasHydrated: () => boolean;
+    onFinishHydration: (callback: () => void) => () => void;
+  };
+};
 
 function usePersistHydrated(store: PersistedStore) {
   return useSyncExternalStore(

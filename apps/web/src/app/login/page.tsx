@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type AuthResponse, type LoginInput } from "@nutrimom/shared";
 import { request, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { Container, Card, Input, Label } from "@/components/ui/primitives";
+import { Container, Card, Input, Label, PasswordInput } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -47,7 +47,7 @@ export default function LoginPage() {
           </div>
           <div>
             <Label htmlFor="login-password">Password</Label>
-            <Input id="login-password" type="password" autoComplete="current-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? "login-password-error" : undefined} {...register("password")} placeholder="••••••••" />
+            <PasswordInput id="login-password" autoComplete="current-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? "login-password-error" : undefined} {...register("password")} placeholder="••••••••" />
             {errors.password && <p id="login-password-error" className="mt-1.5 text-xs text-danger">{errors.password.message}</p>}
           </div>
           {error && <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}

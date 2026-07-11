@@ -10,10 +10,7 @@ import {
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { z } from 'zod';
-import {
-  verifyPaymentSchema,
-  type VerifyPaymentInput,
-} from '@nutrimom/shared';
+import { verifyPaymentSchema, type VerifyPaymentInput } from '@nutrimom/shared';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import {
   CurrentUser,

@@ -33,13 +33,12 @@ function makeService() {
       })[k],
   };
   const svc = new PaymentsService(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     prisma as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     orders as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     notifications as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     config as any,
   );
   return { svc, prisma, tx, orders, notifications };

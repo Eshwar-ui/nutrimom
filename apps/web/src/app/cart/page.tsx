@@ -5,7 +5,7 @@ import { Trash2, ShoppingBag, MapPin } from "lucide-react";
 import { formatPaise } from "@nutrimom/shared";
 import { useCartStore, cartSubtotal } from "@/lib/cart-store";
 import { Container, Card } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { useCartHydrated } from "@/lib/use-store-hydrated";
 
@@ -75,9 +75,7 @@ export default function CartPage() {
             <span className="font-medium text-foreground">Total</span>
             <span className="text-xl font-bold text-foreground">{formatPaise(subtotal)}</span>
           </div>
-          <Link href="/checkout" className="mt-6 block">
-            <Button size="lg" className="w-full">Checkout</Button>
-          </Link>
+          <Link href="/checkout" className={`${buttonVariants({ size: "lg" })} mt-6 w-full`}>Checkout</Link>
           <p className="mt-3 text-center text-xs text-muted-foreground">Final availability and price are checked at checkout.</p>
         </Card>
       </div>

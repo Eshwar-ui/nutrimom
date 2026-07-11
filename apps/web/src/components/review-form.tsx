@@ -34,7 +34,7 @@ export function ReviewForm({ orderId, listingId }: { orderId: string; listingId:
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-2 text-xs font-medium text-accent hover:underline"
+        className="mt-2 text-xs font-medium text-accent-text hover:underline"
       >
         Rate this seller
       </button>
@@ -70,7 +70,7 @@ export function ReviewForm({ orderId, listingId }: { orderId: string; listingId:
         className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus-visible:border-accent focus-visible:outline-none"
       />
       {submit.isError && (
-        <p className="mt-1 text-xs text-accent">
+        <p className="mt-1 text-xs text-danger">
           {submit.error instanceof ApiError ? submit.error.message : "Couldn't submit your review."}
         </p>
       )}

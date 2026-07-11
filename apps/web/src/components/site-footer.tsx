@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FullLogo } from "./logo";
 import { Container } from "./ui/primitives";
+import { cn } from "@/lib/utils";
 
 export function SiteFooter() {
   return (
@@ -12,6 +13,7 @@ export function SiteFooter() {
         <Container className="py-14 pb-52 md:pb-44">
           <div className="mx-auto grid max-w-4xl justify-items-center gap-10 text-center md:grid-cols-3">
           <FooterCol
+              className="order-2 md:order-1"
               title="Explore"
               links={[
                 { href: "/listings", label: "Shop all" },
@@ -20,7 +22,7 @@ export function SiteFooter() {
                 { href: "/sell", label: "Sell an item" },
               ]}
             />
-            <div className="flex flex-col items-center">
+            <div className="order-1 flex flex-col items-center md:order-2">
               <FullLogo className="max-w-[190px]" />
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
                 A trusted marketplace where mothers buy, sell, and donate gently
@@ -29,6 +31,7 @@ export function SiteFooter() {
             </div>
             
             <FooterCol
+              className="order-3"
               title="Your space"
               links={[
                 { href: "/account", label: "My account" },
@@ -59,12 +62,14 @@ export function SiteFooter() {
 function FooterCol({
   title,
   links,
+  className,
 }: {
   title: string;
   links: { href: string; label: string }[];
+  className?: string;
 }) {
   return (
-    <div className="text-center">
+    <div className={cn("text-center", className)}>
       <h4 className="mb-3 text-sm font-semibold text-foreground">{title}</h4>
       <ul className="space-y-2">
         {links.map((l) => (

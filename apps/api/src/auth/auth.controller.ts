@@ -15,9 +15,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('register')
-  register(
-    @Body(new ZodValidationPipe(registerSchema)) dto: RegisterInput,
-  ) {
+  register(@Body(new ZodValidationPipe(registerSchema)) dto: RegisterInput) {
     return this.auth.register(dto);
   }
 

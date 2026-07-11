@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Recycle,
   ShieldCheck,
   Truck,
   Tag,
@@ -12,7 +11,7 @@ import {
 import type { Category, Listing } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { Container } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Playful } from "@/components/ui/playful";
 import { Reveal } from "@/components/reveal";
 import { HeroWave } from "@/components/section-wave";
@@ -24,6 +23,8 @@ import {
 } from "@/components/home-sections";
 import { Newsletter } from "@/components/newsletter";
 import { JourneyLine } from "@/components/journey-line";
+import { DecorativeElement } from "@/components/decorative-element";
+import { cn } from "@/lib/utils";
 
 const chipTints = [
   "bg-blush/70 text-[#7a2447]",
@@ -93,16 +94,26 @@ export default async function HomePage() {
     <>
       {/* Hero — full image; pulled up so the transparent nav floats over it. */}
       <section className="relative -mt-16">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/nutrimom-playful-mama-banner-extended.png"
-          alt="Moms sharing preloved baby essentials"
-          className="block w-full"
-        />
-        <div className="absolute inset-0 hidden items-start pt-[max(80px,8vw)] lg:flex">
-          <Container>
-            <HeroCopy />
-          </Container>
+        <picture>
+          <source media="(min-width: 1024px)" srcSet="/images/nutrimom-playful-mama-banner-extended.png" />
+          <source media="(min-width: 768px)" srcSet="/hero-images/bg-tablet.png" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hero-images/bg-mobile.png"
+            alt="Moms sharing preloved baby essentials"
+            className="block w-full"
+          />
+        </picture>
+        {/* Soft top fade — background colour bleeding into the image so the
+            transparent nav has a legible, seamless backdrop. */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent" />
+        {/* Copy sits in each image's empty space — top on the tall mobile
+            crop, left column on tablet/desktop's wide crops. Desktop is
+            top-anchored (not centered) since the wide banner's empty
+            column runs the full height — centering pushed it below the
+            fold on tall/wide viewports. */}
+        <div className="absolute inset-0 mx-auto flex w-full max-w-7xl items-start px-5 pt-20 sm:px-8 sm:pt-24 md:items-center md:pt-0 lg:items-start lg:pl-24 lg:pr-10 lg:pt-[max(112px,11vw)]">
+          <HeroCopy />
         </div>
         {/* Wavy, shadowed base — turns the image's hard bottom into a soft edge. */}
         <DecorativeElement
@@ -114,12 +125,6 @@ export default async function HomePage() {
           className="bottom-16 left-[28%] hidden w-28 -rotate-12 opacity-65 xl:block"
         />
         <HeroWave />
-      </section>
-      {/* Copy sits below the full image on smaller screens */}
-      <section className="lg:hidden">
-        <Container className="py-10">
-          <HeroCopy />
-        </Container>
       </section>
 
       {/* Category tiles — plain shared cream, tucked up under the banner so the
@@ -179,7 +184,7 @@ export default async function HomePage() {
 
           <div className="mb-9 flex items-end justify-between">
             <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-accent">
+              <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
                 Fresh finds
               </p>
               <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
@@ -299,10 +304,8 @@ export default async function HomePage() {
               Free to list
             </span>
             <Playful>
-              <Link href="/sell">
-                <Button variant="gold" size="lg">
-                  Start selling <ArrowRight className="h-4 w-4" />
-                </Button>
+              <Link href="/sell" className={buttonVariants({ variant: "gold", size: "lg" })}>
+                Start selling <ArrowRight className="h-4 w-4" />
               </Link>
             </Playful>
           </div>
@@ -369,59 +372,38 @@ function CategoryTiles({
 
 function HeroCopy() {
   return (
-    <div className="max-w-xl">
-      <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-surface px-4 py-1.5 text-xs font-bold text-primary">
-        <Recycle className="h-3.5 w-3.5" />
-        Buy · Sell · Donate
-      </span>
-      <h1 className="mt-6 font-display text-[2.7rem] font-semibold leading-[1.02] tracking-tight text-foreground sm:text-6xl">
-        Loved before,{" "}
+    <div className="max-w-sm md:max-w-[19rem] lg:max-w-xl">
+      {/* Font sizes scale continuously with viewport width (clamp) within
+          each image's zone, instead of jumping between fixed steps. Zones
+          reset at md/lg because the tablet/desktop crops swap to a
+          differently-shaped empty column, not a smooth continuation. */}
+      <h1 className="mt-3 font-display text-[clamp(1.75rem,1.2rem_+_3.5vw,2.75rem)] font-semibold leading-[1.05] tracking-tight text-foreground sm:mt-6 md:text-[clamp(1.5rem,1rem_+_2vw,2rem)] lg:text-[clamp(2.25rem,1rem_+_2.5vw,3.75rem)]">
+        Loved before,
+        <br />
         <span className="ink-underline whitespace-nowrap">loved again</span>.
       </h1>
-      <p className="mt-6 max-w-md text-lg leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-[clamp(0.875rem,0.75rem_+_0.6vw,1.125rem)] leading-relaxed text-muted-foreground sm:mt-6 sm:max-w-md md:text-sm lg:text-lg">
         Give baby gear a joyful second life. Browse preloved strollers,
         clothes, toys and more from families nearby.
       </p>
-      <div className="mt-8 flex flex-wrap items-center gap-3">
+      <div className="mt-5 flex items-center gap-2 sm:mt-8 sm:gap-3">
         <Playful>
-          <Link href="/listings">
-            <Button size="lg">
-              Start shopping <ArrowRight className="h-4 w-4" />
-            </Button>
+          <Link href="/listings" className={cn(buttonVariants({ size: "md" }), "lg:h-14 lg:px-8 lg:text-base")}>
+            Start shopping <ArrowRight className="h-4 w-4" />
           </Link>
         </Playful>
         <Playful>
-          <Link href="/sell">
-            <Button size="lg" variant="outline">
-              <Tag className="h-4 w-4" /> Sell an item
-            </Button>
+          <Link href="/sell" className={cn(buttonVariants({ size: "md", variant: "outline" }), "lg:h-14 lg:px-8 lg:text-base")}>
+            <Tag className="h-4 w-4" /> Sell an item
           </Link>
         </Playful>
       </div>
-      <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm text-muted-foreground">
+      <dl className="mt-6 hidden flex-wrap gap-x-8 gap-y-3 text-sm text-muted-foreground sm:mt-10 sm:flex">
         <Trust icon={<Truck className="h-4 w-4 text-accent-text" />} label="Pickup and delivery options" />
         <Trust icon={<ShieldCheck className="h-4 w-4 text-accent-text" />} label="Seller profiles and reviews" />
         <Trust icon={<Sparkles className="h-4 w-4 text-accent-text" />} label="Condition graded listings" />
       </dl>
     </div>
-  );
-}
-
-function DecorativeElement({
-  src,
-  className,
-}: {
-  src: string;
-  className: string;
-}) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      aria-hidden="true"
-      src={src}
-      alt=""
-      className={`pointer-events-none absolute select-none ${className}`}
-    />
   );
 }
 

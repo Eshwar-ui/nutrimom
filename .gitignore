@@ -30,3 +30,7 @@ Thumbs.db
 
 # testing
 coverage/
+
+# local tooling / scratch
+.claude/
+tmp/

@@ -47,8 +47,7 @@ export class ListingsService {
     if (query.condition) where.condition = query.condition;
     if (query.delivery) where.deliveryOption = query.delivery;
     if (query.featured) where.isFeatured = true;
-    if (query.city)
-      where.city = { contains: query.city, mode: 'insensitive' };
+    if (query.city) where.city = { contains: query.city, mode: 'insensitive' };
     if (query.search)
       where.title = { contains: query.search, mode: 'insensitive' };
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
@@ -146,10 +145,18 @@ export class ListingsService {
     totalRevenueInPaise: number;
   }> {
     const [pending, approved, sold, rejected, revenue] = await Promise.all([
-      this.prisma.listing.count({ where: { sellerId: userId, status: 'PENDING' } }),
-      this.prisma.listing.count({ where: { sellerId: userId, status: 'APPROVED' } }),
-      this.prisma.listing.count({ where: { sellerId: userId, status: 'SOLD' } }),
-      this.prisma.listing.count({ where: { sellerId: userId, status: 'REJECTED' } }),
+      this.prisma.listing.count({
+        where: { sellerId: userId, status: 'PENDING' },
+      }),
+      this.prisma.listing.count({
+        where: { sellerId: userId, status: 'APPROVED' },
+      }),
+      this.prisma.listing.count({
+        where: { sellerId: userId, status: 'SOLD' },
+      }),
+      this.prisma.listing.count({
+        where: { sellerId: userId, status: 'REJECTED' },
+      }),
       this.prisma.orderItem.aggregate({
         where: {
           sellerId: userId,
@@ -262,7 +269,11 @@ export class ListingsService {
 
   async moderate(id: string, dto: ModerateListingInput): Promise<Listing> {
     const row = await this.prisma.listing
-      .update({ where: { id }, data: { status: dto.status }, include: withRefs })
+      .update({
+        where: { id },
+        data: { status: dto.status },
+        include: withRefs,
+      })
       .catch(() => {
         throw new NotFoundException('Listing not found');
       });

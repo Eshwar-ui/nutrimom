@@ -7,6 +7,7 @@ import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Container } from "@/components/ui/primitives";
 import { ListingForm } from "@/components/listing-form";
+import { PageSkeleton, StatePanel } from "@/components/ui/states";
 
 export default function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -19,15 +20,12 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
     enabled: ready,
   });
 
-  if (!ready) return <Container className="py-16" />;
-  if (isLoading) return <Container className="py-16 text-muted-foreground">Loading…</Container>;
+  if (!ready || isLoading) return <Container className="max-w-3xl py-16"><PageSkeleton rows={5} /></Container>;
 
   const listing = data?.find((l) => l.id === id);
   if (!listing)
     return (
-      <Container className="py-16 text-center">
-        <h1 className="font-display text-3xl font-semibold">Listing not found</h1>
-      </Container>
+      <Container className="max-w-3xl py-16"><StatePanel tone="error" title="Listing not found" description="This listing may have been removed or belongs to another seller." /></Container>
     );
 
   return (

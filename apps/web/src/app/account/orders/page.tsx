@@ -7,7 +7,6 @@ import { formatPaise, type Order } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Container, Card } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 

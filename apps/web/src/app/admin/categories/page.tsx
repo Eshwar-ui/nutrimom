@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { categoryInputSchema, type Category, type CategoryInput } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
+import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { Card, Input, Label } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 
@@ -49,7 +50,7 @@ export default function AdminCategoriesPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Categories</h1>
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Catalog structure</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Categories</h1></div>
         <Button size="sm" className="gap-1.5" onClick={() => { setEditing("new"); setError(null); }}>
           <Plus className="h-4 w-4" /> New category
         </Button>
@@ -66,9 +67,9 @@ export default function AdminCategoriesPage() {
       )}
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <PageSkeleton rows={4} />
       ) : !data || data.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">No categories yet.</Card>
+        <StatePanel title="No categories yet" description="Create the first category to organize marketplace listings." />
       ) : (
         <Card className="divide-y divide-border">
           {data.map((c) => (
@@ -122,14 +123,14 @@ function CategoryForm({
         <div>
           <Label>Name</Label>
           <Input {...register("name")} placeholder="Strollers" />
-          {errors.name && <p className="mt-1 text-xs text-accent">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
         </div>
         <div>
           <Label>Slug</Label>
           <Input {...register("slug")} placeholder="strollers" />
-          {errors.slug && <p className="mt-1 text-xs text-accent">{errors.slug.message}</p>}
+          {errors.slug && <p className="mt-1 text-xs text-danger">{errors.slug.message}</p>}
         </div>
-        {error && <p className="text-xs text-accent sm:col-span-2">{error}</p>}
+        {error && <p className="text-xs text-danger sm:col-span-2">{error}</p>}
         <div className="flex gap-2 sm:col-span-2">
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Saving…" : "Save"}

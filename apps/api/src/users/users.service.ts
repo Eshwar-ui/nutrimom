@@ -53,7 +53,8 @@ export class UsersService {
       role: u.role,
       city: u.city,
       isSellerVerified: u.isSellerVerified,
-      sellerVerificationRequestedAt: u.sellerVerificationRequestedAt?.toISOString() ?? null,
+      sellerVerificationRequestedAt:
+        u.sellerVerificationRequestedAt?.toISOString() ?? null,
       listingCount: u._count.listings,
       createdAt: u.createdAt.toISOString(),
     }));
@@ -91,7 +92,8 @@ export class UsersService {
       city: user.city,
       bio: user.bio,
       isSellerVerified: user.isSellerVerified,
-      sellerVerificationRequestedAt: user.sellerVerificationRequestedAt?.toISOString() ?? null,
+      sellerVerificationRequestedAt:
+        user.sellerVerificationRequestedAt?.toISOString() ?? null,
     };
   }
 }

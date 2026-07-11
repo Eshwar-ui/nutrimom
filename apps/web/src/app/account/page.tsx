@@ -120,7 +120,7 @@ export default function AccountPage() {
           <div>
             <Label htmlFor="profile-name">Name</Label>
             <Input id="profile-name" autoComplete="name" aria-invalid={!!errors.name} {...register("name")} />
-            {errors.name && <p className="mt-1 text-xs text-accent">{errors.name.message}</p>}
+            {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
           </div>
           <div>
             <Label htmlFor="profile-email">Email</Label>
@@ -129,7 +129,7 @@ export default function AccountPage() {
           <div>
             <Label htmlFor="profile-whatsapp">WhatsApp number</Label>
             <Input id="profile-whatsapp" autoComplete="tel" aria-invalid={!!errors.whatsappNumber} {...register("whatsappNumber")} placeholder="+91 98765 43210" />
-            {errors.whatsappNumber && <p className="mt-1 text-xs text-accent">{errors.whatsappNumber.message}</p>}
+            {errors.whatsappNumber && <p className="mt-1 text-xs text-danger">{errors.whatsappNumber.message}</p>}
           </div>
           <div>
             <Label htmlFor="profile-city">City</Label>

@@ -9,6 +9,7 @@ import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { ListingStatusBadge } from "@/components/listing-status-badge";
+import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 
 const filters = ["PENDING", "APPROVED", "SOLD", "ALL"] as const;
@@ -41,7 +42,7 @@ export default function AdminListingsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-3xl font-semibold text-foreground">Listings</h1>
+      <header className="mb-7"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Moderation</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Listings</h1><p className="mt-2 text-muted-foreground">Review item details and decide what goes live.</p></header>
 
       <div className="mb-6 flex gap-2">
         {filters.map((f) => (
@@ -54,9 +55,9 @@ export default function AdminListingsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <PageSkeleton rows={4} />
       ) : !data || data.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">Nothing here.</Card>
+        <StatePanel title="Nothing here" description="No listings match this moderation status." />
       ) : (
         <div className="space-y-3">
           {data.map((l) => (
