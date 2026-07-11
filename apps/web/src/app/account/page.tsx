@@ -3,25 +3,28 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BadgeCheck, ShieldCheck } from "lucide-react";
+import { BadgeCheck, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   profileUpdateSchema,
   type AuthUser,
   type ProfileUpdateInput,
 } from "@nutrimom/shared";
-import { authedRequest } from "@/lib/api";
+import { authedRequest, ApiError } from "@/lib/api";
+import { toast } from "@/lib/toast-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/states";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default function AccountPage() {
   const { ready, user } = useRequireAuth();
   const setUser = useAuthStore((s) => s.setUser);
-  const [saved, setSaved] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const requestVerification = useMutation({
@@ -29,7 +32,10 @@ export default function AccountPage() {
     onSuccess: (updated) => {
       setUser(updated);
       qc.invalidateQueries();
+      toast.success("Verification requested — an admin will review your account.");
     },
+    onError: (err) =>
+      toast.error(err instanceof ApiError ? err.message : "Couldn't send your request. Please try again."),
   });
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } =
@@ -46,10 +52,16 @@ export default function AccountPage() {
   if (!ready || !user) return <PageSkeleton rows={4} />;
 
   const onSubmit = async (dto: ProfileUpdateInput) => {
-    const updated = await authedRequest<AuthUser>("/users/me", { method: "PATCH", body: dto });
-    setUser(updated);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSubmitError(null);
+    try {
+      const updated = await authedRequest<AuthUser>("/users/me", { method: "PATCH", body: dto });
+      setUser(updated);
+      setShowSuccess(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiError ? err.message : "Couldn't save your profile. Please try again.",
+      );
+    }
   };
 
   return (
@@ -116,13 +128,36 @@ export default function AccountPage() {
             <Label htmlFor="profile-bio">Short bio</Label>
             <Textarea id="profile-bio" {...register("bio")} rows={3} placeholder="A line about you as a seller…" />
           </div>
+          {submitError && (
+            <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger sm:col-span-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving…" : saved ? "Saved ✓" : "Save profile"}
+              {isSubmitting ? "Saving…" : "Save profile"}
             </Button>
           </div>
         </form>
       </Card>
+
+      <Modal open={showSuccess} onClose={() => setShowSuccess(false)} labelledBy="profile-saved-title">
+        <div className="text-center">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/12 text-primary">
+            <CheckCircle2 className="h-7 w-7" />
+          </span>
+          <h2 id="profile-saved-title" className="mt-4 font-display text-2xl font-semibold text-foreground">
+            Profile saved
+          </h2>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            Your seller details are up to date. Buyers will see your latest info on your listings and shop page.
+          </p>
+          <Button className="mt-6 w-full" onClick={() => setShowSuccess(false)}>
+            Done
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

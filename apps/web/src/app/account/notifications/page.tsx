@@ -24,7 +24,7 @@ export default function NotificationsPage() {
   const { ready } = useRequireAuth();
   const qc = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => authedRequest<Notification[]>("/notifications"),
     enabled: ready,
@@ -53,6 +53,8 @@ export default function NotificationsPage() {
 
       {isLoading ? (
         <PageSkeleton rows={4} />
+      ) : isError ? (
+        <StatePanel tone="error" title="Couldn't load notifications" description="Something went wrong reaching the marketplace. Check your connection and try again." action={<Button variant="outline" onClick={() => refetch()}>Try again</Button>} />
       ) : !data || data.length === 0 ? (
         <StatePanel title="Nothing new" description="Updates about your orders, listings and seller activity will appear here." />
       ) : (
