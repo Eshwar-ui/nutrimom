@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import type { Notification } from "@nutrimom/shared";
 import { Logo, LogoEmblem } from "./logo";
+import { SearchOverlay } from "./search-overlay";
 import { Button, buttonVariants } from "./ui/button";
 import { useCartStore, cartCount } from "@/lib/cart-store";
 import { useAuthStore } from "@/lib/auth-store";
@@ -51,7 +51,6 @@ const ticker = [
 ];
 
 export function SiteHeader() {
-  const router = useRouter();
   const hydrated = useAuthHydrated();
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -118,14 +117,6 @@ export function SiteHeader() {
   useEffect(() => () => {
     if (accountCloseTimer.current) clearTimeout(accountCloseTimer.current);
   }, []);
-
-  const submitSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const q =
-      new FormData(e.currentTarget).get("search")?.toString().trim() ?? "";
-    setSearchOpen(false);
-    router.push(q ? `/listings?search=${encodeURIComponent(q)}` : "/listings");
-  };
 
   return (
     <div className="sticky top-0 z-40">
@@ -337,32 +328,7 @@ export function SiteHeader() {
         </div>
       </header>
 
-      {searchOpen && (
-        <div className="absolute inset-x-0 top-full border-b border-border bg-background/95 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)]">
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-5 py-3 sm:px-8">
-            <form onSubmit={submitSearch} role="search" className="relative flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                autoFocus
-                type="search"
-                name="search"
-                placeholder="Search preloved strollers, clothes, toys…"
-                aria-label="Search listings"
-                className="h-12 w-full rounded-full border-2 border-border bg-surface pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              />
-            </form>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Close search"
-              onClick={() => setSearchOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
+      <SearchOverlay open={searchOpen} onOpenChange={setSearchOpen} />
       <AnimatePresence>
         {menuOpen && (
           <motion.div
