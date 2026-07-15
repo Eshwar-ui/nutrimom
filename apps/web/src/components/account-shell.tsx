@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { User, Tag, Package, Heart, Bell, BadgeCheck, LogOut } from "lucide-react";
+import {
+  User,
+  Tag,
+  Package,
+  Heart,
+  Bell,
+  BadgeCheck,
+  Truck,
+  LogOut,
+} from "lucide-react";
 import type { Notification } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -15,6 +24,7 @@ import { cn } from "@/lib/utils";
 const nav = [
   { href: "/account", label: "Profile", icon: User, exact: true },
   { href: "/account/listings", label: "My listings", icon: Tag },
+  { href: "/account/sales", label: "Sales", icon: Truck },
   { href: "/account/membership", label: "Membership", icon: BadgeCheck },
   { href: "/account/orders", label: "My orders", icon: Package },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
