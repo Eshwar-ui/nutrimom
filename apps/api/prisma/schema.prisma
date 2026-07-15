@@ -46,8 +46,8 @@ enum OrderStatus {
 }
 
 enum PaymentMethod {
-  COD // Cash on Delivery — the active method
-  ONLINE // Razorpay — kept for a future rollout
+  COD // RETIRED — retained only so historical orders stay valid; not selectable
+  ONLINE // Online gateway (Razorpay/…) — the only method for new orders
 }
 
 enum NotificationType {
@@ -137,7 +137,7 @@ model Order {
   buyer             User        @relation(fields: [buyerId], references: [id])
   buyerId           String
   status            OrderStatus   @default(PENDING)
-  paymentMethod     PaymentMethod @default(COD)
+  paymentMethod     PaymentMethod @default(ONLINE)
   totalInPaise      Int
   shippingAddress   Json
   razorpayOrderId   String?       @unique

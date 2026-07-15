@@ -8,8 +8,6 @@ import { Prisma } from '@prisma/client';
 import type {
   CreateOrderInput,
   Order,
-  OrderStatus,
-  PaymentMethod,
   ShippingAddress,
   UpdateOrderStatusInput,
 } from '@nutrimom/shared';
@@ -34,20 +32,23 @@ export class OrdersService {
    * Create a PENDING order from a set of listings. Prices come from the DB and
    * availability is re-checked here — a cart can hold stale items.
    *
-   * Cash on Delivery (the active method) has no payment gate, so the order is
-   * confirmed immediately: the listings are reserved (marked SOLD) and the
-   * seller/admin are notified right away. For ONLINE orders that settlement is
-   * deferred until payment is verified (see PaymentsService.settle).
+   * Payment is ONLINE-only: the order stays PENDING and the listings stay
+   * APPROVED until payment is verified, at which point PaymentsService.settle
+   * marks each listing SOLD and notifies the seller + admin. Nothing is
+   * reserved or notified at placement time — an unpaid order reserves nothing.
    */
   async create(buyerId: string, input: CreateOrderInput): Promise<Order> {
     const ids = [...new Set(input.listingIds)];
-    const paymentMethod: PaymentMethod = input.paymentMethod;
 
     return this.prisma.$transaction(async (tx) => {
-      const listings = await tx.listing.findMany({ where: { id: { in: ids } } });
+      const listings = await tx.listing.findMany({
+        where: { id: { in: ids } },
+      });
 
       if (listings.length !== ids.length) {
-        throw new BadRequestException('One or more items are no longer available');
+        throw new BadRequestException(
+          'One or more items are no longer available',
+        );
       }
       for (const l of listings) {
         if (l.status !== 'APPROVED') {
@@ -67,7 +68,7 @@ export class OrdersService {
         data: {
           buyerId,
           status: 'PENDING',
-          paymentMethod,
+          paymentMethod: 'ONLINE',
           totalInPaise,
           shippingAddress: input.shippingAddress,
           items: {
@@ -82,34 +83,6 @@ export class OrdersService {
         },
         include: withItems,
       });
-
-      if (paymentMethod === 'COD') {
-        // Reserve each item and notify — the same side effects an online
-        // payment triggers on settlement, but at placement time.
-        for (const l of listings) {
-          const reserved = await tx.listing.updateMany({
-            where: { id: l.id, status: 'APPROVED' },
-            data: { status: 'SOLD' },
-          });
-          // Another cart won the item between the check above and now.
-          if (reserved.count === 0) {
-            throw new BadRequestException(`"${l.title}" was just taken`);
-          }
-          await this.notifications.create(
-            l.sellerId,
-            'ITEM_SOLD',
-            `Your item "${l.title}" has sold (Cash on Delivery). Please arrange handover.`,
-            l.id,
-            tx,
-          );
-        }
-        await this.notifications.notifyAdmins(
-          'ORDER_PLACED',
-          `New COD order ${order.id.slice(-6).toUpperCase()} — ${order.items.length} item(s).`,
-          null,
-          tx,
-        );
-      }
 
       return toOrderDto(order);
     });
@@ -136,10 +109,10 @@ export class OrdersService {
 
   /**
    * Buyer-initiated cancellation. Only from PENDING/PAID — once shipped, the
-   * item has already left the seller's hands. Any listing this order had
-   * reserved (marked SOLD — true for paid online orders and for every COD
-   * order) is released back to APPROVED so it can be bought again, and its
-   * seller is notified.
+   * item has already left the seller's hands. A PAID order reserved its
+   * listings (marked SOLD); those are released back to APPROVED so they can be
+   * bought again, and the seller is notified. A PENDING (unpaid) order reserved
+   * nothing, so there is nothing to release.
    */
   async cancel(buyerId: string, id: string): Promise<Order> {
     return this.prisma.$transaction(async (tx) => {

@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 import { BadRequestException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { RazorpayProvider } from './providers/razorpay.provider';
 
 const KEY_SECRET = 'secret';
 const WEBHOOK_SECRET = 'whsec';
@@ -32,14 +33,14 @@ function makeService() {
         RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET,
       })[k],
   };
+  // Real Razorpay adapter so the signature/webhook HMAC path is genuinely
+  // exercised through the gateway-agnostic PaymentProvider interface.
+  const provider = new RazorpayProvider(config as any);
   const svc = new PaymentsService(
     prisma as any,
-
     orders as any,
-
     notifications as any,
-
-    config as any,
+    provider,
   );
   return { svc, prisma, tx, orders, notifications };
 }

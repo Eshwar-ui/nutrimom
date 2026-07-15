@@ -363,13 +363,11 @@ export const shippingAddressSchema = z.object({
 export type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
 // The client sends only listing ids (each item is a single unit).
-// The server re-prices and re-checks availability.
+// The server re-prices and re-checks availability. Payment is ONLINE-only —
+// the method is not client-selectable (COD is retired).
 export const createOrderSchema = z.object({
   listingIds: z.array(z.string().min(1)).min(1).max(20),
   shippingAddress: shippingAddressSchema,
-  paymentMethod: z
-    .enum([PaymentMethod.COD, PaymentMethod.ONLINE])
-    .default(PaymentMethod.COD),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 

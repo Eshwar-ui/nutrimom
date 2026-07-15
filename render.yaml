@@ -51,12 +51,21 @@ services:
       - key: CORS_ORIGIN
         sync: false # your Vercel web URL(s), comma-separated, no trailing slash
         # e.g. https://nutrimom.vercel.app,https://web-sage-ten-z6ut2ocum8.vercel.app
+      - key: PAYMENT_PROVIDER
+        value: razorpay
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+      # Supabase Storage — listing photos. Service-role key is server-only.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: listing-images
       - key: ADMIN_EMAIL
         sync: false # optional — for the seeded admin login
       - key: ADMIN_PASSWORD

@@ -9,6 +9,7 @@ import { getCategories } from "@/lib/listings";
 import { authedRequest } from "@/lib/api";
 import { Card, Input, Label, Select, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
+import { ImageUploader } from "@/components/image-uploader";
 
 const rupees = (paise?: number | null) => (paise ? String(paise / 100) : "");
 
@@ -27,8 +28,8 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
     usageDuration: initial?.usageDuration ?? "",
     reasonForSelling: initial?.reasonForSelling ?? "",
     whatsappNumber: initial?.seller.whatsappNumber ?? "",
-    imagesText: initial?.images.join("\n") ?? "",
   });
+  const [images, setImages] = useState<string[]>(initial?.images ?? []);
   const [issues, setIssues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,7 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
       usageDuration: form.usageDuration || undefined,
       reasonForSelling: form.reasonForSelling || undefined,
       whatsappNumber: form.whatsappNumber || undefined,
-      images: form.imagesText.split("\n").map((value) => value.trim()).filter(Boolean),
+      images,
     };
     const parsed = listingInputSchema.safeParse(payload);
     if (!parsed.success) {
@@ -70,20 +71,14 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
     }
   };
 
-  const problem = (name: string) => issues[name] ? <p id={`${name}-error`} className="mt-1.5 text-xs text-danger">{issues[name]}</p> : null;
   const describedBy = (name: string, helper?: string) => [helper, issues[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined;
 
   return (
     <Card className="overflow-hidden">
       <fieldset className="grid gap-5 border-b border-border p-6 sm:p-8">
         <legend className="sr-only">Photos</legend>
-        <SectionHeading icon={Camera} title="Photos" description="Use clear, recent photos of the exact item from several angles." />
-        <div>
-          <Label htmlFor="imagesText">Photo URLs, one per line</Label>
-          <Textarea id="imagesText" value={form.imagesText} onChange={(event) => set("imagesText", event.target.value)} rows={4} aria-invalid={!!issues.images} aria-describedby={describedBy("images", "images-help")} placeholder="https://…" />
-          <p id="images-help" className="mt-1.5 text-xs text-muted-foreground">Add 1–10 image URLs. Genuine item photos build trust and sell faster.</p>
-          {problem("images")}
-        </div>
+        <SectionHeading icon={Camera} title="Photos" description="Add clear, recent photos of the exact item from several angles. Genuine photos build trust and sell faster." />
+        <ImageUploader initialImages={initial?.images} onChange={setImages} error={issues.images} />
       </fieldset>
 
       <fieldset className="grid gap-5 border-b border-border p-6 sm:grid-cols-2 sm:p-8">

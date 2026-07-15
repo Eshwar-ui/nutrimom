@@ -16,6 +16,7 @@ import type {
 } from '@nutrimom/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StorageService } from '../storage/storage.service';
 
 export const withRefs = {
   category: true,
@@ -39,6 +40,7 @@ export class ListingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly storage: StorageService,
   ) {}
 
   async browse(query: ListingQuery): Promise<Paginated<Listing>> {
@@ -230,7 +232,7 @@ export class ListingsService {
   }
 
   async remove(userId: string, id: string): Promise<{ id: string }> {
-    await this.owned(userId, id);
+    const existing = await this.owned(userId, id);
     try {
       await this.prisma.listing.delete({ where: { id } });
     } catch {
@@ -238,6 +240,8 @@ export class ListingsService {
         'This listing is part of an order and cannot be deleted',
       );
     }
+    // Listing is gone from the DB; free its images best-effort (never throws).
+    await this.storage.removeByUrls(existing.images);
     return { id };
   }
 

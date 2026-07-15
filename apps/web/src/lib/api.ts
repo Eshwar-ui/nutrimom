@@ -94,3 +94,56 @@ export async function authedRequest<T>(
     return request<T>(path, { ...opts, token: refreshed.accessToken });
   }
 }
+
+/**
+ * Authenticated multipart upload of a single file, with the same one-shot
+ * refresh-and-retry as authedRequest. Content-Type is left unset so the browser
+ * writes the multipart boundary itself.
+ */
+export async function authedUpload<T>(path: string, file: File): Promise<T> {
+  const send = async (token?: string): Promise<T> => {
+    const form = new FormData();
+    form.append("file", file);
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}${path}`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+    } catch (err) {
+      throw new ApiError(0, `Cannot reach API at ${API_URL}.`, err);
+    }
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!res.ok) {
+      const message =
+        (data && typeof data === "object" && "message" in data
+          ? String((data as { message: unknown }).message)
+          : res.statusText) || "Upload failed";
+      throw new ApiError(res.status, message, data);
+    }
+    return data as T;
+  };
+
+  const store = useAuthStore.getState();
+  try {
+    return await send(store.tokens?.accessToken);
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 401 || !store.tokens) {
+      throw err;
+    }
+    let refreshed: AuthTokens;
+    try {
+      refreshed = await request<AuthTokens>("/auth/refresh", {
+        method: "POST",
+        body: { refreshToken: store.tokens.refreshToken },
+      });
+    } catch {
+      store.logout();
+      throw err;
+    }
+    useAuthStore.getState().setTokens(refreshed);
+    return send(refreshed.accessToken);
+  }
+}

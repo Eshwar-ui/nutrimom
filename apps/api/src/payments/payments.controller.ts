@@ -26,16 +26,16 @@ type CreateOrderBody = z.infer<typeof createOrderBodySchema>;
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
 
-  @Post('razorpay/order')
+  @Post('order')
   @UseGuards(JwtAuthGuard)
   createOrder(
     @CurrentUser() user: RequestUser,
     @Body(new ZodValidationPipe(createOrderBodySchema)) dto: CreateOrderBody,
   ) {
-    return this.payments.createRazorpayOrder(user.id, dto.orderId);
+    return this.payments.createGatewayOrder(user.id, dto.orderId);
   }
 
-  @Post('razorpay/verify')
+  @Post('verify')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   verify(
