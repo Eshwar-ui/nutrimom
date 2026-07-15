@@ -11,6 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
+import { SellerBillingModule } from './seller-billing/seller-billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AppController } from './app.controller';
@@ -29,6 +30,7 @@ import { AppService } from './app.service';
     WishlistModule,
     OrdersModule,
     PaymentsModule,
+    SellerBillingModule,
     NotificationsModule,
     ReviewsModule,
   ],

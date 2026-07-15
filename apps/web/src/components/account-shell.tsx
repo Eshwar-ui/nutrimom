@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 const nav = [
   { href: "/account", label: "Profile", icon: User, exact: true },
   { href: "/account/listings", label: "My listings", icon: Tag },
+  { href: "/account/membership", label: "Membership", icon: BadgeCheck },
   { href: "/account/orders", label: "My orders", icon: Package },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
   { href: "/account/notifications", label: "Notifications", icon: Bell },

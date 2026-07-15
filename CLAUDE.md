@@ -10,7 +10,22 @@
 
 ## Planned Features (roadmap — not yet built)
 
-### 1. Seller Monetization (NEW — no code exists yet)
+### 1. Seller Monetization ✅ IMPLEMENTED (2026-07-15)
+
+> Data model: `SellerPayment` (REGISTRATION|MEMBERSHIP, PENDING→PAID) + `SellerMembership`
+> (plan, startsAt, expiresAt) + `User.registrationPaidAt`. Prices are server-authoritative in
+> shared (`REGISTRATION_FEE_PAISE`, `MEMBERSHIP_PLANS`). Flow reuses the `PaymentProvider`
+> abstraction from Phase 2. API: `apps/api/src/seller-billing/*` — `GET /seller/billing/status`,
+> `POST /seller/billing/registration|membership|verify`; the gateway webhook (`/payments/webhook`)
+> settles both orders and seller payments. **Gate:** `ListingsService.assertCanList` blocks
+> `create` server-side when there is no active membership window (verified live: 403). Registration
+> must precede membership (400 otherwise). Membership purchases stack onto the current expiry.
+> Web: `/account/membership` (register + plan cards + buy), `/sell` is gated, billing helper in
+> `lib/seller-billing.ts`. Seeded sellers get registration + a YEARLY window so the demo isn't gated.
+> **Prepaid passes now; auto-renew (UPI AutoPay/e-NACH) is a later fast-follow.** Needs real Razorpay
+> keys for live payment; all non-payment logic verified live.
+
+Original spec (for reference):
 
 **One-time seller registration fee**
 - ₹100, one-time, required to verify a seller account and activate marketplace access.
@@ -133,7 +148,7 @@ first, polish after.
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
 2. ~~**Online payments + remove COD** (#1)~~ ✅ **DONE** — provider-agnostic, online-only.
-3. **Seller registration fee + membership gating** (roadmap #1) — the monetization core; blocks listing creation. ⬅ NEXT
-4. **Shipping label flow** (roadmap #4).
+3. ~~**Seller registration fee + membership gating** (roadmap #1)~~ ✅ **DONE** — see below.
+4. **Shipping label flow** (roadmap #4). ⬅ NEXT
 5. **Latest Listings homepage section** (roadmap #3) — small.
 6. **Cleanup:** rewrite README (#4), delete `.firebaserc` (#5), add reservation sweeper or drop reservations (#6), fill real legal copy (#7).

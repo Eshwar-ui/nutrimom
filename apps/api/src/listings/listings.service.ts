@@ -177,6 +177,7 @@ export class ListingsService {
   }
 
   async create(userId: string, input: ListingInput): Promise<Listing> {
+    await this.assertCanList(userId);
     await this.assertCategory(input.categoryId);
     // A seller's contact travels with their profile; capture it on first sell.
     if (input.whatsappNumber) {
@@ -310,6 +311,20 @@ export class ListingsService {
     if (!row) throw new NotFoundException('Listing not found');
     if (row.sellerId !== userId) throw new ForbiddenException();
     return row;
+  }
+
+  // Monetization gate: a seller may create a listing only while holding an
+  // active membership window. Enforced here (server-side), not just in the UI.
+  private async assertCanList(userId: string) {
+    const active = await this.prisma.sellerMembership.findFirst({
+      where: { userId, expiresAt: { gt: new Date() } },
+      select: { id: true },
+    });
+    if (!active) {
+      throw new ForbiddenException(
+        'An active membership is required to list items. Please subscribe to a plan.',
+      );
+    }
   }
 
   private async assertCategory(categoryId: string) {

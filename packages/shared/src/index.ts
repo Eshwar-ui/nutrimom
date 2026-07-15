@@ -66,6 +66,86 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
   ONLINE: "Online payment",
 };
 
+/* ------------------------------------------------------------------ */
+/* Seller monetization — registration fee + membership plans           */
+/* ------------------------------------------------------------------ */
+
+// One-time seller registration fee (paise). Server-authoritative.
+export const REGISTRATION_FEE_PAISE = 10000; // ₹100
+
+export const MembershipPlan = {
+  MONTHLY: "MONTHLY",
+  QUARTERLY: "QUARTERLY",
+  HALF_YEARLY: "HALF_YEARLY",
+  YEARLY: "YEARLY",
+} as const;
+export type MembershipPlan =
+  (typeof MembershipPlan)[keyof typeof MembershipPlan];
+
+// Server-authoritative plan catalogue — price + duration + label. The client
+// only ever sends a plan key; amounts are never trusted from the client.
+export interface MembershipPlanInfo {
+  plan: MembershipPlan;
+  label: string;
+  priceInPaise: number;
+  durationDays: number;
+  bestValue?: boolean;
+}
+
+export const MEMBERSHIP_PLANS: Record<MembershipPlan, MembershipPlanInfo> = {
+  MONTHLY: { plan: "MONTHLY", label: "Monthly", priceInPaise: 9900, durationDays: 30 },
+  QUARTERLY: { plan: "QUARTERLY", label: "Quarterly", priceInPaise: 19900, durationDays: 90 },
+  HALF_YEARLY: { plan: "HALF_YEARLY", label: "Half-Yearly", priceInPaise: 49900, durationDays: 180 },
+  YEARLY: { plan: "YEARLY", label: "Yearly", priceInPaise: 99900, durationDays: 365, bestValue: true },
+};
+
+// Stable display order for the plans UI.
+export const MEMBERSHIP_PLAN_ORDER: MembershipPlan[] = [
+  "MONTHLY",
+  "QUARTERLY",
+  "HALF_YEARLY",
+  "YEARLY",
+];
+
+export const membershipCheckoutSchema = z.object({
+  plan: z.enum([
+    MembershipPlan.MONTHLY,
+    MembershipPlan.QUARTERLY,
+    MembershipPlan.HALF_YEARLY,
+    MembershipPlan.YEARLY,
+  ]),
+});
+export type MembershipCheckoutInput = z.infer<typeof membershipCheckoutSchema>;
+
+// Response for any seller-billing checkout (registration or membership). The
+// gateway ids are provider-neutral; keyId is the public key the browser needs.
+export interface SellerCheckoutResponse {
+  sellerPaymentId: string;
+  razorpayOrderId: string;
+  amountInPaise: number;
+  currency: string;
+  keyId: string;
+}
+
+export const verifySellerPaymentSchema = z.object({
+  sellerPaymentId: z.string().min(1),
+  razorpayOrderId: z.string().min(1),
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+});
+export type VerifySellerPaymentInput = z.infer<
+  typeof verifySellerPaymentSchema
+>;
+
+// Seller's current billing state — drives the Sell-page gate and account UI.
+export interface SellerBillingStatus {
+  registrationPaid: boolean;
+  registrationFeePaise: number;
+  activePlan: MembershipPlan | null;
+  membershipExpiresAt: string | null; // ISO, null if none/expired
+  canList: boolean; // registrationPaid && active membership
+}
+
 /**
  * A COD order is confirmed the moment it's placed (no payment gate), so a
  * PENDING COD order reads as "placed" rather than "awaiting payment".

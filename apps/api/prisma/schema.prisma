@@ -50,6 +50,24 @@ enum PaymentMethod {
   ONLINE // Online gateway (Razorpay/…) — the only method for new orders
 }
 
+enum SellerPaymentType {
+  REGISTRATION // one-time ₹100 account activation
+  MEMBERSHIP // a prepaid plan purchase
+}
+
+enum SellerPaymentStatus {
+  PENDING // gateway order created, awaiting payment
+  PAID // verified/settled
+  FAILED
+}
+
+enum MembershipPlan {
+  MONTHLY // 30 days
+  QUARTERLY // 90 days
+  HALF_YEARLY // 180 days
+  YEARLY // 365 days
+}
+
 enum NotificationType {
   LISTING_APPROVED
   LISTING_REJECTED
@@ -70,12 +88,17 @@ model User {
   bio                           String?
   isSellerVerified              Boolean        @default(false)
   sellerVerificationRequestedAt DateTime?
+  // Monetization: ₹100 one-time registration fee gate (paid online). Must be
+  // set before a seller can buy a membership plan or create listings.
+  registrationPaidAt            DateTime?
   listings                      Listing[]
   orders                        Order[]
   wishlist                      WishlistItem[]
   notifications                 Notification[]
   reviewsWritten                Review[]       @relation("ReviewsWritten")
   reviewsReceived               Review[]       @relation("ReviewsReceived")
+  sellerPayments                SellerPayment[]
+  memberships                   SellerMembership[]
   createdAt                     DateTime       @default(now())
 }
 
@@ -197,4 +220,38 @@ model Review {
   @@unique([orderId, listingId])
   @@index([sellerId])
   @@index([listingId])
+}
+
+// A seller's payment for registration or a membership plan (online only). The
+// gateway ids mirror Order's; on settle a MEMBERSHIP payment creates/extends a
+// SellerMembership window.
+model SellerPayment {
+  id               String              @id @default(cuid())
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  type             SellerPaymentType
+  plan             MembershipPlan? // set only when type = MEMBERSHIP
+  amountInPaise    Int // authoritative amount from the server
+  status           SellerPaymentStatus @default(PENDING)
+  gatewayOrderId   String?             @unique
+  gatewayPaymentId String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([userId])
+}
+
+// A prepaid access window. A seller may list only while some window has
+// expiresAt in the future. Buying while active stacks onto the current expiry.
+model SellerMembership {
+  id        String         @id @default(cuid())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  plan      MembershipPlan
+  startsAt  DateTime       @default(now())
+  expiresAt DateTime
+  createdAt DateTime       @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }

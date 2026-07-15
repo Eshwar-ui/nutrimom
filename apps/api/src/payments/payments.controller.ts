@@ -18,13 +18,17 @@ import {
 } from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { PaymentsService } from './payments.service';
+import { SellerBillingService } from '../seller-billing/seller-billing.service';
 
 const createOrderBodySchema = z.object({ orderId: z.string().min(1) });
 type CreateOrderBody = z.infer<typeof createOrderBodySchema>;
 
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly payments: PaymentsService) {}
+  constructor(
+    private readonly payments: PaymentsService,
+    private readonly sellerBilling: SellerBillingService,
+  ) {}
 
   @Post('order')
   @UseGuards(JwtAuthGuard)
@@ -45,13 +49,18 @@ export class PaymentsController {
     return this.payments.verify(user.id, dto);
   }
 
-  // Public — authenticity is proven by the HMAC signature, not a JWT.
+  // Public — authenticity is proven by the HMAC signature, not a JWT. One
+  // gateway webhook URL settles whichever domain the event belongs to: an
+  // order payment or a seller registration/membership payment (each no-ops if
+  // the gateway order id isn't theirs).
   @Post('webhook')
   @HttpCode(200)
-  webhook(
+  async webhook(
     @Req() req: RawBodyRequest<Request>,
     @Headers('x-razorpay-signature') signature: string,
   ) {
-    return this.payments.handleWebhook(req.rawBody!, signature);
+    await this.payments.handleWebhook(req.rawBody!, signature);
+    await this.sellerBilling.handleWebhook(req.rawBody!, signature);
+    return { received: true };
   }
 }

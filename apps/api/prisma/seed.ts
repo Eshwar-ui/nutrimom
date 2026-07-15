@@ -409,6 +409,8 @@ async function main() {
         whatsappNumber: s.whatsappNumber,
         isSellerVerified: s.isSellerVerified,
         bio: s.bio,
+        // Seeded sellers are treated as registered so the demo isn't gated.
+        registrationPaidAt: new Date(),
       },
       create: {
         email: s.email,
@@ -418,9 +420,25 @@ async function main() {
         whatsappNumber: s.whatsappNumber,
         isSellerVerified: s.isSellerVerified,
         bio: s.bio,
+        registrationPaidAt: new Date(),
       },
     });
     sellerByEmail.set(s.email, row.id);
+
+    // Grant an active YEARLY membership if they don't already have a live one,
+    // so seeded sellers can list without paying (idempotent across re-seeds).
+    const active = await prisma.sellerMembership.findFirst({
+      where: { userId: row.id, expiresAt: { gt: new Date() } },
+    });
+    if (!active) {
+      await prisma.sellerMembership.create({
+        data: {
+          userId: row.id,
+          plan: "YEARLY",
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
   }
 
   // Admin
