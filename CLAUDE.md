@@ -58,7 +58,16 @@ Original spec (for reference):
   the homepage.
 - Admin reviews and approves/rejects all listings (approval flow already exists).
 
-### 4. Shipping / Fulfilment (NEW — no code exists yet)
+### 4. Shipping / Fulfilment 🟡 FOUNDATION DONE (2026-07-15)
+
+> Vendor-agnostic `ShippingProvider` interface (mirrors payments) + built-in `ManualLabelProvider`
+> that renders a printable, marketplace-branded address label (no vendor; browser → PDF). `Shipment`
+> model is **per (order, seller)** since an order can span sellers. API `apps/api/src/shipping/*`:
+> `GET /seller/sales`, `POST /seller/sales/:orderId/label`, `POST /seller/sales/:orderId/ship`;
+> selected by env `SHIPPING_PROVIDER` (only `manual` today). Marking all sellers shipped advances the
+> order to SHIPPED; re-generating a label never downgrades a shipped shipment. Verified live.
+> **Remaining:** a `ShiprocketProvider` adapter for real scannable AWBs (needs their Shiprocket keys)
+> + seller fulfilment UI. Original spec:
 
 Order → seller ships, using a **marketplace-generated shipping label**:
 1. Seller prepares the product for shipment.
@@ -123,14 +132,12 @@ Supabase Postgres (dev `apps/api/.env`). Note: `node dist/main` in `start:prod` 
 nests output at `dist/src/main.js` because `prisma/seed.ts` is compiled; Render's start command
 likely needs `node dist/src/main` (pre-existing, separate from this feature).
 
-**#4 — README describes the wrong product & the brand name is inconsistent.**
-[README.md](README.md#L1) says "maternal-nutrition storefront"; it's a preloved marketplace.
-Names in use: `nutrimom` (repo/README), `The Nurture Moms` (schema/UI), `nurturemom-ecommerce`
-([.firebaserc](.firebaserc)). Pick one; rewrite README to match reality.
+**#4 — README. ✅ DONE (2026-07-15).** [README.md](README.md) rewritten to describe the real
+product (preloved C2C marketplace, online-only payments, seller membership, Supabase storage).
 
-**#5 — Orphaned infra.** [.firebaserc](.firebaserc) points at `nurturemom-ecommerce` but there is
-**no `firebase.json`** — nothing deploys to Firebase. Delete `.firebaserc`. Live deploy is
-Render (API+PG) + Vercel (web).
+**#5 — Orphaned infra. ✅ DONE (2026-07-15).** `.firebaserc` deleted. Live deploy is Render (API+PG)
++ Vercel (web). Also fixed: `start:prod`/Render `node dist/main` — `tsconfig.build.json` now excludes
+`prisma/` so build output lands at `dist/main.js` (was nesting at `dist/src/main.js`).
 
 **#6 — Marketplace built complete before first sale.** Seller verification, reservation holds,
 notifications, wishlist, seller reviews are all wired but unvalidated. Note: **reservation holds set
@@ -149,6 +156,10 @@ first, polish after.
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
 2. ~~**Online payments + remove COD** (#1)~~ ✅ **DONE** — provider-agnostic, online-only.
 3. ~~**Seller registration fee + membership gating** (roadmap #1)~~ ✅ **DONE** — see below.
-4. **Shipping label flow** (roadmap #4). ⬅ NEXT
-5. **Latest Listings homepage section** (roadmap #3) — small.
-6. **Cleanup:** rewrite README (#4), delete `.firebaserc` (#5), add reservation sweeper or drop reservations (#6), fill real legal copy (#7).
+4. **Shipping label flow** (roadmap #4) — 🟡 **FOUNDATION DONE** (vendor-agnostic `ShippingProvider` +
+   built-in manual printable label + `Shipment` model + seller endpoints, verified live). **Remaining:**
+   Shiprocket adapter (needs their keys) + seller fulfilment UI (`/account/sales`).
+5. ~~**Latest Listings homepage section** (roadmap #3)~~ ✅ **DONE** — home page fetches newest approved.
+6. **Cleanup:** ~~rewrite README (#4)~~ ✅ · ~~delete `.firebaserc` (#5)~~ ✅ · ~~fix `node dist/main` (start:prod)~~ ✅
+   (tsconfig.build excludes `prisma` → output is `dist/main.js`) · reservation sweeper or drop (#6) ⬅ TODO ·
+   real legal copy (#7) ⬅ TODO (needs the operator's business/grievance/contact details).

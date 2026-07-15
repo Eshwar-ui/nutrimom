@@ -72,16 +72,17 @@ const steps = [
 
 export default async function HomePage() {
   let featured: Listing[] = [];
+  let latest: Listing[] = [];
   let categories: Category[] = [];
   try {
-    const [f, cats] = await Promise.all([
+    const [f, latestRes, cats] = await Promise.all([
       getListings({ featured: true, pageSize: 8 }),
+      getListings({ pageSize: 8 }), // newest approved first (default sort)
       getCategories(),
     ]);
     featured = f.items;
-    if (featured.length === 0) {
-      featured = (await getListings({ pageSize: 8 })).items;
-    }
+    latest = latestRes.items;
+    if (featured.length === 0) featured = latest;
     categories = cats;
   } catch {
     // API/DB not running yet — render the shell.
@@ -231,6 +232,39 @@ export default async function HomePage() {
           )}
         </Container>
       </section>
+
+      {/* Latest listings — every newly approved item shows up here */}
+      {latest.length > 0 && (
+        <section className="relative">
+          <Container className="py-14">
+            <div className="mb-9 flex items-end justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
+                  Latest listings
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
+                  New this week
+                </h2>
+              </div>
+              <Playful className="hidden sm:inline-flex">
+                <Link
+                  href="/listings"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background"
+                >
+                  See everything <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Playful>
+            </div>
+            <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+              {latest.map((l, i) => (
+                <Reveal key={l.id} delay={(i % 4) * 0.06}>
+                  <ListingCard listing={l} />
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* How it works */}
       <section className="relative overflow-hidden">

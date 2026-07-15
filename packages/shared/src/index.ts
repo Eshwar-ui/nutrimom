@@ -146,6 +146,49 @@ export interface SellerBillingStatus {
   canList: boolean; // registrationPaid && active membership
 }
 
+/* ------------------------------------------------------------------ */
+/* Shipping / fulfilment                                               */
+/* ------------------------------------------------------------------ */
+
+export const ShipmentStatus = {
+  PENDING: "PENDING",
+  LABEL_GENERATED: "LABEL_GENERATED",
+  SHIPPED: "SHIPPED",
+  DELIVERED: "DELIVERED",
+} as const;
+export type ShipmentStatus =
+  (typeof ShipmentStatus)[keyof typeof ShipmentStatus];
+
+export const shipmentStatusLabels: Record<ShipmentStatus, string> = {
+  PENDING: "Awaiting label",
+  LABEL_GENERATED: "Label ready",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+};
+
+// Response of generating a label. labelHtml (manual provider) or labelUrl
+// (courier provider) — the client opens whichever is present.
+export interface GenerateLabelResponse {
+  shipmentId: string;
+  status: ShipmentStatus;
+  courier: string;
+  trackingId: string | null;
+  labelUrl: string | null;
+  labelHtml: string | null;
+}
+
+// One row in a seller's "sales to fulfil" list.
+export interface SellerSale {
+  orderId: string;
+  createdAt: string;
+  shipmentStatus: ShipmentStatus;
+  courier: string | null;
+  trackingId: string | null;
+  shipToCity: string;
+  shipToState: string;
+  items: { title: string; unitPriceInPaise: number; image: string | null }[];
+}
+
 /**
  * A COD order is confirmed the moment it's placed (no payment gate), so a
  * PENDING COD order reads as "placed" rather than "awaiting payment".

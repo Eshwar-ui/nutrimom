@@ -53,6 +53,8 @@ services:
         # e.g. https://nutrimom.vercel.app,https://web-sage-ten-z6ut2ocum8.vercel.app
       - key: PAYMENT_PROVIDER
         value: razorpay
+      - key: SHIPPING_PROVIDER
+        value: manual
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET

@@ -13,6 +13,9 @@ const envSchema = z.object({
 
   // Active payment gateway. Extend the enum + add an adapter to support more.
   PAYMENT_PROVIDER: z.enum(['razorpay']).default('razorpay'),
+  // Shipping label provider. 'manual' = built-in printable label (no vendor);
+  // add 'shiprocket' etc. with an adapter for real courier AWBs.
+  SHIPPING_PROVIDER: z.enum(['manual']).default('manual'),
   RAZORPAY_KEY_ID: z.string().min(1),
   RAZORPAY_KEY_SECRET: z.string().min(1),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1),

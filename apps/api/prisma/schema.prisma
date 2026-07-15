@@ -68,6 +68,13 @@ enum MembershipPlan {
   YEARLY // 365 days
 }
 
+enum ShipmentStatus {
+  PENDING // order paid, seller has not generated a label yet
+  LABEL_GENERATED // label created, ready to print + hand over
+  SHIPPED // handed to the courier
+  DELIVERED
+}
+
 enum NotificationType {
   LISTING_APPROVED
   LISTING_REJECTED
@@ -167,6 +174,7 @@ model Order {
   razorpayPaymentId String?
   items             OrderItem[]
   reviews           Review[]
+  shipments         Shipment[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -254,4 +262,27 @@ model SellerMembership {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// One seller's shippable portion of an order (an order may span sellers). The
+// seller generates a marketplace label, prints it, and marks it shipped. For a
+// courier provider (Shiprocket/…) labelUrl + trackingId hold the AWB; for the
+// built-in manual provider the label is rendered on demand and labelGeneratedAt
+// records that it was produced.
+model Shipment {
+  id               String         @id @default(cuid())
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String
+  sellerId         String
+  status           ShipmentStatus @default(PENDING)
+  courier          String?
+  trackingId       String?
+  labelUrl         String?
+  labelGeneratedAt DateTime?
+  shippedAt        DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([orderId, sellerId])
+  @@index([sellerId])
 }

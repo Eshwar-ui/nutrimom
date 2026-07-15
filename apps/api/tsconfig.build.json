@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  // Exclude prisma/ (seed.ts runs via ts-node, never the app build). Compiling
+  // it shifts rootDir up and nests output at dist/src/main.js, which breaks
+  // `node dist/main` (start:prod + Render). Excluded → output is dist/main.js.
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
 }
