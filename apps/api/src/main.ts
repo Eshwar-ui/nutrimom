@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
@@ -24,6 +25,6 @@ async function bootstrap() {
 
   const port = config.get('PORT', { infer: true });
   await app.listen(port);
-  console.log(`nutrimom-api listening on http://localhost:${port}`);
+  Logger.log(`nutrimom-api listening on http://localhost:${port}`, 'Bootstrap');
 }
-bootstrap();
+void bootstrap();

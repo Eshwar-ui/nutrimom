@@ -47,10 +47,36 @@ Only thing you must edit for real payments: add your **Razorpay TEST keys**
 docker compose up -d                      # start Postgres (needs Docker running)
 
 cd apps/api
-pnpm prisma migrate dev --name init       # create tables
+pnpm prisma migrate deploy                # apply committed migrations (prisma/migrations)
 pnpm prisma db seed                       # categories + products + admin user
 cd ../..
 ```
+
+**Migrations.** Schema changes go through Prisma Migrate now — never `db push`:
+
+```bash
+cd apps/api
+pnpm prisma migrate dev --name <change-name>   # writes SQL to prisma/migrations + applies
+```
+
+The baseline migration `0_init` captures the schema as of 2026-07-22. A database
+that was created **before** migrations existed (via `db push`) already has all the
+tables, so `migrate deploy` fails once with **P3005** ("database schema is not
+empty"). Fix is a one-time baseline resolve against that database:
+
+```bash
+cd apps/api && DATABASE_URL="<that db url>" DIRECT_URL="<that db url>" pnpm prisma migrate resolve --applied 0_init
+```
+
+Only resolve if the database actually matches `0_init`. Check first with
+`pnpm prisma migrate diff --from-url "<that db url>" --to-schema-datamodel prisma/schema.prisma`
+— if it reports differences (e.g. the DB predates the Shipment/SellerPayment
+tables), run `DATABASE_URL=... pnpm prisma db push` once to sync it, **then**
+resolve. Never resolve a migration the database doesn't really contain.
+
+This applies to the Render production DB on the first deploy after this change —
+run the resolve with the Render connection string, then redeploy. Empty/new
+databases need nothing: `migrate deploy` applies `0_init` cleanly.
 
 Seeded admin account:
 - **Email:** `admin@nutrimom.local`

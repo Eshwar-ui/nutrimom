@@ -12,7 +12,7 @@ import {
   type Paginated,
 } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
-import { Container, Input, Select } from "@/components/ui/primitives";
+import { Container, Input } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing-card";
 import { ListingsSort } from "@/components/listings-sort";

@@ -40,12 +40,11 @@ export function CustomSelect({
   }, [open]);
 
   // Highlight the current selection whenever the menu opens.
-  useEffect(() => {
-    if (open) {
-      const i = options.indexOf(value);
-      setActive(i >= 0 ? i : 0);
-    }
-  }, [open, value, options]);
+  const openMenu = () => {
+    const i = options.indexOf(value);
+    setActive(i >= 0 ? i : 0);
+    setOpen(true);
+  };
 
   const choose = (v: string) => {
     onChange(v);
@@ -59,7 +58,7 @@ export function CustomSelect({
     }
     if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
-      setOpen(true);
+      openMenu();
       return;
     }
     if (open) {
@@ -84,7 +83,7 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-invalid={invalid || undefined}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={onKeyDown}
         className={cn(
           "flex h-11 w-full items-center justify-between gap-2 rounded-xl border bg-surface px-4 text-sm transition-colors focus-visible:border-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",

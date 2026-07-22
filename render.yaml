@@ -18,7 +18,7 @@ services:
     region: singapore # must match the database region for private networking
     branch: master
     autoDeploy: true
-    healthCheckPath: /
+    healthCheckPath: /health
     buildCommand: >-
       corepack enable &&
       pnpm install --frozen-lockfile &&
@@ -27,6 +27,8 @@ services:
       pnpm --filter api build
     # migrate deploy is idempotent (no-op when there are no pending migrations),
     # so running it on start is safe on the free plan (no preDeploy hook there).
+    # NOTE: if the database already has tables from a pre-migrations `db push`
+    # deploy, migrate deploy fails once with P3005 — see RUNBOOK "Migrations".
     startCommand: >-
       pnpm --filter api exec prisma migrate deploy &&
       pnpm --filter api start:prod

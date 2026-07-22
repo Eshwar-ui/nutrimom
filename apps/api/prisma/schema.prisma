@@ -138,6 +138,12 @@ model Listing {
   // Optional reservation hold
   reservedById         String?
   reservedUntil        DateTime?
+  // The order (if any) currently holding a claim on this listing — set
+  // atomically at order-creation so two buyers can never both check out the
+  // same item, and checked by settle()/cancel() so only the order that
+  // actually holds a listing can flip or release it.
+  holdOrder            Order?         @relation("ListingHold", fields: [holdOrderId], references: [id])
+  holdOrderId          String?
   orderItems           OrderItem[]
   wishlistedBy         WishlistItem[]
   reviews              Review[]
@@ -148,6 +154,7 @@ model Listing {
   @@index([categoryId])
   @@index([status])
   @@index([isFeatured])
+  @@index([holdOrderId])
 }
 
 model WishlistItem {
@@ -175,6 +182,7 @@ model Order {
   items             OrderItem[]
   reviews           Review[]
   shipments         Shipment[]
+  heldListings      Listing[]   @relation("ListingHold")
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
