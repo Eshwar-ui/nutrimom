@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { z } from 'zod';
 import { verifyPaymentSchema, type VerifyPaymentInput } from '@nutrimom/shared';
@@ -53,6 +54,10 @@ export class PaymentsController {
   // gateway webhook URL settles whichever domain the event belongs to: an
   // order payment or a seller registration/membership payment (each no-ops if
   // the gateway order id isn't theirs).
+  // Authenticity here comes from the HMAC signature, not rate limiting —
+  // Razorpay retries failed deliveries and may fan them out from a shared
+  // egress IP, so this shouldn't share the per-IP budget with real users.
+  @SkipThrottle()
   @Post('webhook')
   @HttpCode(200)
   async webhook(

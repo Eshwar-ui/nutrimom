@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,9 +12,11 @@ import {
   type Order,
   type OrderStatus,
   type PaymentMethod,
+  type RazorpayOrderResponse,
 } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
+import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
 import { useAuthStore } from "@/lib/auth-store";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
 import { Container, Card } from "@/components/ui/primitives";
@@ -40,14 +42,67 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
     onSuccess: (updated) => { queryClient.setQueryData(["order", id], updated); queryClient.invalidateQueries({ queryKey: ["my-orders"] }); toast.success("Order cancelled"); },
     onError: (caught) => toast.error(caught instanceof ApiError ? caught.message : "Couldn't cancel this order."),
   });
+  const [paying, setPaying] = useState(false);
+
+  const payNow = async () => {
+    if (!order) return;
+    setPaying(true);
+    try {
+      const pay = await authedRequest<RazorpayOrderResponse>("/payments/order", {
+        method: "POST",
+        body: { orderId: order.id },
+      });
+      await loadRazorpay();
+      openRazorpay({
+        key: pay.keyId,
+        amount: pay.amountInPaise,
+        currency: pay.currency,
+        name: "Preloved by The Nurture Moms",
+        description: `Order ${order.id.slice(-6).toUpperCase()}`,
+        order_id: pay.razorpayOrderId,
+        prefill: {
+          name: order.shippingAddress.fullName,
+          email: user?.email,
+          contact: order.shippingAddress.phone,
+        },
+        theme: { color: "#e8756a" },
+        handler: async (resp) => {
+          try {
+            const updated = await authedRequest<Order>("/payments/verify", {
+              method: "POST",
+              body: {
+                orderId: order.id,
+                razorpayOrderId: resp.razorpay_order_id,
+                razorpayPaymentId: resp.razorpay_payment_id,
+                razorpaySignature: resp.razorpay_signature,
+              },
+            });
+            queryClient.setQueryData(["order", id], updated);
+            queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+            toast.success(updated.status === "PAID" ? "Payment successful" : "Payment could not be confirmed");
+          } catch (err) {
+            toast.error(err instanceof ApiError ? err.message : "Payment verification failed");
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: { ondismiss: () => setPaying(false) },
+      });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't start payment");
+      setPaying(false);
+    }
+  };
 
   if (!hydrated || !user || isLoading) return <Container className="max-w-3xl py-14"><PageSkeleton rows={4} /></Container>;
   if (!order) return <Container className="max-w-3xl py-14"><StatePanel tone="error" title="Order not found" description="This order may no longer be available or may belong to another account." /></Container>;
 
   const confirmed = isOrderConfirmed(order.status, order.paymentMethod);
   const isCod = order.paymentMethod === "COD";
+  const payable = order.status === "PENDING" && !isCod;
   const cancellable = order.status === "PENDING" || order.status === "PAID";
   const reviewable = ["PAID", "SHIPPED", "DELIVERED"].includes(order.status);
+  const refunded = order.status === "CANCELLED" && !!order.refundedAt;
 
   return (
     <Container className="max-w-3xl py-12 sm:py-14">
@@ -57,7 +112,15 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         <p className="mt-2 text-muted-foreground">Order <span className="font-medium text-foreground">#{order.id.slice(-8).toUpperCase()}</span></p>
         <div className="mt-3 flex justify-center"><OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} /></div>
         {isCod && order.status !== "CANCELLED" && <p className="mt-3 text-sm text-muted-foreground">Cash on Delivery · pay <span className="font-medium text-foreground">{formatPaise(order.totalInPaise)}</span> when your order is handed over.</p>}
+        {payable && <p className="mt-3 text-sm text-muted-foreground">Your order is saved but payment hasn&apos;t gone through yet.</p>}
+        {refunded && <p className="mt-3 text-sm text-muted-foreground">Your payment has been refunded to the original method.</p>}
       </header>
+
+      {payable && (
+        <div className="mt-6 flex justify-center print:hidden">
+          <Button size="lg" disabled={paying} onClick={() => void payNow()}>{paying ? "Opening payment…" : `Pay ${formatPaise(order.totalInPaise)}`}</Button>
+        </div>
+      )}
 
       {order.status !== "CANCELLED" && <OrderTimeline status={order.status} paymentMethod={order.paymentMethod} />}
 

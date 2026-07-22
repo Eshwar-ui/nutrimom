@@ -230,6 +230,7 @@ export const NotificationType = {
   ITEM_SOLD: "ITEM_SOLD",
   ORDER_PLACED: "ORDER_PLACED",
   ORDER_CANCELLED: "ORDER_CANCELLED",
+  PAYMENT_REFUNDED: "PAYMENT_REFUNDED",
 } as const;
 export type NotificationType =
   (typeof NotificationType)[keyof typeof NotificationType];
@@ -511,6 +512,7 @@ export interface Order {
   shippingAddress: ShippingAddress;
   items: OrderItem[];
   razorpayOrderId: string | null;
+  refundedAt: string | null;
   createdAt: string;
 }
 

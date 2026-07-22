@@ -81,6 +81,7 @@ enum NotificationType {
   ITEM_SOLD // to the seller
   ORDER_PLACED // to the admin
   ORDER_CANCELLED // to the seller
+  PAYMENT_REFUNDED // to the buyer
 }
 
 model User {
@@ -178,7 +179,9 @@ model Order {
   totalInPaise      Int
   shippingAddress   Json
   razorpayOrderId   String?       @unique
-  razorpayPaymentId String?
+  razorpayPaymentId String?       @unique
+  refundId          String?
+  refundedAt        DateTime?
   items             OrderItem[]
   reviews           Review[]
   shipments         Shipment[]
@@ -250,7 +253,7 @@ model SellerPayment {
   amountInPaise    Int // authoritative amount from the server
   status           SellerPaymentStatus @default(PENDING)
   gatewayOrderId   String?             @unique
-  gatewayPaymentId String?
+  gatewayPaymentId String?             @unique
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 

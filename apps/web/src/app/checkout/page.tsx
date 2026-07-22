@@ -111,10 +111,11 @@ export default function CheckoutPage() {
         },
         modal: {
           ondismiss: () => {
-            setSubmitting(false);
-            setError(
-              "Payment cancelled. Your order is saved as pending — you can pay from your orders.",
-            );
+            // The order already exists and holds these listings — sending the
+            // buyer back to checkout would just fail (items are RESERVED, not
+            // APPROVED). The order page has its own "Pay now" retry.
+            clear();
+            router.push(`/orders/${order.id}`);
           },
         },
       });

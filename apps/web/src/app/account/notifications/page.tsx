@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag } from "lucide-react";
+import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw } from "lucide-react";
 import type { Notification, NotificationType } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
@@ -18,6 +18,7 @@ const icons: Record<NotificationType, typeof Tag> = {
   ITEM_SOLD: Tag,
   ORDER_PLACED: ShoppingBag,
   ORDER_CANCELLED: XCircle,
+  PAYMENT_REFUNDED: RotateCcw,
 };
 
 export default function NotificationsPage() {
@@ -85,8 +86,15 @@ export default function NotificationsPage() {
                 {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />}
               </Card>
             );
-            return n.listingId ? (
-              <Link key={n.id} href={`/listings/${n.listingId}`}>{body}</Link>
+            // A rejected listing isn't publicly viewable — send the seller
+            // to their own edit page instead of a link that would 404.
+            const href = !n.listingId
+              ? null
+              : n.type === "LISTING_REJECTED"
+                ? `/account/listings/${n.listingId}/edit`
+                : `/listings/${n.listingId}`;
+            return href ? (
+              <Link key={n.id} href={href}>{body}</Link>
             ) : (
               <div key={n.id}>{body}</div>
             );

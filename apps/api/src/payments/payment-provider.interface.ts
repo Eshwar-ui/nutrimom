@@ -15,11 +15,20 @@ export interface WebhookResult {
   settled: boolean;
   gatewayOrderId?: string;
   gatewayPaymentId?: string;
+  /** Captured amount, when the event carries one — used to catch under/over-capture. */
+  amountInPaise?: number;
+}
+
+export interface RefundResult {
+  refundId: string;
 }
 
 export interface PaymentProvider {
   /** Adapter name, e.g. 'razorpay'. */
   readonly name: string;
+
+  /** Public key/id the browser needs to open the gateway's checkout. */
+  readonly keyId: string;
 
   /** Create a gateway order for `amountInPaise`; `receipt` is our order id. */
   createOrder(amountInPaise: number, receipt: string): Promise<GatewayOrder>;
@@ -33,6 +42,12 @@ export interface PaymentProvider {
 
   /** Verify + parse a gateway webhook. Throws on an invalid signature. */
   parseWebhook(rawBody: Buffer, signature: string | undefined): WebhookResult;
+
+  /** Refund a captured payment, in full or in part. */
+  refund(
+    gatewayPaymentId: string,
+    amountInPaise: number,
+  ): Promise<RefundResult>;
 }
 
 // DI token for the selected provider.

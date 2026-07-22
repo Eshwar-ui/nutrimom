@@ -6,6 +6,7 @@ import type { Env } from '../../config/env.validation';
 import type {
   GatewayOrder,
   PaymentProvider,
+  RefundResult,
   WebhookResult,
 } from '../payment-provider.interface';
 
@@ -14,7 +15,7 @@ import type {
 export class RazorpayProvider implements PaymentProvider {
   readonly name = 'razorpay';
   private readonly razorpay: Razorpay;
-  private readonly keyId: string;
+  readonly keyId: string;
   private readonly keySecret: string;
   private readonly webhookSecret: string;
 
@@ -61,7 +62,11 @@ export class RazorpayProvider implements PaymentProvider {
     }
     const event = JSON.parse(rawBody.toString('utf8')) as {
       event?: string;
-      payload?: { payment?: { entity?: { order_id?: string; id?: string } } };
+      payload?: {
+        payment?: {
+          entity?: { order_id?: string; id?: string; amount?: number };
+        };
+      };
     };
     if (event.event === 'payment.captured') {
       const payment = event.payload?.payment?.entity;
@@ -69,9 +74,20 @@ export class RazorpayProvider implements PaymentProvider {
         settled: true,
         gatewayOrderId: payment?.order_id,
         gatewayPaymentId: payment?.id,
+        amountInPaise: payment?.amount,
       };
     }
     return { settled: false };
+  }
+
+  async refund(
+    gatewayPaymentId: string,
+    amountInPaise: number,
+  ): Promise<RefundResult> {
+    const refund = await this.razorpay.payments.refund(gatewayPaymentId, {
+      amount: amountInPaise,
+    });
+    return { refundId: refund.id };
   }
 }
 
