@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function ListingGallery({
@@ -15,10 +16,16 @@ export function ListingGallery({
 
   return (
     <div className="space-y-3">
-      <div className="aspect-square overflow-hidden rounded-[2rem] border-2 border-border bg-muted">
+      <div className="relative aspect-square overflow-hidden rounded-[2rem] border-2 border-border bg-muted">
         {main && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={main} alt={alt} className="h-full w-full object-cover" />
+          <Image
+            src={main}
+            alt={alt}
+            fill
+            priority
+            sizes="(min-width: 1024px) 40vw, 100vw"
+            className="object-cover"
+          />
         )}
       </div>
       {images.length > 1 && (
@@ -29,12 +36,11 @@ export function ListingGallery({
               onClick={() => setActive(i)}
               aria-label={`View image ${i + 1}`}
               className={cn(
-                "h-16 w-16 overflow-hidden rounded-xl border-2 transition-all",
+                "relative h-16 w-16 overflow-hidden rounded-xl border-2 transition-all",
                 i === active ? "border-accent" : "border-border opacity-70 hover:opacity-100",
               )}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="h-full w-full object-cover" />
+              <Image src={src} alt="" fill sizes="64px" className="object-cover" />
             </button>
           ))}
         </div>

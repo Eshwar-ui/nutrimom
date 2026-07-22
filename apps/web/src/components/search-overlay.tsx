@@ -26,6 +26,9 @@ function useDebouncedValue(value: string, delay = 220) {
   return debounced;
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function SearchOverlay({
   open,
   onOpenChange,
@@ -35,18 +38,47 @@ export function SearchOverlay({
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<Element | null>(null);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim());
   const hasSearch = debouncedQuery.length >= 2;
 
   useEffect(() => {
     if (!open) return;
+    triggerRef.current = document.activeElement;
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 80);
+
+    // Keep Tab from escaping into the (visually hidden) page behind — Escape
+    // itself is handled by the parent SiteHeader, which owns `open`.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const container = containerRef.current;
+      if (!container) return;
+      const items = Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.body.style.overflow = previousOverflow;
       window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", onKeyDown);
+      if (triggerRef.current instanceof HTMLElement) triggerRef.current.focus();
     };
   }, [open]);
 
@@ -88,6 +120,7 @@ export function SearchOverlay({
     <AnimatePresence>
       {open && (
         <motion.div
+          ref={containerRef}
           role="dialog"
           aria-modal="true"
           aria-label="Search listings"
