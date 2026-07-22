@@ -107,7 +107,22 @@ model User {
   reviewsReceived               Review[]       @relation("ReviewsReceived")
   sellerPayments                SellerPayment[]
   memberships                   SellerMembership[]
+  passwordResetTokens           PasswordResetToken[]
   createdAt                     DateTime       @default(now())
+}
+
+// Only the SHA-256 hash of the reset token is stored — same principle as a
+// password hash — so a DB read alone can't be used to reset an account.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Category {
