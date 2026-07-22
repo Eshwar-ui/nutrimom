@@ -37,7 +37,12 @@ export class ReservationSweeperService
     try {
       const { count } = await this.prisma.listing.updateMany({
         where: { status: 'RESERVED', reservedUntil: { lt: new Date() } },
-        data: { status: 'APPROVED', reservedById: null, reservedUntil: null },
+        data: {
+          status: 'APPROVED',
+          reservedById: null,
+          reservedUntil: null,
+          holdOrderId: null,
+        },
       });
       if (count > 0) {
         this.logger.log(`Released ${count} expired reservation hold(s)`);

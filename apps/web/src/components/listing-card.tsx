@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -34,6 +35,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
         (1 - listing.sellingPriceInPaise / listing.originalPriceInPaise) * 100,
       )
     : 0;
+
+  const sold = listing.status === "SOLD";
+  const held = listing.status === "RESERVED";
+  const unavailable = sold || held;
 
   const heart = () => {
     if (!user) return router.push("/login?next=/listings");
@@ -71,14 +76,24 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
       <Link href={`/listings/${listing.id}`} className="relative block aspect-square overflow-hidden bg-muted">
         {listing.images[0] && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             ref={imgRef}
             src={listing.images[0]}
             alt={listing.title}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+            fill
+            sizes="(min-width: 1024px) 23vw, (min-width: 640px) 45vw, 90vw"
+            className={cn(
+              "object-cover transition-transform duration-500 group-hover:scale-[1.06]",
+              unavailable && "opacity-60 grayscale",
+            )}
           />
+        )}
+        {unavailable && (
+          <span className="absolute inset-0 grid place-items-center bg-black/10">
+            <span className="rounded-full bg-foreground/85 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-background">
+              {sold ? "Sold" : "On hold"}
+            </span>
+          </span>
         )}
         <span className="absolute bottom-3 left-3 flex items-center gap-1.5">
           <span
@@ -128,15 +143,17 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         <button
           onClick={add}
-          disabled={inCart}
+          disabled={inCart || unavailable}
           className={cn(
             "mt-4 flex items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold transition-all active:scale-[0.97] disabled:opacity-70",
-            inCart
+            inCart || unavailable
               ? "bg-muted text-muted-foreground"
               : "bg-primary text-primary-foreground hover:brightness-110",
           )}
         >
-          {inCart ? (
+          {unavailable ? (
+            sold ? "Sold" : "On hold"
+          ) : inCart ? (
             <>
               <Check className="h-4 w-4" /> In your bag
             </>

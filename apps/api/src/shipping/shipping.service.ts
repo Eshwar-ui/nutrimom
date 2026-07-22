@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type {
   GenerateLabelResponse,
   SellerSale,
@@ -140,21 +141,35 @@ export class ShippingService {
     };
   }
 
-  /** Mark this seller's shipment handed to the courier. */
+  /**
+   * Mark this seller's shipment handed to the courier. Two sellers on the
+   * same multi-seller order can call this within moments of each other —
+   * without serializing them, each could read the *other's* shipment as
+   * still unshipped (their own update not yet committed) and neither would
+   * ever advance the order to SHIPPED. A per-order advisory lock forces the
+   * second caller's "has everyone shipped" check to run after the first's
+   * update has committed, so whichever seller finishes last always sees an
+   * accurate picture.
+   */
   async markShipped(sellerId: string, orderId: string): Promise<SellerSale> {
-    const shipment = await this.prisma.shipment.findUnique({
-      where: { orderId_sellerId: { orderId, sellerId } },
-    });
-    if (!shipment || shipment.status === 'PENDING') {
-      throw new BadRequestException('Generate the shipping label first');
-    }
-    if (shipment.status === 'LABEL_GENERATED') {
-      await this.prisma.shipment.update({
+    await this.prisma.$transaction(async (tx) => {
+      const shipment = await tx.shipment.findUnique({
+        where: { orderId_sellerId: { orderId, sellerId } },
+      });
+      if (!shipment || shipment.status === 'PENDING') {
+        throw new BadRequestException('Generate the shipping label first');
+      }
+      if (shipment.status !== 'LABEL_GENERATED') return;
+
+      await tx.shipment.update({
         where: { id: shipment.id },
         data: { status: 'SHIPPED', shippedAt: new Date() },
       });
-      await this.maybeMarkOrderShipped(orderId);
-    }
+
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${orderId}))`;
+      await this.maybeMarkOrderShipped(tx, orderId);
+    });
+
     const sales = await this.listSales(sellerId);
     const row = sales.find((s) => s.orderId === orderId);
     if (!row) throw new NotFoundException('Sale not found');
@@ -162,8 +177,11 @@ export class ShippingService {
   }
 
   // When every seller in an order has shipped, advance the order to SHIPPED.
-  private async maybeMarkOrderShipped(orderId: string) {
-    const order = await this.prisma.order.findUnique({
+  private async maybeMarkOrderShipped(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ) {
+    const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true, shipments: true },
     });
@@ -176,7 +194,7 @@ export class ShippingService {
     );
     const allShipped = [...sellerIds].every((id) => shippedSellers.has(id));
     if (allShipped) {
-      await this.prisma.order.update({
+      await tx.order.update({
         where: { id: orderId },
         data: { status: 'SHIPPED' },
       });

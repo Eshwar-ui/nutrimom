@@ -16,7 +16,9 @@ describe('AppController', () => {
   }
 
   function fakeRes() {
-    return { status: jest.fn().mockReturnThis() } as unknown as import('express').Response & {
+    return {
+      status: jest.fn().mockReturnThis(),
+    } as unknown as import('express').Response & {
       status: jest.Mock;
     };
   }

@@ -12,6 +12,7 @@ import type {
   ListingUpdateInput,
   ModerateListingInput,
   Paginated,
+  SellerContact,
   SellerProfile,
 } from '@nutrimom/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -95,6 +96,21 @@ export class ListingsService {
       throw new NotFoundException('Listing not found');
     }
     return toListingDto(row);
+  }
+
+  /** The seller's WhatsApp number — gated behind auth, unlike getPublic(). */
+  async getContact(id: string): Promise<SellerContact> {
+    const row = await this.prisma.listing.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        seller: { select: { whatsappNumber: true } },
+      },
+    });
+    if (!row || !PUBLIC_STATUSES.includes(row.status as never)) {
+      throw new NotFoundException('Listing not found');
+    }
+    return { whatsappNumber: row.seller.whatsappNumber };
   }
 
   async sellerProfile(sellerId: string): Promise<SellerProfile> {
@@ -224,8 +240,15 @@ export class ListingsService {
         ...input,
         usageDuration: input.usageDuration ?? undefined,
         reasonForSelling: input.reasonForSelling ?? undefined,
-        // Edits to a rejected listing go back into the review queue.
-        status: existing.status === 'REJECTED' ? 'PENDING' : existing.status,
+        // Any edit to a listing that's already been reviewed sends it back
+        // into the queue — otherwise a seller could get a listing approved
+        // once and then freely swap in different photos/price/description
+        // with no further review.
+        status:
+          existing.status === 'REJECTED' || existing.status === 'APPROVED'
+            ? 'PENDING'
+            : existing.status,
+        rejectionReason: null,
       },
       include: withRefs,
     });
@@ -246,21 +269,6 @@ export class ListingsService {
     return { id };
   }
 
-  async reserve(userId: string, id: string): Promise<Listing> {
-    const row = await this.prisma.listing.findUnique({ where: { id } });
-    if (!row) throw new NotFoundException('Listing not found');
-    if (row.status !== 'APPROVED') {
-      throw new BadRequestException('This item is no longer available');
-    }
-    const reservedUntil = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-    const updated = await this.prisma.listing.update({
-      where: { id },
-      data: { status: 'RESERVED', reservedById: userId, reservedUntil },
-      include: withRefs,
-    });
-    return toListingDto(updated);
-  }
-
   // ---- Admin ----
 
   async adminList(status?: string): Promise<Listing[]> {
@@ -272,22 +280,36 @@ export class ListingsService {
     return rows.map(toListingDto);
   }
 
+  // Moderation only ever applies to a listing awaiting review — approving or
+  // rejecting a RESERVED/SOLD listing would put an already-purchased item
+  // back in the browse pool out from under its buyer.
   async moderate(id: string, dto: ModerateListingInput): Promise<Listing> {
-    const row = await this.prisma.listing
-      .update({
+    const { count } = await this.prisma.listing.updateMany({
+      where: { id, status: 'PENDING' },
+      data: {
+        status: dto.status,
+        rejectionReason: dto.status === 'REJECTED' ? dto.reason : null,
+      },
+    });
+    if (count === 0) {
+      const existing = await this.prisma.listing.findUnique({
         where: { id },
-        data: { status: dto.status },
-        include: withRefs,
-      })
-      .catch(() => {
-        throw new NotFoundException('Listing not found');
       });
+      if (!existing) throw new NotFoundException('Listing not found');
+      throw new BadRequestException(
+        'This listing is no longer awaiting review',
+      );
+    }
+    const row = await this.prisma.listing.findUniqueOrThrow({
+      where: { id },
+      include: withRefs,
+    });
     await this.notifications.create(
       row.sellerId,
       dto.status === 'APPROVED' ? 'LISTING_APPROVED' : 'LISTING_REJECTED',
       dto.status === 'APPROVED'
         ? `Your listing "${row.title}" is now live.`
-        : `Your listing "${row.title}" was not approved.`,
+        : `Your listing "${row.title}" wasn't approved: ${dto.reason}`,
       row.id,
     );
     return toListingDto(row);
@@ -351,6 +373,7 @@ export function toListingDto(row: ListingRow): Listing {
     deliveryOption: row.deliveryOption,
     images: row.images,
     status: row.status,
+    rejectionReason: row.rejectionReason,
     isFeatured: row.isFeatured,
     createdAt: row.createdAt.toISOString(),
     category: {
@@ -362,7 +385,7 @@ export function toListingDto(row: ListingRow): Listing {
       id: row.seller.id,
       name: row.seller.name,
       city: row.seller.city,
-      whatsappNumber: row.seller.whatsappNumber,
+      hasWhatsapp: !!row.seller.whatsappNumber,
       isSellerVerified: row.seller.isSellerVerified,
     },
   };

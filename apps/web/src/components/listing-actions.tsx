@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, ShoppingBag, Check, MessageCircle, BookmarkPlus } from "lucide-react";
+import { Heart, ShoppingBag, Check, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { formatPaise, whatsappLink, type Listing } from "@nutrimom/shared";
+import { formatPaise, whatsappLink, type Listing, type SellerContact } from "@nutrimom/shared";
 import { Button } from "./ui/button";
 import { useCartStore } from "@/lib/cart-store";
 import { useWishlistStore } from "@/lib/wishlist-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { authedRequest } from "@/lib/api";
+import { toast } from "@/lib/toast-store";
 import { flyToCart } from "@/lib/fly-to-cart";
 
 export function ListingActions({ listing }: { listing: Listing }) {
@@ -19,11 +20,12 @@ export function ListingActions({ listing }: { listing: Listing }) {
   const inCart = useCartStore((s) => s.items.some((i) => i.listingId === listing.id));
   const wished = useWishlistStore((s) => s.ids.includes(listing.id));
   const toggleWish = useWishlistStore((s) => s.toggle);
-  const [reserved, setReserved] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [contacting, setContacting] = useState(false);
 
   const sold = listing.status === "SOLD";
-  const reservedByOther = listing.status === "RESERVED";
+  // A buyer's checkout hold on this listing — not purchasable by anyone
+  // else until it either sells or the hold expires and frees it back up.
+  const held = listing.status === "RESERVED";
 
   const snapshot = {
     listingId: listing.id,
@@ -39,20 +41,32 @@ export function ListingActions({ listing }: { listing: Listing }) {
     toggleWish(listing.id);
   };
 
-  const reserve = async () => {
-    if (!user) return router.push(`/login?next=/listings/${listing.id}`);
-    try {
-      await authedRequest(`/listings/${listing.id}/reserve`, { method: "POST" });
-      setReserved(true);
-      setMsg("Reserved for you for 48 hours. Complete checkout to secure it.");
-    } catch {
-      setMsg("Sorry, this item was just taken.");
-    }
-  };
-
   const addToBag = (target?: HTMLElement | null) => {
     addItem(snapshot);
     flyToCart(target ?? null, listing.images[0] ?? null);
+  };
+
+  const chatOnWhatsapp = async () => {
+    if (!user) return router.push(`/login?next=/listings/${listing.id}`);
+    setContacting(true);
+    try {
+      const { whatsappNumber } = await authedRequest<SellerContact>(
+        `/listings/${listing.id}/contact`,
+      );
+      if (!whatsappNumber) return;
+      window.open(
+        whatsappLink(
+          whatsappNumber,
+          `Hi ${listing.seller.name.split(" ")[0]}, is "${listing.title}" still available on The Nurture Moms?`,
+        ),
+        "_blank",
+        "noopener,noreferrer",
+      );
+    } catch {
+      toast.error("Couldn't reach the seller right now — try again shortly.");
+    } finally {
+      setContacting(false);
+    }
   };
 
   if (sold) {
@@ -65,11 +79,9 @@ export function ListingActions({ listing }: { listing: Listing }) {
 
   return (
     <div className="space-y-3">
-      {(reservedByOther || reserved) && (
+      {held && (
         <p className="rounded-2xl bg-gold/20 px-4 py-3 text-sm font-medium text-[#5c4410]">
-          {reserved
-            ? "You've reserved this — head to checkout to secure it."
-            : "Currently reserved by another buyer. You can still join the waitlist by contacting the seller."}
+          Someone&apos;s completing checkout on this item right now — check back in a bit.
         </p>
       )}
 
@@ -78,7 +90,7 @@ export function ListingActions({ listing }: { listing: Listing }) {
           size="lg"
           variant="outline"
           className="flex-1"
-          disabled={inCart}
+          disabled={inCart || held}
           onClick={(e) => {
             addToBag(e.currentTarget);
           }}
@@ -88,6 +100,7 @@ export function ListingActions({ listing }: { listing: Listing }) {
         <Button
           size="lg"
           className="flex-1"
+          disabled={held}
           onClick={() => {
             addItem(snapshot);
             router.push("/checkout");
@@ -108,37 +121,29 @@ export function ListingActions({ listing }: { listing: Listing }) {
           </motion.span>
           {wished ? "Saved" : "Save"}
         </Button>
-        <Button variant="ghost" size="lg" className="flex-1 border-2 border-border" onClick={reserve}>
-          <BookmarkPlus className="h-5 w-5" /> Reserve
-        </Button>
       </div>
 
-      {listing.seller.whatsappNumber && (
-        <a
-          href={whatsappLink(
-            listing.seller.whatsappNumber,
-            `Hi ${listing.seller.name.split(" ")[0]}, is "${listing.title}" still available on The Nurture Moms?`,
-          )}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex h-14 items-center justify-center gap-2 rounded-full bg-[#25D366] text-base font-bold text-[#0b3d24] transition-transform active:scale-[0.98]"
+      {listing.seller.hasWhatsapp && (
+        <button
+          type="button"
+          onClick={() => void chatOnWhatsapp()}
+          disabled={contacting}
+          className="flex h-14 items-center justify-center gap-2 rounded-full bg-[#25D366] text-base font-bold text-[#0b3d24] transition-transform active:scale-[0.98] disabled:opacity-70"
         >
-          <MessageCircle className="h-5 w-5" /> Chat with seller on WhatsApp
-        </a>
+          <MessageCircle className="h-5 w-5" /> {contacting ? "Opening…" : "Chat with seller on WhatsApp"}
+        </button>
       )}
-
-      {msg && <p className="text-center text-sm text-muted-foreground">{msg}</p>}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground">One available</p>
+            <p className="text-xs text-muted-foreground">{held ? "Checkout in progress" : "One available"}</p>
             <p className="text-lg font-bold text-foreground">{formatPaise(listing.sellingPriceInPaise)}</p>
           </div>
-          <Button variant="outline" className="px-5" disabled={inCart} onClick={(event) => addToBag(event.currentTarget)}>
+          <Button variant="outline" className="px-5" disabled={inCart || held} onClick={(event) => addToBag(event.currentTarget)}>
             {inCart ? "In bag" : "Add"}
           </Button>
-          <Button className="px-6" onClick={() => { addItem(snapshot); router.push("/checkout"); }}>Buy now</Button>
+          <Button className="px-6" disabled={held} onClick={() => { addItem(snapshot); router.push("/checkout"); }}>Buy now</Button>
         </div>
       </div>
     </div>

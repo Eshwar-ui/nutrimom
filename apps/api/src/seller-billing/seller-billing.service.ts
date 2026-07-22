@@ -37,25 +37,87 @@ export class SellerBillingService {
     });
     const active = await this.activeMembership(userId);
     const registrationPaid = !!user?.registrationPaidAt;
+
+    let lastMembershipExpiredAt: string | null = null;
+    if (!active) {
+      const mostRecent = await this.prisma.sellerMembership.findFirst({
+        where: { userId },
+        orderBy: { expiresAt: 'desc' },
+      });
+      lastMembershipExpiredAt = mostRecent?.expiresAt.toISOString() ?? null;
+    }
+
     return {
       registrationPaid,
       registrationFeePaise: REGISTRATION_FEE_PAISE,
       activePlan: active?.plan ?? null,
       membershipExpiresAt: active?.expiresAt.toISOString() ?? null,
+      lastMembershipExpiredAt,
       canList: registrationPaid && !!active,
     };
   }
 
-  /** Start the one-time ₹100 registration payment. */
+  /**
+   * Start the one-time ₹100 registration payment. Guarded by a per-user
+   * advisory lock so two concurrent clicks (e.g. two tabs) can't both pass
+   * the "not paid yet" check and each mint a payable Razorpay order — the
+   * second call instead reuses whichever PENDING registration order the
+   * first one already created.
+   */
   async registrationCheckout(userId: string): Promise<SellerCheckoutResponse> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { registrationPaidAt: true },
-    });
-    if (user?.registrationPaidAt) {
-      throw new BadRequestException('Seller registration is already paid');
-    }
-    return this.createCheckout(userId, 'REGISTRATION', null, REGISTRATION_FEE_PAISE);
+    return this.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { registrationPaidAt: true },
+        });
+        if (user?.registrationPaidAt) {
+          throw new BadRequestException('Seller registration is already paid');
+        }
+
+        const pending = await tx.sellerPayment.findFirst({
+          where: { userId, type: 'REGISTRATION', status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (pending?.gatewayOrderId) {
+          return {
+            sellerPaymentId: pending.id,
+            razorpayOrderId: pending.gatewayOrderId,
+            amountInPaise: pending.amountInPaise,
+            currency: 'INR',
+            keyId: this.provider.keyId,
+          };
+        }
+
+        const payment = await tx.sellerPayment.create({
+          data: {
+            userId,
+            type: 'REGISTRATION',
+            plan: null,
+            amountInPaise: REGISTRATION_FEE_PAISE,
+            status: 'PENDING',
+          },
+        });
+        const gateway = await this.provider.createOrder(
+          REGISTRATION_FEE_PAISE,
+          payment.id,
+        );
+        await tx.sellerPayment.update({
+          where: { id: payment.id },
+          data: { gatewayOrderId: gateway.gatewayOrderId },
+        });
+        return {
+          sellerPaymentId: payment.id,
+          razorpayOrderId: gateway.gatewayOrderId,
+          amountInPaise: REGISTRATION_FEE_PAISE,
+          currency: gateway.currency,
+          keyId: gateway.keyId,
+        };
+      },
+      { timeout: 10_000 },
+    );
   }
 
   /** Start a membership plan payment. Registration must be paid first. */
@@ -164,6 +226,15 @@ export class SellerBillingService {
       }
 
       if (payment.type === 'MEMBERSHIP' && payment.plan) {
+        // Two settlements for the same user can race (e.g. two purchases
+        // whose webhooks land moments apart) — both would otherwise read the
+        // same "current" expiry and stack onto it independently, silently
+        // dropping one purchase's paid-for duration. A Postgres advisory
+        // lock scoped to this transaction serializes the read-then-write
+        // per user without needing a row to lock; it's released
+        // automatically on commit/rollback.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${payment.userId}))`;
+
         const info = MEMBERSHIP_PLANS[payment.plan];
         // Stack onto the current window if the seller is still active.
         const current = await tx.sellerMembership.findFirst({

@@ -20,9 +20,7 @@ export class ManualLabelProvider implements ShippingProvider {
     const ref = `NM-${order.orderId.slice(-6).toUpperCase()}`;
     const a = order.shippingAddress;
     const line2 = a.line2 ? `${esc(a.line2)}<br/>` : '';
-    const items = order.items
-      .map((i) => `<li>${esc(i.title)}</li>`)
-      .join('');
+    const items = order.items.map((i) => `<li>${esc(i.title)}</li>`).join('');
 
     const labelHtml = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>

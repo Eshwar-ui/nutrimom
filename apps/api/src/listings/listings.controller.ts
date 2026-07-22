@@ -1,10 +1,7 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { listingQuerySchema, type ListingQuery } from '@nutrimom/shared';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import {
-  CurrentUser,
-  type RequestUser,
-} from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { ListingsService } from './listings.service';
 
@@ -24,10 +21,13 @@ export class ListingsController {
     return this.listings.getPublic(id);
   }
 
-  @Post(':id/reserve')
+  // Authenticated (not just rate-limited) — the seller's phone number is PII
+  // that shouldn't be scrapeable by iterating listing ids anonymously.
+  @Get(':id/contact')
   @UseGuards(JwtAuthGuard)
-  reserve(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.listings.reserve(user.id, id);
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  contact(@Param('id') id: string) {
+    return this.listings.getContact(id);
   }
 }
 

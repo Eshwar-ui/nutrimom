@@ -18,18 +18,12 @@ export class ShippingController {
   }
 
   @Post(':orderId/label')
-  label(
-    @CurrentUser() user: RequestUser,
-    @Param('orderId') orderId: string,
-  ) {
+  label(@CurrentUser() user: RequestUser, @Param('orderId') orderId: string) {
     return this.shipping.generateLabel(user.id, orderId);
   }
 
   @Post(':orderId/ship')
-  ship(
-    @CurrentUser() user: RequestUser,
-    @Param('orderId') orderId: string,
-  ) {
+  ship(@CurrentUser() user: RequestUser, @Param('orderId') orderId: string) {
     return this.shipping.markShipped(user.id, orderId);
   }
 }
