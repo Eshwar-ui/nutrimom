@@ -53,7 +53,7 @@ registration + a membership so they can list immediately).
 ## Run
 
 ```bash
-pnpm dev            # both apps in parallel — web :3000, api :3001
+pnpm dev            # both apps in parallel — web :4000, api :4001
 ```
 
 ## Payments (Razorpay)

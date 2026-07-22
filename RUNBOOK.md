@@ -3,8 +3,8 @@
 Operational guide for running, verifying, and troubleshooting the app locally.
 Windows-first (PowerShell / Git Bash), but commands are the same on macOS/Linux.
 
-- **web** (Next.js) → http://localhost:3000
-- **api** (NestJS) → http://localhost:3001
+- **web** (Next.js) → http://localhost:4000
+- **api** (NestJS) → http://localhost:4001
 - **db** (Postgres in Docker) → localhost:5432
 
 ---
@@ -81,7 +81,7 @@ Stop:
 
 ## 3. Smoke test (is it working?)
 
-1. Open http://localhost:3000 — landing page shows featured products.
+1. Open http://localhost:4000 — landing page shows featured products.
 2. **Shop** → open a product → **Add to cart** → cart badge increments.
 3. Click **Sign in** → **Create an account** → you're logged in.
 4. Cart → **Proceed to checkout** → fill address → **Pay** → Razorpay opens.
@@ -89,7 +89,7 @@ Stop:
 6. Sign in as the admin → **Admin** in the header → Dashboard shows the order;
    Products lets you create/edit; Orders lets you change status.
 
-Health check: http://localhost:3001/health → `{"status":"ok","service":"nutrimom-api"}`
+Health check: http://localhost:4001/health → `{"status":"ok","service":"nutrimom-api"}`
 
 ---
 
@@ -122,8 +122,8 @@ pnpm build                        # production build of both apps
 
 **Webhook (optional, for reconciliation):** point a Razorpay webhook for
 `payment.captured` at `POST http://<your-host>/payments/webhook` with the same
-`RAZORPAY_WEBHOOK_SECRET`. For local testing, expose port 3001 with a tunnel
-(e.g. `ngrok http 3001`) and use that URL.
+`RAZORPAY_WEBHOOK_SECRET`. For local testing, expose port 4001 with a tunnel
+(e.g. `ngrok http 4001`) and use that URL.
 
 ---
 
@@ -171,8 +171,8 @@ match `docker-compose.yml` (`nutrimom:nutrimom@localhost:5432/nutrimom`)? Is por
 5432 free? (`netstat -ano | findstr 5432`).
 
 **Web calls fail with CORS / network error**
-`NEXT_PUBLIC_API_URL` in `apps/web/.env.local` must be `http://localhost:3001`,
-and `CORS_ORIGIN` in `apps/api/.env` must be `http://localhost:3000`. Restart
+`NEXT_PUBLIC_API_URL` in `apps/web/.env.local` must be `http://localhost:4001`,
+and `CORS_ORIGIN` in `apps/api/.env` must be `http://localhost:4000`. Restart
 after changing env.
 
 **"Prisma Client is not generated" / type errors from `@prisma/client`**
@@ -180,7 +180,7 @@ after changing env.
 cd apps/api && pnpm prisma generate && cd ../..
 ```
 
-**Port already in use (3000 / 3001 / 5432)**
+**Port already in use (4000 / 4001 / 5432)**
 Stop the other process, or change the port (`PORT` in `apps/api/.env`, `-p` flag
 for `next dev`, and the compose `ports` mapping for Postgres).
 
@@ -191,7 +191,7 @@ logged out by design — sign in again. Clearing site data resets auth state
 
 **Products don't appear**
 The DB isn't seeded, or the API is down. Run `pnpm prisma db seed` and confirm
-`http://localhost:3001/products` returns data.
+`http://localhost:4001/products` returns data.
 
 ---
 
@@ -199,9 +199,9 @@ The DB isn't seeded, or the API is down. Run `pnpm prisma db seed` and confirm
 
 | What | Value |
 |------|-------|
-| Web | http://localhost:3000 |
-| API | http://localhost:3001 |
-| API health | http://localhost:3001/health |
+| Web | http://localhost:4000 |
+| API | http://localhost:4001 |
+| API health | http://localhost:4001/health |
 | Postgres | `postgresql://nutrimom:nutrimom@localhost:5432/nutrimom` |
 | Prisma Studio | http://localhost:5555 (`pnpm prisma studio`) |
 | Admin login | `admin@nutrimom.local` / `admin12345` |

@@ -2,7 +2,7 @@ import type { AuthTokens } from "@nutrimom/shared";
 import { useAuthStore } from "./auth-store";
 
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
 
 export class ApiError extends Error {
   constructor(
