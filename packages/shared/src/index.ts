@@ -143,6 +143,10 @@ export interface SellerBillingStatus {
   registrationFeePaise: number;
   activePlan: MembershipPlan | null;
   membershipExpiresAt: string | null; // ISO, null if none/expired
+  // The most recent membership's end date, when it's the reason canList is
+  // false (a lapsed plan) rather than "never subscribed" — lets the UI show
+  // "expired on X — renew" instead of just silently hiding the status card.
+  lastMembershipExpiredAt: string | null;
   canList: boolean; // registrationPaid && active membership
 }
 
@@ -412,6 +416,7 @@ export interface Listing {
   deliveryOption: DeliveryOption;
   images: string[];
   status: ListingStatus;
+  rejectionReason: string | null;
   isFeatured: boolean;
   category: Category;
   seller: SellerInfo;
@@ -580,9 +585,15 @@ export interface Notification {
 /* Admin                                                               */
 /* ------------------------------------------------------------------ */
 
-export const moderateListingSchema = z.object({
-  status: z.enum([ListingStatus.APPROVED, ListingStatus.REJECTED]),
-});
+export const moderateListingSchema = z
+  .object({
+    status: z.enum([ListingStatus.APPROVED, ListingStatus.REJECTED]),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .refine(
+    (v) => v.status !== ListingStatus.REJECTED || !!v.reason,
+    { message: "A reason is required to reject a listing", path: ["reason"] },
+  );
 export type ModerateListingInput = z.infer<typeof moderateListingSchema>;
 
 export const featureListingSchema = z.object({ isFeatured: z.boolean() });

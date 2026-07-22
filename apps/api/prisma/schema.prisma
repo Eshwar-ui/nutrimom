@@ -135,6 +135,9 @@ model Listing {
   deliveryOption       DeliveryOption @default(PICKUP)
   images               String[] // up to 10, enforced in app
   status               ListingStatus  @default(PENDING)
+  // Set when status = REJECTED so the seller sees why, not just that.
+  // Cleared on the next moderation decision (approve or a fresh reject).
+  rejectionReason      String?
   isFeatured           Boolean        @default(false)
   // Optional reservation hold
   reservedById         String?

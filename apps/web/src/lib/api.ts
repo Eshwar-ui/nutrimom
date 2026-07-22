@@ -44,7 +44,9 @@ export async function request<T>(
   } catch (err) {
     throw new ApiError(
       0,
-      `Cannot reach API at ${API_URL}. Start the API server and database, then try again.`,
+      process.env.NODE_ENV === "development"
+        ? `Cannot reach API at ${API_URL}. Start the API server and database, then try again.`
+        : "We're having trouble connecting right now. Please try again in a moment.",
       err,
     );
   }

@@ -30,10 +30,17 @@ export default function AdminListingsPage() {
     qc.invalidateQueries({ queryKey: ["admin-listings"] });
 
   const moderate = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "APPROVED" | "REJECTED" }) =>
-      authedRequest(`/admin/listings/${id}/moderate`, { method: "PATCH", body: { status } }),
+    mutationFn: ({ id, status, reason }: { id: string; status: "APPROVED" | "REJECTED"; reason?: string }) =>
+      authedRequest(`/admin/listings/${id}/moderate`, { method: "PATCH", body: { status, reason } }),
     onSuccess: invalidate,
   });
+
+  const reject = (id: string) => {
+    const reason = window.prompt("Why is this listing being rejected? The seller will see this.");
+    if (reason === null) return; // cancelled
+    if (!reason.trim()) return window.alert("A reason is required.");
+    moderate.mutate({ id, status: "REJECTED", reason: reason.trim() });
+  };
   const feature = useMutation({
     mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
       authedRequest(`/admin/listings/${id}/feature`, { method: "PATCH", body: { isFeatured } }),
@@ -85,7 +92,7 @@ export default function AdminListingsPage() {
                       <Check className="h-4 w-4 text-primary" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Reject"
-                      onClick={() => moderate.mutate({ id: l.id, status: "REJECTED" })}>
+                      onClick={() => reject(l.id)}>
                       <X className="h-4 w-4 text-accent" />
                     </Button>
                   </>

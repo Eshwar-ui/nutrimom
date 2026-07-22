@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -196,6 +197,9 @@ export default function CheckoutPage() {
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Secure online payment. Availability is re-checked before your order is confirmed.
+          </p>
+          <p className="mt-1 text-center text-xs text-muted-foreground">
+            Read our <Link href="/refunds" className="underline hover:text-foreground">cancellation &amp; refund policy</Link> before you pay.
           </p>
         </Card>
       </form>

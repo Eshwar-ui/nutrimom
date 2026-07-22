@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, Lock } from "lucide-react";
+import { MEMBERSHIP_PLANS, REGISTRATION_FEE_PAISE, formatPaise } from "@nutrimom/shared";
 import { getBillingStatus } from "@/lib/seller-billing";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Container, Card } from "@/components/ui/primitives";
@@ -51,7 +52,7 @@ export default function SellPage() {
               <p className="mt-1 max-w-prose text-sm text-muted-foreground">
                 {status?.registrationPaid
                   ? "Your seller registration is complete. Choose a membership plan to start listing items."
-                  : "Pay the one-time seller registration, then choose a membership plan. It only takes a minute and unlocks listing."}
+                  : `A one-time ${formatPaise(REGISTRATION_FEE_PAISE)} seller registration, then a membership plan from ${formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}/mo, unlocks listing.`}
               </p>
             </div>
             <Link href="/account/membership" className={buttonVariants()}>

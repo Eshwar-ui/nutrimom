@@ -8,7 +8,7 @@ import {
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
-import type { Category, Listing } from "@nutrimom/shared";
+import { MEMBERSHIP_PLANS, formatPaise, type Category, type Listing } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { Container } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
@@ -227,7 +227,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="rounded-3xl border-2 border-dashed border-border p-14 text-center text-muted-foreground">
-              Start the API and seed the database to see listings here.
+              New treasures are on their way — check back soon.
             </div>
           )}
         </Container>
@@ -351,7 +351,7 @@ export default async function HomePage() {
           />
           <div className="relative md:justify-self-end">
             <span className="absolute -right-3 -top-6 -rotate-6 rounded-full bg-gold px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#5c4410] shadow-md">
-              Free to list
+              Membership from {formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}/mo
             </span>
             <Playful>
               <Link href="/sell" className={buttonVariants({ variant: "gold", size: "lg" })}>

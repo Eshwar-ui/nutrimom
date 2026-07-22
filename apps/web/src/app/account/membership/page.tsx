@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, Check, Loader2, Sparkles } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Check, Loader2, Sparkles } from "lucide-react";
 import {
   MEMBERSHIP_PLANS,
   MEMBERSHIP_PLAN_ORDER,
@@ -112,6 +112,19 @@ export default function MembershipPage() {
               {fmtDate(status.membershipExpiresAt)}
             </span>
             .
+          </p>
+        </Card>
+      )}
+
+      {!status.canList && status.lastMembershipExpiredAt && (
+        <Card className="flex items-center gap-3 border-danger/30 bg-danger/5 p-5">
+          <AlertTriangle className="h-6 w-6 shrink-0 text-danger" />
+          <p className="text-sm text-foreground">
+            Your membership expired on{" "}
+            <span className="font-semibold">
+              {fmtDate(status.lastMembershipExpiredAt)}
+            </span>
+            . Renew below to list new items — your existing listings stay live either way.
           </p>
         </Card>
       )}

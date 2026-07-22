@@ -52,10 +52,11 @@ export default function MyListingsPage() {
       />
 
       {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatTile label="Live" value={stats.approved} />
           <StatTile label="Sold" value={stats.sold} />
           <StatTile label="Pending review" value={stats.pending} />
+          <StatTile label="Not approved" value={stats.rejected} />
           <StatTile label="Revenue" value={formatPaise(stats.totalRevenueInPaise)} />
         </div>
       )}
@@ -79,11 +80,21 @@ export default function MyListingsPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-foreground">{l.title}</p>
                 <p className="text-sm text-muted-foreground">{formatPaise(l.sellingPriceInPaise)} · {l.city}</p>
+                {l.status === "REJECTED" && l.rejectionReason && (
+                  <p className="mt-1 text-sm text-danger">Not approved: {l.rejectionReason}</p>
+                )}
               </div>
               <ListingStatusBadge status={l.status} />
               <div className="flex gap-1">
                 <Link href={`/account/listings/${l.id}/edit`} aria-label="Edit" className={buttonVariants({ variant: "ghost", size: "icon" })}><Pencil className="h-4 w-4" /></Link>
-                <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => remove.mutate(l.id)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Delete"
+                  onClick={() => {
+                    if (window.confirm(`Delete "${l.title}"? This can't be undone.`)) remove.mutate(l.id);
+                  }}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

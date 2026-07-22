@@ -46,7 +46,7 @@ const pageLinks = [
 const ticker = [
   "Preloved gear from local families",
   "Condition and seller details up front",
-  "Server-verified prices at checkout",
+  "Secure checkout, every time",
   "Buy, sell or pass it on",
 ];
 
