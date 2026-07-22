@@ -7,6 +7,7 @@ import { Camera, CircleDollarSign, PackageOpen } from "lucide-react";
 import { conditionLabels, deliveryLabels, listingInputSchema, type Category, type Listing } from "@nutrimom/shared";
 import { getCategories } from "@/lib/listings";
 import { authedRequest } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
 import { Card, Input, Label, Select, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/image-uploader";
@@ -15,6 +16,7 @@ const rupees = (paise?: number | null) => (paise ? String(paise / 100) : "");
 
 export function ListingForm({ initial, listingId }: { initial?: Listing; listingId?: string }) {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
   const [form, setForm] = useState({
     title: initial?.title ?? "",
@@ -27,7 +29,9 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
     deliveryOption: initial?.deliveryOption ?? "PICKUP",
     usageDuration: initial?.usageDuration ?? "",
     reasonForSelling: initial?.reasonForSelling ?? "",
-    whatsappNumber: initial?.seller.whatsappNumber ?? "",
+    // This is the seller's own contact info — sourced from their account,
+    // not the listing's public (PII-free) seller payload.
+    whatsappNumber: user?.whatsappNumber ?? "",
   });
   const [images, setImages] = useState<string[]>(initial?.images ?? []);
   const [issues, setIssues] = useState<Record<string, string>>({});

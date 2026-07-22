@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -6,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'crypto';
 import type {
   AuthResponse,
   AuthTokens,
@@ -14,13 +16,19 @@ import type {
 } from '@nutrimom/shared';
 import type { User } from '@prisma/client';
 import { UsersService } from '../users/users.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import type { Env } from '../config/env.validation';
 import type { JwtPayload } from './jwt.strategy';
+
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly users: UsersService,
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -66,6 +74,57 @@ export class AuthService {
     // ponytail: stateless refresh — no server-side revocation. Add a
     // tokenVersion column on User and check it here if you need logout-all /
     // revoke-on-compromise.
+  }
+
+  /**
+   * Always resolves the same way whether or not the email is registered —
+   * this endpoint can't be used to enumerate accounts. The raw token is only
+   * ever in the emailed link; the DB holds just its hash, mirroring how a
+   * password itself is never stored in the clear.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.users.findByEmail(email);
+    if (!user) return;
+
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+
+    const webUrl = this.config.get('WEB_URL', { infer: true });
+    await this.mail.sendPasswordReset(
+      user.email,
+      `${webUrl}/reset-password?token=${token}`,
+    );
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+    });
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'This reset link is invalid or has expired',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: record.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
   }
 
   private async buildResponse(user: User): Promise<AuthResponse> {

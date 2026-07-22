@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.validation';
 
@@ -9,6 +10,8 @@ async function bootstrap() {
   // Razorpay webhook can verify its HMAC signature against what was actually sent.
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService<Env, true>);
+
+  app.use(helmet());
 
   // CORS_ORIGIN may be a comma-separated allowlist, so the stable production
   // domain and any Vercel preview URLs can all be permitted without a redeploy.

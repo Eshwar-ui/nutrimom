@@ -153,6 +153,26 @@ pnpm build                        # production build of both apps
 
 ---
 
+## 5a. Password reset emails (Resend)
+
+1. Create a free account at [resend.com](https://resend.com) and grab an API key.
+2. Put it in `apps/api/.env` → `RESEND_API_KEY`. The default `MAIL_FROM_EMAIL`
+   (`onboarding@resend.dev`) works out of the box for testing — swap it for an
+   address on a domain you've verified in Resend once you're ready to go live.
+3. `WEB_URL` (`apps/api/.env`) must match wherever the web app actually runs —
+   it's what gets embedded in the reset link. Already set to
+   `http://localhost:4000` for local dev.
+4. Test it: `/forgot-password` on the web app → check the inbox for the
+   address you registered with → the emailed link opens `/reset-password`.
+   Reset tokens expire after 30 minutes and can only be used once.
+
+Without a real `RESEND_API_KEY`, requests to `/auth/forgot-password` still
+return success (this is deliberate — the endpoint never reveals whether an
+email is registered) but no email actually sends; check the API log for a
+"Failed to send password-reset email" warning.
+
+---
+
 ## 6. Common tasks
 
 **Reset the database (fresh start):**

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   membershipCheckoutSchema,
   verifySellerPaymentSchema,
@@ -24,11 +32,13 @@ export class SellerBillingController {
   }
 
   @Post('registration')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   registration(@CurrentUser() user: RequestUser) {
     return this.billing.registrationCheckout(user.id);
   }
 
   @Post('membership')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   membership(
     @CurrentUser() user: RequestUser,
     @Body(new ZodValidationPipe(membershipCheckoutSchema))

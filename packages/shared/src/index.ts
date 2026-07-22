@@ -255,6 +255,15 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 export type RefreshInput = z.infer<typeof refreshSchema>;
 
+export const forgotPasswordSchema = z.object({ email: z.string().email() });
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(72),
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 // Phone/WhatsApp number: accept an optional country code and common separators
 // (spaces, hyphens, parens), then require 10–15 digits once normalised. Blocks
 // junk like "++++----" that the old loose char-class regex let through.
@@ -378,8 +387,15 @@ export interface SellerInfo {
   id: string;
   name: string;
   city: string | null;
-  whatsappNumber: string | null;
+  // The number itself isn't in the public listing payload — it's PII and
+  // this type is returned from unauthenticated endpoints. Fetch it from
+  // GET /listings/:id/contact (requires auth) when this is true.
+  hasWhatsapp: boolean;
   isSellerVerified: boolean;
+}
+
+export interface SellerContact {
+  whatsappNumber: string | null;
 }
 
 export interface Listing {

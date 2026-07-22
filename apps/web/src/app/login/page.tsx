@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +15,17 @@ export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
+  const [next, setNext] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
+
+  useEffect(() => {
+    // Reads window.location directly (not useSearchParams()) to avoid forcing
+    // this whole page into a Suspense boundary for one link's href. Setting
+    // state post-mount, matching SSR's null on the first paint, is the
+    // tradeoff — this only ever affects an href, never a flash of content.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNext(new URLSearchParams(window.location.search).get("next"));
+  }, []);
 
   const onSubmit = async (data: LoginInput) => {
     setError(null);
@@ -28,6 +38,8 @@ export default function LoginPage() {
       setError(caught instanceof ApiError ? caught.message : "Something went wrong");
     }
   };
+
+  const registerHref = next ? `/register?next=${encodeURIComponent(next)}` : "/register";
 
   return (
     <Container className="grid min-h-[calc(100dvh-8rem)] items-center gap-10 py-12 lg:grid-cols-[0.9fr_1.1fr]">
@@ -46,14 +58,17 @@ export default function LoginPage() {
             {errors.email && <p id="login-email-error" className="mt-1.5 text-xs text-danger">{errors.email.message}</p>}
           </div>
           <div>
-            <Label htmlFor="login-password">Password</Label>
+            <div className="flex items-baseline justify-between">
+              <Label htmlFor="login-password">Password</Label>
+              <Link href="/forgot-password" className="text-xs font-semibold text-accent-text hover:underline">Forgot password?</Link>
+            </div>
             <PasswordInput id="login-password" autoComplete="current-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? "login-password-error" : undefined} {...register("password")} placeholder="••••••••" />
             {errors.password && <p id="login-password-error" className="mt-1.5 text-xs text-danger">{errors.password.message}</p>}
           </div>
           {error && <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
           <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>{isSubmitting ? "Signing in…" : "Sign in"}</Button>
         </form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">New here? <Link href="/register" className="font-semibold text-accent-text hover:underline">Create an account</Link></p>
+        <p className="mt-6 text-center text-sm text-muted-foreground">New here? <Link href={registerHref} className="font-semibold text-accent-text hover:underline">Create an account</Link></p>
       </Card>
     </Container>
   );

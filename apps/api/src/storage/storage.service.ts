@@ -9,11 +9,49 @@ import { randomUUID } from 'crypto';
 import type { Env } from '../config/env.validation';
 
 // Only real photo formats a phone camera produces. Kept small on purpose.
-const ALLOWED: Record<string, string> = {
+const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
 };
+
+/**
+ * Sniffs the actual file format from its magic bytes. The client-supplied
+ * mimetype is just a header the caller sets — never trust it to decide what
+ * gets stored and served as an image. Returns null for anything that isn't
+ * one of the three formats we accept.
+ */
+function detectImageType(buffer: Buffer): string | null {
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return 'image/jpeg';
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  return null;
+}
 
 /**
  * Thin wrapper over the Supabase Storage REST API (no SDK dependency).
@@ -36,18 +74,20 @@ export class StorageService {
     this.bucket = config.get('SUPABASE_STORAGE_BUCKET', { infer: true });
   }
 
-  /** Store one image and return its public URL. */
-  async uploadImage(
-    userId: string,
-    buffer: Buffer,
-    contentType: string,
-  ): Promise<string> {
-    const ext = ALLOWED[contentType];
-    if (!ext) {
+  /**
+   * Store one image and return its public URL. The format is determined by
+   * sniffing the file's magic bytes, not the client-supplied mimetype —
+   * that header is trivially spoofable and would otherwise let arbitrary
+   * bytes get hosted on our domain labeled (and served) as an image.
+   */
+  async uploadImage(userId: string, buffer: Buffer): Promise<string> {
+    const contentType = detectImageType(buffer);
+    if (!contentType) {
       throw new BadRequestException(
         'Only JPEG, PNG or WebP images are allowed',
       );
     }
+    const ext = EXTENSIONS[contentType];
     const path = `${userId}/${randomUUID()}.${ext}`;
     const res = await fetch(
       `${this.baseUrl}/storage/v1/object/${this.bucket}/${path}`,

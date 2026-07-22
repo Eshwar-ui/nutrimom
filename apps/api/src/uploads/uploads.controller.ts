@@ -7,6 +7,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -25,17 +26,14 @@ export class UploadsController {
 
   /** Accepts one image, stores it, returns its public URL. */
   @Post()
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_BYTES } }))
   async upload(
     @CurrentUser() user: RequestUser,
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<{ url: string }> {
     if (!file) throw new BadRequestException('No image was uploaded');
-    const url = await this.storage.uploadImage(
-      user.id,
-      file.buffer,
-      file.mimetype,
-    );
+    const url = await this.storage.uploadImage(user.id, file.buffer);
     return { url };
   }
 }

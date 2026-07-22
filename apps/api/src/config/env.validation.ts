@@ -3,8 +3,12 @@ import { z } from 'zod';
 // Fail fast at boot if the environment is misconfigured.
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
-  PORT: z.coerce.number().default(3001),
-  CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  PORT: z.coerce.number().default(4001),
+  CORS_ORIGIN: z.string().default('http://localhost:4000'),
+  // The web app's own origin (no trailing slash) — used to build links that
+  // go out in emails (e.g. the password-reset link), since the API can't
+  // infer it from CORS_ORIGIN (that's an allowlist, possibly several origins).
+  WEB_URL: z.string().url().default('http://localhost:4000'),
 
   JWT_ACCESS_SECRET: z.string().min(1),
   JWT_REFRESH_SECRET: z.string().min(1),
@@ -29,6 +33,11 @@ const envSchema = z.object({
 
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().optional(),
+
+  // Transactional email (password reset). Get a key at resend.com; FROM_EMAIL
+  // must be on a domain verified in that Resend account.
+  RESEND_API_KEY: z.string().min(1),
+  MAIL_FROM_EMAIL: z.string().email().default('onboarding@resend.dev'),
 });
 
 export type Env = z.infer<typeof envSchema>;

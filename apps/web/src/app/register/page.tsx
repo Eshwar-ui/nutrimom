@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,18 +15,29 @@ export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
+  const [next, setNext] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+
+  // Read client-side only (avoids an SSR/hydration mismatch) — carries a
+  // "come back here after signing in" destination through to both the
+  // post-register redirect and the "already have an account" link below.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNext(new URLSearchParams(window.location.search).get("next"));
+  }, []);
 
   const onSubmit = async (data: RegisterInput) => {
     setError(null);
     try {
       const response = await request<AuthResponse>("/auth/register", { method: "POST", body: data });
       setAuth(response.user, response.tokens);
-      router.push("/account");
+      router.push(next ?? "/account");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Something went wrong");
     }
   };
+
+  const signInHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
 
   return (
     <Container className="grid min-h-[calc(100dvh-8rem)] items-center gap-10 py-12 lg:grid-cols-[0.9fr_1.1fr]">
@@ -59,7 +70,7 @@ export default function RegisterPage() {
           <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>{isSubmitting ? "Creating account…" : "Create account"}</Button>
         </form>
         <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">By creating an account, you agree to our <Link href="/terms" className="font-semibold text-accent-text hover:underline">Terms</Link> and <Link href="/privacy" className="font-semibold text-accent-text hover:underline">Privacy Policy</Link>.</p>
-        <p className="mt-4 text-center text-sm text-muted-foreground">Already have an account? <Link href="/login" className="font-semibold text-accent-text hover:underline">Sign in</Link></p>
+        <p className="mt-4 text-center text-sm text-muted-foreground">Already have an account? <Link href={signInHref} className="font-semibold text-accent-text hover:underline">Sign in</Link></p>
       </Card>
     </Container>
   );
