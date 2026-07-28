@@ -18,7 +18,14 @@ import {
 import { useRequireAuth } from "@/lib/use-auth";
 import { useAuthStore } from "@/lib/auth-store";
 import { toast } from "@/lib/toast-store";
-import { ApiError } from "@/lib/api";
+import {
+  classifyPaymentError,
+  type PaymentOutcome,
+} from "@/lib/payment-outcome";
+import {
+  PaymentStatusModal,
+  PaymentVerifyingOverlay,
+} from "@/components/payment-status-modal";
 import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,6 +43,9 @@ export default function MembershipPage() {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [busy, setBusy] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<PaymentOutcome | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
 
   const { data: status, isLoading } = useQuery({
     queryKey: ["seller-billing"],
@@ -45,24 +55,47 @@ export default function MembershipPage() {
 
   const prefill = { name: user?.name, email: user?.email };
 
+  const hooks = {
+    onVerifyStart: () => setVerifying(true),
+    onVerifyEnd: () => setVerifying(false),
+  };
+
   const settle = (next: SellerBillingStatus, message: string) => {
     qc.setQueryData(["seller-billing"], next);
     toast.success(message);
   };
   const fail = (err: unknown) => {
-    if (err instanceof Error && err.message === "Payment cancelled") return;
-    toast.error(
-      err instanceof ApiError || err instanceof Error
-        ? err.message
-        : "Payment failed",
-    );
+    const classified = classifyPaymentError(err);
+    // A dismissed modal is a non-event — the seller chose it and nothing was
+    // charged, so don't interrupt them with a dialog about it.
+    if (classified.kind === "cancelled") return;
+    setOutcome(classified);
+  };
+
+  /** Re-read billing status after a captured-but-unconfirmed payment. */
+  const recheckStatus = async () => {
+    setRechecking(true);
+    try {
+      const latest = await getBillingStatus();
+      qc.setQueryData(["seller-billing"], latest);
+      if (latest.canList || latest.registrationPaid) {
+        setOutcome(null);
+        toast.success("Payment confirmed");
+      } else {
+        toast.info("Still confirming — this can take a minute.");
+      }
+    } catch {
+      toast.error("Couldn't reach us just now. Your payment is still safe.");
+    } finally {
+      setRechecking(false);
+    }
   };
 
   const buyRegistration = async () => {
     setBusy("registration");
     try {
       settle(
-        await payRegistration(prefill),
+        await payRegistration(prefill, hooks),
         "Registration complete — choose a plan to start listing.",
       );
     } catch (e) {
@@ -76,7 +109,7 @@ export default function MembershipPage() {
     setBusy(plan);
     try {
       settle(
-        await payMembership(plan, prefill),
+        await payMembership(plan, prefill, hooks),
         "Membership active — you can now list items.",
       );
     } catch (e) {
@@ -235,6 +268,14 @@ export default function MembershipPage() {
           })}
         </div>
       </div>
+
+      <PaymentVerifyingOverlay open={verifying} />
+      <PaymentStatusModal
+        outcome={outcome}
+        retrying={rechecking}
+        onRetry={outcome?.charged ? () => void recheckStatus() : undefined}
+        onClose={() => setOutcome(null)}
+      />
     </div>
   );
 }

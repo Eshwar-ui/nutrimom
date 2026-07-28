@@ -15,10 +15,19 @@ import {
 import { authedRequest } from "@/lib/api";
 import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
 import { toast } from "@/lib/toast-store";
+import {
+  classifyPaymentError,
+  declinedOutcome,
+  type PaymentOutcome,
+} from "@/lib/payment-outcome";
+import {
+  PaymentStatusModal,
+  PaymentVerifyingOverlay,
+} from "@/components/payment-status-modal";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore, cartSubtotal } from "@/lib/cart-store";
 import { Container, Card, Input, Label } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { useAuthHydrated, useCartHydrated } from "@/lib/use-store-hydrated";
 import { ShoppingBag } from "lucide-react";
@@ -32,6 +41,13 @@ export default function CheckoutPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Payment attempts have outcomes the inline error line can't express — most
+  // importantly "we took your money but couldn't confirm it yet".
+  const [outcome, setOutcome] = useState<PaymentOutcome | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
+  // The order the current attempt belongs to, so "Check again" knows what to poll.
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const authHydrated = useAuthHydrated();
   const cartHydrated = useCartHydrated();
 
@@ -69,6 +85,7 @@ export default function CheckoutPage() {
           shippingAddress: address,
         },
       });
+      setPendingOrderId(order.id);
       // 2. Create the gateway order to pay against (authoritative amount).
       const pay = await authedRequest<RazorpayOrderResponse>("/payments/order", {
         method: "POST",
@@ -90,6 +107,9 @@ export default function CheckoutPage() {
         },
         theme: { color: "#e8756a" },
         handler: async (resp) => {
+          // From here on the gateway HAS captured the money. Any failure below
+          // is a confirmation problem, never a payment failure — say so.
+          setVerifying(true);
           try {
             await authedRequest<Order>("/payments/verify", {
               method: "POST",
@@ -103,12 +123,17 @@ export default function CheckoutPage() {
             clear();
             router.push(`/orders/${order.id}`);
           } catch (err) {
-            setError(
-              err instanceof Error
-                ? err.message
-                : "Payment verification failed",
+            setOutcome(
+              classifyPaymentError(err, {
+                charged: true,
+                paymentId: resp.razorpay_payment_id,
+              }),
             );
-            setSubmitting(false);
+            // Deliberately leave `submitting` set: this cart has already been
+            // paid for, and re-enabling the button under the dialog would
+            // invite a second order for the same items.
+          } finally {
+            setVerifying(false);
           }
         },
         modal: {
@@ -121,14 +146,40 @@ export default function CheckoutPage() {
           },
         },
       },
-      // A declined attempt leaves the order PENDING and the modal open. Toast
-      // rather than setError: the Toaster is global, so the reason survives the
-      // push to the order page if the buyer gives up and closes the modal.
-        (message) => toast.error(message),
+        // A declined attempt leaves the order PENDING and the gateway modal
+        // open for a retry, so this toasts instead of taking over the screen —
+        // and because the Toaster is global, the reason still survives the push
+        // to the order page if the buyer gives up and closes the modal.
+        (message) => toast.error(declinedOutcome(message).description),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Checkout failed");
+      // Nothing has been charged at this point — the gateway never opened.
+      setOutcome(classifyPaymentError(err));
       setSubmitting(false);
+    }
+  };
+
+  /**
+   * "Check again" for a captured-but-unconfirmed payment: re-read the order and
+   * move on if the webhook has since settled it.
+   */
+  const recheckOrder = async () => {
+    const orderId = pendingOrderId;
+    if (!orderId) return;
+    setRechecking(true);
+    try {
+      const latest = await authedRequest<Order>(`/orders/${orderId}`);
+      if (latest.status === "PAID") {
+        clear();
+        setOutcome(null);
+        router.push(`/orders/${orderId}`);
+        return;
+      }
+      toast.info("Still confirming — this can take a minute. We'll keep trying.");
+    } catch {
+      toast.error("Couldn't reach us just now. Your payment is still safe.");
+    } finally {
+      setRechecking(false);
     }
   };
 
@@ -215,6 +266,34 @@ export default function CheckoutPage() {
           <button type="submit" form="checkout-form" disabled={submitting} className="inline-flex h-12 items-center rounded-full bg-primary px-7 font-semibold text-primary-foreground disabled:opacity-50">{submitting ? "Opening…" : "Pay now"}</button>
         </div>
       </div>
+
+      <PaymentVerifyingOverlay open={verifying} />
+      <PaymentStatusModal
+        outcome={outcome}
+        retrying={rechecking}
+        onRetry={outcome?.charged ? () => void recheckOrder() : undefined}
+        onClose={() => {
+          const settled = outcome?.charged;
+          setOutcome(null);
+          // A charged order exists and holds its listings — send the buyer to it
+          // rather than back to a form that would fail on RESERVED items.
+          if (settled && pendingOrderId) {
+            clear();
+            router.push(`/orders/${pendingOrderId}`);
+          }
+        }}
+        secondary={
+          outcome?.kind === "session-expired" ? (
+            <Link href="/login?next=/checkout" className={buttonVariants()}>
+              Sign in
+            </Link>
+          ) : outcome?.kind === "item-unavailable" ? (
+            <Link href="/listings" className={buttonVariants()}>
+              Browse listings
+            </Link>
+          ) : undefined
+        }
+      />
     </Container>
   );
 }

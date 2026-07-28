@@ -6,8 +6,19 @@ import type {
 import { authedRequest } from "./api";
 import { loadRazorpay, openRazorpay } from "./razorpay";
 import { toast } from "./toast-store";
+import {
+  PaymentCancelledError,
+  PaymentCapturedError,
+  declinedOutcome,
+} from "./payment-outcome";
 
 type Prefill = { name?: string; email?: string; contact?: string };
+
+/** Lets the page show a "don't close this window" overlay while we verify. */
+export interface PayHooks {
+  onVerifyStart?: () => void;
+  onVerifyEnd?: () => void;
+}
 
 export function getBillingStatus() {
   return authedRequest<SellerBillingStatus>("/seller/billing/status");
@@ -18,6 +29,7 @@ async function payAndVerify(
   checkout: SellerCheckoutResponse,
   description: string,
   prefill: Prefill,
+  { onVerifyStart, onVerifyEnd }: PayHooks = {},
 ): Promise<SellerBillingStatus> {
   await loadRazorpay();
   return new Promise<SellerBillingStatus>((resolve, reject) => {
@@ -31,6 +43,7 @@ async function payAndVerify(
       prefill,
       theme: { color: "#e8756a" },
       handler: (resp) => {
+        onVerifyStart?.();
         authedRequest<SellerBillingStatus>("/seller/billing/verify", {
           method: "POST",
           body: {
@@ -41,36 +54,41 @@ async function payAndVerify(
           },
         })
           .then(resolve)
+          // The gateway already took the money here, so surface it as
+          // "captured, not yet confirmed" rather than a generic failure.
           .catch((err: unknown) =>
-            reject(err instanceof Error ? err : new Error("Verification failed")),
-          );
+            reject(new PaymentCapturedError(resp.razorpay_payment_id, err)),
+          )
+          .finally(() => onVerifyEnd?.());
       },
-      modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
+      modal: { ondismiss: () => reject(new PaymentCancelledError()) },
     },
       // Surface the decline but don't settle the promise — the modal stays open
       // and a retry can still succeed. Only dismiss or a verified payment ends it.
-      (message) => toast.error(message),
+      (message) => toast.error(declinedOutcome(message).description),
     );
   });
 }
 
 export async function payRegistration(
   prefill: Prefill,
+  hooks?: PayHooks,
 ): Promise<SellerBillingStatus> {
   const checkout = await authedRequest<SellerCheckoutResponse>(
     "/seller/billing/registration",
     { method: "POST" },
   );
-  return payAndVerify(checkout, "Seller registration", prefill);
+  return payAndVerify(checkout, "Seller registration", prefill, hooks);
 }
 
 export async function payMembership(
   plan: MembershipPlan,
   prefill: Prefill,
+  hooks?: PayHooks,
 ): Promise<SellerBillingStatus> {
   const checkout = await authedRequest<SellerCheckoutResponse>(
     "/seller/billing/membership",
     { method: "POST", body: { plan } },
   );
-  return payAndVerify(checkout, "Seller membership", prefill);
+  return payAndVerify(checkout, "Seller membership", prefill, hooks);
 }

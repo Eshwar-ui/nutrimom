@@ -17,6 +17,15 @@ import {
 import { authedRequest, ApiError } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
 import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
+import {
+  classifyPaymentError,
+  declinedOutcome,
+  type PaymentOutcome,
+} from "@/lib/payment-outcome";
+import {
+  PaymentStatusModal,
+  PaymentVerifyingOverlay,
+} from "@/components/payment-status-modal";
 import { useAuthStore } from "@/lib/auth-store";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
 import { Container, Card } from "@/components/ui/primitives";
@@ -43,6 +52,28 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
     onError: (caught) => toast.error(caught instanceof ApiError ? caught.message : "Couldn't cancel this order."),
   });
   const [paying, setPaying] = useState(false);
+  const [outcome, setOutcome] = useState<PaymentOutcome | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
+
+  /** Re-read the order after a captured-but-unconfirmed payment. */
+  const recheckOrder = async () => {
+    setRechecking(true);
+    try {
+      const latest = await authedRequest<Order>(`/orders/${id}`);
+      queryClient.setQueryData(["order", id], latest);
+      if (latest.status === "PAID") {
+        setOutcome(null);
+        toast.success("Payment confirmed");
+      } else {
+        toast.info("Still confirming — this can take a minute.");
+      }
+    } catch {
+      toast.error("Couldn't reach us just now. Your payment is still safe.");
+    } finally {
+      setRechecking(false);
+    }
+  };
 
   const payNow = async () => {
     if (!order) return;
@@ -67,6 +98,9 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         },
         theme: { color: "#e8756a" },
         handler: async (resp) => {
+          // The money is captured by now — a failure here is a confirmation
+          // problem, not a payment failure.
+          setVerifying(true);
           try {
             const updated = await authedRequest<Order>("/payments/verify", {
               method: "POST",
@@ -79,10 +113,16 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
             });
             queryClient.setQueryData(["order", id], updated);
             queryClient.invalidateQueries({ queryKey: ["my-orders"] });
-            toast.success(updated.status === "PAID" ? "Payment successful" : "Payment could not be confirmed");
+            toast.success("Payment successful");
           } catch (err) {
-            toast.error(err instanceof ApiError ? err.message : "Payment verification failed");
+            setOutcome(
+              classifyPaymentError(err, {
+                charged: true,
+                paymentId: resp.razorpay_payment_id,
+              }),
+            );
           } finally {
+            setVerifying(false);
             setPaying(false);
           }
         },
@@ -90,10 +130,11 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       },
         // The modal stays open for a retry, so keep `paying` set — only
         // ondismiss or a verified handler ends the attempt.
-        (message) => toast.error(message),
+        (message) => toast.error(declinedOutcome(message).description),
       );
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn't start payment");
+      // Nothing charged — the gateway never opened.
+      setOutcome(classifyPaymentError(err));
       setPaying(false);
     }
   };
@@ -168,6 +209,21 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
           <Button variant="ghost" className="mt-3 gap-1.5 text-danger hover:bg-danger/10" disabled={cancel.isPending} onClick={() => { if (window.confirm("Cancel this order? This can't be undone.")) cancel.mutate(); }}><XCircle className="h-4 w-4" /> {cancel.isPending ? "Cancelling…" : "Cancel order"}</Button>
         </div>
       )}
+
+      <PaymentVerifyingOverlay open={verifying} />
+      <PaymentStatusModal
+        outcome={outcome}
+        retrying={rechecking}
+        onRetry={outcome?.charged ? () => void recheckOrder() : undefined}
+        onClose={() => setOutcome(null)}
+        secondary={
+          outcome?.kind === "session-expired" ? (
+            <Link href={`/login?next=/orders/${id}`} className={buttonVariants()}>
+              Sign in
+            </Link>
+          ) : undefined
+        }
+      />
     </Container>
   );
 }
