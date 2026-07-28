@@ -14,6 +14,7 @@ import {
 } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
+import { toast } from "@/lib/toast-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore, cartSubtotal } from "@/lib/cart-store";
 import { Container, Card, Input, Label } from "@/components/ui/primitives";
@@ -119,7 +120,12 @@ export default function CheckoutPage() {
             router.push(`/orders/${order.id}`);
           },
         },
-      });
+      },
+      // A declined attempt leaves the order PENDING and the modal open. Toast
+      // rather than setError: the Toaster is global, so the reason survives the
+      // push to the order page if the buyer gives up and closes the modal.
+        (message) => toast.error(message),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Checkout failed");
       setSubmitting(false);

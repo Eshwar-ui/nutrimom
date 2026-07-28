@@ -87,7 +87,11 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
           }
         },
         modal: { ondismiss: () => setPaying(false) },
-      });
+      },
+        // The modal stays open for a retry, so keep `paying` set — only
+        // ondismiss or a verified handler ends the attempt.
+        (message) => toast.error(message),
+      );
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't start payment");
       setPaying(false);

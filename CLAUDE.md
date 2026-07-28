@@ -110,9 +110,19 @@ selected by env `PAYMENT_PROVIDER` (only `razorpay` today; add a case + adapter 
 Cashfree/PhonePe). Routes: `POST /payments/order`, `/payments/verify`, `/payments/webhook`.
 Checkout wires create-order → gateway order → Razorpay checkout → verify → settle. The
 `PaymentMethod` enum keeps `COD` so the 4 historical COD orders stay valid (retired, not selectable);
-DB columns `razorpayOrderId`/`razorpayPaymentId` are the generic gateway ids. **To go live:** add real
-`RAZORPAY_KEY_ID/SECRET/WEBHOOK_SECRET`. Verified live: online order creates PENDING/ONLINE, payment
-route reaches the gateway (401 on placeholder keys, as expected), 6/6 money-path tests pass.
+DB columns `razorpayOrderId`/`razorpayPaymentId` are the generic gateway ids.
+
+**Test keys wired (2026-07-28).** Real `rzp_test_*` key id/secret are in `apps/api/.env` +
+`apps/web/.env.local`; checkout now reaches the live Razorpay test gateway. Verified live end-to-end:
+`POST /payments/order` returns a real `order_*` id and reuses it on retry (no duplicate gateway
+orders), forged signature / mismatched gateway order / missing fields all 400 with the order left
+PENDING, unauthenticated 401, webhook rejects a bad HMAC, 19/19 tests pass. Also added: a
+`payment.failed` handler on all three checkout call sites (the modal stays open for a retry; the
+reason is toasted) and a ≥100-paise floor in `RazorpayProvider.createOrder`.
+**Still needed to go live:** `RAZORPAY_WEBHOOK_SECRET` is still a placeholder — generate it in
+Dashboard → Settings → Webhooks when registering the `/payments/webhook` URL, or every delivery is
+rejected (verify-on-return still settles orders, so this only costs you the async safety net).
+Swap the test key pair for live keys before taking real money.
 
 **#2 — Test coverage points at the (formerly) dead path.** The only real test suite is
 [payments.service.spec.ts](apps/api/src/payments/payments.service.spec.ts) (Razorpay). Now that

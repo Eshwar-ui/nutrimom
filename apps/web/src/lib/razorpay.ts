@@ -19,8 +19,22 @@ interface RazorpayOptions {
   modal?: { ondismiss?: () => void };
 }
 
+/** `error` payload of the gateway's `payment.failed` event. */
+export interface RazorpayFailure {
+  code?: string;
+  description?: string;
+  reason?: string;
+  step?: string;
+  source?: string;
+  metadata?: { order_id?: string; payment_id?: string };
+}
+
 interface RazorpayInstance {
   open: () => void;
+  on: (
+    event: "payment.failed",
+    handler: (response: { error?: RazorpayFailure }) => void,
+  ) => void;
 }
 
 declare global {
@@ -51,7 +65,31 @@ export function loadRazorpay(): Promise<void> {
   });
 }
 
-export function openRazorpay(options: RazorpayOptions) {
+/**
+ * Open the gateway checkout. `onFailed` fires on a declined/failed attempt —
+ * the modal stays open so the buyer can retry with another method, and
+ * `modal.ondismiss` still runs if they then close it. Nothing is settled here:
+ * only the signed `handler` callback marks a payment good.
+ */
+export function openRazorpay(
+  options: RazorpayOptions,
+  onFailed?: (message: string) => void,
+) {
   if (!window.Razorpay) throw new Error("Razorpay not loaded");
-  new window.Razorpay(options).open();
+  const instance = new window.Razorpay(options);
+  if (onFailed) {
+    instance.on("payment.failed", (response) =>
+      onFailed(describeFailure(response.error)),
+    );
+  }
+  instance.open();
+}
+
+/** Gateway failure reasons are buyer-readable; fall back when one is missing. */
+export function describeFailure(error: RazorpayFailure | undefined): string {
+  return (
+    error?.description ??
+    error?.reason ??
+    "Your payment could not be completed. Please try another method."
+  );
 }

@@ -5,6 +5,7 @@ import type {
 } from "@nutrimom/shared";
 import { authedRequest } from "./api";
 import { loadRazorpay, openRazorpay } from "./razorpay";
+import { toast } from "./toast-store";
 
 type Prefill = { name?: string; email?: string; contact?: string };
 
@@ -45,7 +46,11 @@ async function payAndVerify(
           );
       },
       modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
-    });
+    },
+      // Surface the decline but don't settle the promise — the modal stays open
+      // and a retry can still succeed. Only dismiss or a verified payment ends it.
+      (message) => toast.error(message),
+    );
   });
 }
 

@@ -10,6 +10,9 @@ import type {
   WebhookResult,
 } from '../payment-provider.interface';
 
+/** Razorpay's floor for a chargeable order — ₹1. */
+const MIN_AMOUNT_PAISE = 100;
+
 /** Razorpay adapter for the gateway-agnostic PaymentProvider contract. */
 @Injectable()
 export class RazorpayProvider implements PaymentProvider {
@@ -33,6 +36,13 @@ export class RazorpayProvider implements PaymentProvider {
     amountInPaise: number,
     receipt: string,
   ): Promise<GatewayOrder> {
+    // Razorpay rejects anything under ₹1 with an opaque gateway error; fail
+    // here instead so the caller sees a 400 naming the real problem.
+    if (!Number.isInteger(amountInPaise) || amountInPaise < MIN_AMOUNT_PAISE) {
+      throw new BadRequestException(
+        `Payment amount must be a whole number of paise and at least ${MIN_AMOUNT_PAISE} (₹1)`,
+      );
+    }
     const rzp = await this.razorpay.orders.create({
       amount: amountInPaise, // authoritative amount from our DB
       currency: 'INR',
