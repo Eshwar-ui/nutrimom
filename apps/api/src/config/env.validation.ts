@@ -5,7 +5,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   PORT: z.coerce.number().default(4001),
   CORS_ORIGIN: z.string().default('http://localhost:4000'),
-  // The web app's own origin (no trailing slash) — used to build links that
+  // The web app's own origin (no trailing slash) - used to build links that
   // go out in emails (e.g. the password-reset link), since the API can't
   // infer it from CORS_ORIGIN (that's an allowlist, possibly several origins).
   WEB_URL: z.string().url().default('http://localhost:4000'),

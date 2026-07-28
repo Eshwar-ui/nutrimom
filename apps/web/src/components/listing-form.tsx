@@ -29,8 +29,8 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
     deliveryOption: initial?.deliveryOption ?? "PICKUP",
     usageDuration: initial?.usageDuration ?? "",
     reasonForSelling: initial?.reasonForSelling ?? "",
-    // This is the seller's own contact info — sourced from their account,
-    // not the listing's public (PII-free) seller payload.
+    // This is the seller's own contact info, sourced from their account,
+    // not the listing's public seller payload.
     whatsappNumber: user?.whatsappNumber ?? "",
   });
   const [images, setImages] = useState<string[]>(initial?.images ?? []);
@@ -89,10 +89,10 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
         <legend className="sr-only">Item details</legend>
         <div className="sm:col-span-2"><SectionHeading icon={PackageOpen} title="Item details" description="Describe condition honestly so buyers know exactly what to expect." /></div>
         <Field label="What are you selling?" id="title" error={issues.title} className="sm:col-span-2">
-          <Input id="title" value={form.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!issues.title} aria-describedby={describedBy("title")} placeholder="Chicco Bravo Stroller — Navy" />
+          <Input id="title" value={form.title} onChange={(event) => set("title", event.target.value)} aria-invalid={!!issues.title} aria-describedby={describedBy("title")} placeholder="Chicco Bravo Stroller - Navy" />
         </Field>
         <Field label="Description" id="description" error={issues.description} className="sm:col-span-2">
-          <Textarea id="description" value={form.description} onChange={(event) => set("description", event.target.value)} rows={5} aria-invalid={!!issues.description} aria-describedby={describedBy("description")} placeholder="Condition, what is included, and any visible wear…" />
+          <Textarea id="description" value={form.description} onChange={(event) => set("description", event.target.value)} rows={5} aria-invalid={!!issues.description} aria-describedby={describedBy("description")} placeholder="Condition, what is included, and any visible wear..." />
         </Field>
         <Field label="Category" id="categoryId" error={issues.categoryId}>
           <Select id="categoryId" value={form.categoryId} onChange={(event) => set("categoryId", event.target.value)} aria-invalid={!!issues.categoryId} aria-describedby={describedBy("categoryId")}>
@@ -116,10 +116,10 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
       <fieldset className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
         <legend className="sr-only">Price and handover</legend>
         <div className="sm:col-span-2"><SectionHeading icon={CircleDollarSign} title="Price and handover" description="Set the price, location and best way for the buyer to receive it." /></div>
-        <Field label="Original price" id="originalRupees" helper="Optional, in ₹" error={issues.originalPriceInPaise}>
+        <Field label="Original price" id="originalRupees" helper="Optional, in Rs." error={issues.originalPriceInPaise}>
           <Input id="originalRupees" type="number" min="1" value={form.originalRupees} onChange={(event) => set("originalRupees", event.target.value)} aria-invalid={!!issues.originalPriceInPaise} />
         </Field>
-        <Field label="Your price" id="sellingRupees" helper="In ₹" error={issues.sellingPriceInPaise}>
+        <Field label="Your price" id="sellingRupees" helper="In Rs." error={issues.sellingPriceInPaise}>
           <Input id="sellingRupees" type="number" min="1" value={form.sellingRupees} onChange={(event) => set("sellingRupees", event.target.value)} aria-invalid={!!issues.sellingPriceInPaise} />
         </Field>
         <Field label="City" id="city" error={issues.city}>
@@ -138,7 +138,7 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
       {error && <p role="alert" className="mx-6 mt-6 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger sm:mx-8">{error}</p>}
       <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-border bg-surface/95 p-5 backdrop-blur-xl sm:flex-row sm:justify-end sm:p-6">
         <Button size="lg" variant="ghost" onClick={() => router.back()}>Cancel</Button>
-        <Button size="lg" onClick={submit} disabled={busy}>{busy ? "Saving…" : listingId ? "Save changes" : "Submit for review"}</Button>
+        <Button size="lg" onClick={submit} disabled={busy}>{busy ? "Saving..." : listingId ? "Save changes" : "Submit for review"}</Button>
       </div>
     </Card>
   );
