@@ -297,7 +297,7 @@ export function SiteHeader() {
                           </Link>
                           {user.role === "ADMIN" && (
                             <Link role="menuitem" href="/admin" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
-                              <LayoutDashboard className="h-4 w-4 text-muted-foreground" /> Admin
+                              <LayoutDashboard className="h-4 w-4 text-muted-foreground" /> Visit admin panel
                             </Link>
                           )}
                         </div>
@@ -363,7 +363,7 @@ export function SiteHeader() {
               ))}
               {hydrated && user && (
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
-                  {user.role === "ADMIN" && <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Admin</Link>}
+                  {user.role === "ADMIN" && <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Visit admin panel</Link>}
                   <Link href="/account/notifications" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Notifications</Link>
                   <Link href="/wishlist" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Wishlist</Link>
                   <button type="button" onClick={() => { logout(); setMenuOpen(false); }} className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger/10">Log out</button>

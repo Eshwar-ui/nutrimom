@@ -9,6 +9,7 @@ import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { ListingStatusBadge } from "@/components/listing-status-badge";
+import { RejectListingDialog } from "@/components/reject-listing-dialog";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 
@@ -35,12 +36,8 @@ export default function AdminListingsPage() {
     onSuccess: invalidate,
   });
 
-  const reject = (id: string) => {
-    const reason = window.prompt("Why is this listing being rejected? The seller will see this.");
-    if (reason === null) return; // cancelled
-    if (!reason.trim()) return window.alert("A reason is required.");
-    moderate.mutate({ id, status: "REJECTED", reason: reason.trim() });
-  };
+  // Which listing is being rejected, if any — drives the reason dialog.
+  const [rejecting, setRejecting] = useState<{ id: string; title: string } | null>(null);
   const feature = useMutation({
     mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
       authedRequest(`/admin/listings/${id}/feature`, { method: "PATCH", body: { isFeatured } }),
@@ -76,7 +73,7 @@ export default function AdminListingsPage() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <Link href={`/listings/${l.id}`} className="truncate font-medium text-foreground hover:text-accent">
+                <Link href={`/admin/listings/${l.id}`} className="truncate font-medium text-foreground hover:text-accent">
                   {l.title}
                 </Link>
                 <p className="text-sm text-muted-foreground">
@@ -92,7 +89,7 @@ export default function AdminListingsPage() {
                       <Check className="h-4 w-4 text-primary" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Reject"
-                      onClick={() => reject(l.id)}>
+                      onClick={() => setRejecting({ id: l.id, title: l.title })}>
                       <X className="h-4 w-4 text-accent" />
                     </Button>
                   </>
@@ -107,6 +104,20 @@ export default function AdminListingsPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {rejecting && (
+        <RejectListingDialog
+          listingTitle={rejecting.title}
+          pending={moderate.isPending}
+          onCancel={() => setRejecting(null)}
+          onConfirm={(reason) =>
+            moderate.mutate(
+              { id: rejecting.id, status: "REJECTED", reason },
+              { onSettled: () => setRejecting(null) },
+            )
+          }
+        />
       )}
     </div>
   );

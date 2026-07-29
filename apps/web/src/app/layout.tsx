@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { FlyToCart } from "@/components/fly-to-cart";
+import { AppChrome } from "@/components/app-chrome";
 import { Toaster } from "@/components/toaster";
 
 const outfit = Outfit({
@@ -39,10 +37,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <Providers>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-          <FlyToCart />
+          <AppChrome>{children}</AppChrome>
           <Toaster />
         </Providers>
       </body>
