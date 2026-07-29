@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import Razorpay from 'razorpay';
@@ -17,6 +22,7 @@ const MIN_AMOUNT_PAISE = 100;
 @Injectable()
 export class RazorpayProvider implements PaymentProvider {
   readonly name = 'razorpay';
+  private readonly logger = new Logger(RazorpayProvider.name);
   private readonly razorpay: Razorpay;
   readonly keyId: string;
   private readonly keySecret: string;
@@ -30,6 +36,22 @@ export class RazorpayProvider implements PaymentProvider {
       key_id: this.keyId,
       key_secret: this.keySecret,
     });
+
+    // Placeholder credentials still satisfy env validation (they're non-empty),
+    // so every payment would fail at the gateway with a 401 instead. Say so at
+    // boot rather than letting it look like a runtime bug later.
+    if (/x{4,}/i.test(this.keyId) || /x{4,}/i.test(this.keySecret)) {
+      this.logger.error(
+        'RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET still look like placeholders — ' +
+          'every payment will be rejected by the gateway. Set real keys in apps/api/.env and restart.',
+      );
+    }
+    if (/x{4,}/i.test(this.webhookSecret)) {
+      this.logger.warn(
+        'RAZORPAY_WEBHOOK_SECRET is still a placeholder — webhook deliveries will be rejected. ' +
+          'Generate it in Dashboard → Settings → Webhooks. Verify-on-return still settles orders.',
+      );
+    }
   }
 
   async createOrder(
@@ -43,12 +65,52 @@ export class RazorpayProvider implements PaymentProvider {
         `Payment amount must be a whole number of paise and at least ${MIN_AMOUNT_PAISE} (₹1)`,
       );
     }
-    const rzp = await this.razorpay.orders.create({
-      amount: amountInPaise, // authoritative amount from our DB
-      currency: 'INR',
-      receipt,
-    });
-    return { gatewayOrderId: rzp.id, keyId: this.keyId, currency: 'INR' };
+    try {
+      const rzp = await this.razorpay.orders.create({
+        amount: amountInPaise, // authoritative amount from our DB
+        currency: 'INR',
+        receipt,
+      });
+      return { gatewayOrderId: rzp.id, keyId: this.keyId, currency: 'INR' };
+    } catch (err) {
+      throw this.gatewayFailure('create order', err);
+    }
+  }
+
+  /**
+   * Turn a raw SDK rejection into something diagnosable. Left unhandled these
+   * surface as a bare 500 with nothing in the log, which makes a misconfigured
+   * key or an unreachable gateway indistinguishable from a real server bug.
+   */
+  private gatewayFailure(action: string, err: unknown): Error {
+    const detail = err as {
+      statusCode?: number;
+      error?: { code?: string; description?: string };
+      message?: string;
+    };
+    const status = detail?.statusCode;
+    const description =
+      detail?.error?.description ?? detail?.message ?? 'unknown error';
+
+    // 401/403 from Razorpay means our own credentials are wrong — an operator
+    // problem the logs must name outright, never the buyer's fault.
+    if (status === 401 || status === 403) {
+      this.logger.error(
+        `Razorpay rejected our credentials on ${action} (HTTP ${status}: ${description}). ` +
+          `Check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET — the API must be restarted after changing them.`,
+      );
+      return new ServiceUnavailableException(
+        'Payments are temporarily unavailable. Please try again shortly.',
+      );
+    }
+
+    this.logger.error(
+      `Razorpay ${action} failed${status ? ` (HTTP ${status})` : ''}: ${description}`,
+      err instanceof Error ? err.stack : undefined,
+    );
+    return new ServiceUnavailableException(
+      'Our payment provider is not responding right now. Please try again in a moment.',
+    );
   }
 
   verifySignature(input: {
@@ -94,10 +156,14 @@ export class RazorpayProvider implements PaymentProvider {
     gatewayPaymentId: string,
     amountInPaise: number,
   ): Promise<RefundResult> {
-    const refund = await this.razorpay.payments.refund(gatewayPaymentId, {
-      amount: amountInPaise,
-    });
-    return { refundId: refund.id };
+    try {
+      const refund = await this.razorpay.payments.refund(gatewayPaymentId, {
+        amount: amountInPaise,
+      });
+      return { refundId: refund.id };
+    } catch (err) {
+      throw this.gatewayFailure(`refund ${gatewayPaymentId}`, err);
+    }
   }
 }
 

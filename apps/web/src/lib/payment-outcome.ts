@@ -41,6 +41,7 @@ export type PaymentOutcomeKind =
   | "offline"
   | "rate-limited"
   | "session-expired"
+  | "gateway-unavailable"
   | "item-unavailable"
   | "already-settled"
   | "amount-too-small"
@@ -161,6 +162,19 @@ export function classifyPaymentError(
         title: "Please sign in again",
         description:
           "Your session expired before the payment could start. Sign in again and your order will still be waiting — nothing was charged.",
+      };
+    }
+    // 502/503 is the API telling us the payment gateway itself is unreachable
+    // or misconfigured — not a bug in the order, so don't blame the buyer's cart.
+    if (err.status === 502 || err.status === 503) {
+      return {
+        kind: "gateway-unavailable",
+        charged: false,
+        tone: "warning",
+        title: "Payments are temporarily unavailable",
+        description:
+          "We couldn't reach our payment provider, so nothing was charged. Your order is saved — please try paying again in a few minutes.",
+        retryLabel: "Try again",
       };
     }
     if (err.status >= 500) {

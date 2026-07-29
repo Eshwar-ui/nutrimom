@@ -12,6 +12,7 @@ import { useWishlistStore } from "@/lib/wishlist-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { WishlistButton } from "@/components/ui/wishlist-button";
 import { flyToCart } from "@/lib/fly-to-cart";
+import { getListingImageSources } from "@/lib/listing-image";
 import { cn } from "@/lib/utils";
 
 const conditionTint: Record<string, string> = {
@@ -29,6 +30,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
   const user = useAuthStore((s) => s.user);
   const wished = useWishlistStore((s) => s.ids.includes(listing.id));
   const toggleWish = useWishlistStore((s) => s.toggle);
+  const [image] = getListingImageSources(listing.images);
 
   const discount = listing.originalPriceInPaise
     ? Math.round(
@@ -49,12 +51,12 @@ export function ListingCard({ listing }: { listing: Listing }) {
     addItem({
       listingId: listing.id,
       title: listing.title,
-      image: listing.images[0] ?? null,
+      image,
       priceInPaise: listing.sellingPriceInPaise,
       city: listing.city,
       sellerName: listing.seller.name,
     });
-    flyToCart(imgRef.current, listing.images[0] ?? null);
+    flyToCart(imgRef.current, image);
   };
 
   return (
@@ -75,19 +77,17 @@ export function ListingCard({ listing }: { listing: Listing }) {
       />
 
       <Link href={`/listings/${listing.id}`} className="relative block aspect-square overflow-hidden bg-muted">
-        {listing.images[0] && (
-          <Image
-            ref={imgRef}
-            src={listing.images[0]}
-            alt={listing.title}
-            fill
-            sizes="(min-width: 1024px) 23vw, (min-width: 640px) 45vw, 90vw"
-            className={cn(
-              "object-cover transition-transform duration-500 group-hover:scale-[1.06]",
-              unavailable && "opacity-60 grayscale",
-            )}
-          />
-        )}
+        <Image
+          ref={imgRef}
+          src={image}
+          alt={listing.title}
+          fill
+          sizes="(min-width: 1024px) 23vw, (min-width: 640px) 45vw, 90vw"
+          className={cn(
+            "object-cover transition-transform duration-500 group-hover:scale-[1.06]",
+            unavailable && "opacity-60 grayscale",
+          )}
+        />
         {unavailable && (
           <span className="absolute inset-0 grid place-items-center bg-black/10">
             <span className="rounded-full bg-foreground/85 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-background">

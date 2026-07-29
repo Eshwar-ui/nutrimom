@@ -61,6 +61,8 @@ export default function CheckoutPage() {
     formState: { errors },
   } = useForm<ShippingAddress>({
     resolver: zodResolver(shippingAddressSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: { country: "India", fullName: user?.name ?? "" },
   });
 
@@ -197,7 +199,14 @@ export default function CheckoutPage() {
               <Input {...register("fullName")} placeholder="Jane Mother" />
             </Field>
             <Field label="Phone" error={errors.phone?.message}>
-              <Input {...register("phone")} placeholder="+91 98765 43210" />
+              <Input
+                {...register("phone")}
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                aria-invalid={!!errors.phone}
+                placeholder="+91 98765 43210"
+              />
             </Field>
             <Field label="Postal code" error={errors.postalCode?.message}>
               <Input {...register("postalCode")} placeholder="560001" />

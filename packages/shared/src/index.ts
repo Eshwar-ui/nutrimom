@@ -279,6 +279,19 @@ export const phoneNumberSchema = z
     "Enter a valid phone number, e.g. +91 98765 43210",
   );
 
+// Delivery is currently limited to India. Accept a ten-digit Indian mobile
+// number, with an optional +91 country code and common visual separators.
+export const indianMobileNumberSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => {
+      const normalized = value.replace(/[\s\-()]/g, "");
+      return /^(?:\+91)?[6-9]\d{9}$/.test(normalized);
+    },
+    "Enter a valid 10-digit Indian mobile number",
+  );
+
 export const profileUpdateSchema = z.object({
   name: z.string().min(2).max(80).optional(),
   whatsappNumber: phoneNumberSchema.optional().or(z.literal("")),
@@ -497,7 +510,7 @@ export interface Review {
 
 export const shippingAddressSchema = z.object({
   fullName: z.string().min(2).max(120),
-  phone: phoneNumberSchema,
+  phone: indianMobileNumberSchema,
   line1: z.string().min(2).max(200),
   line2: z.string().max(200).optional().or(z.literal("")),
   city: z.string().min(1).max(80),
