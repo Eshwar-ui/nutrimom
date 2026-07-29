@@ -6,6 +6,7 @@ import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 const statusOptions = Object.values(OrderStatus);
 
@@ -18,15 +19,15 @@ export default function AdminOrdersPage() {
   });
 
   const statusSelect = (order: Order) => (
-    <select
-      aria-label={`Update order ${order.id.slice(-8)} status`}
+    <CustomSelect
+      id={`order-status-${order.id}`}
+      ariaLabel={`Update order ${order.id.slice(-8)} status`}
       value={order.status}
+      onChange={(status) => updateStatus.mutate({ id: order.id, status: status as OrderStatusType })}
+      options={statusOptions.map((status) => ({ value: status, label: status }))}
       disabled={updateStatus.isPending}
-      onChange={(event) => updateStatus.mutate({ id: order.id, status: event.target.value as OrderStatusType })}
-      className="h-10 rounded-lg border border-border-control/60 bg-surface px-2 text-sm text-foreground"
-    >
-      {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
-    </select>
+      className="w-40"
+    />
   );
 
   return (

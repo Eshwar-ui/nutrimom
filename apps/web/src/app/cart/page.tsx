@@ -7,6 +7,7 @@ import { useCartStore, cartSubtotal } from "@/lib/cart-store";
 import { Container, Card } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
+import { ListingThumb } from "@/components/ui/listing-thumb";
 import { useCartHydrated } from "@/lib/use-store-hydrated";
 
 export default function CartPage() {
@@ -39,10 +40,7 @@ export default function CartPage() {
           {items.map((item) => (
             <Card key={item.listingId} className="flex gap-4 p-4">
               <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
-                {item.image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
-                )}
+                <ListingThumb src={item.image} alt={item.title} />
               </div>
               <div className="flex flex-1 flex-col">
                 <div className="flex items-start justify-between gap-3">

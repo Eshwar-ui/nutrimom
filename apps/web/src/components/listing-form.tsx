@@ -8,7 +8,8 @@ import { conditionLabels, deliveryLabels, listingInputSchema, type Category, typ
 import { getCategories } from "@/lib/listings";
 import { authedRequest } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { Card, Input, Label, Select, Textarea } from "@/components/ui/primitives";
+import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/image-uploader";
 
@@ -95,15 +96,24 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
           <Textarea id="description" value={form.description} onChange={(event) => set("description", event.target.value)} rows={5} aria-invalid={!!issues.description} aria-describedby={describedBy("description")} placeholder="Condition, what is included, and any visible wear..." />
         </Field>
         <Field label="Category" id="categoryId" error={issues.categoryId}>
-          <Select id="categoryId" value={form.categoryId} onChange={(event) => set("categoryId", event.target.value)} aria-invalid={!!issues.categoryId} aria-describedby={describedBy("categoryId")}>
-            <option value="">Select a category</option>
-            {(categories ?? []).map((category: Category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </Select>
+          <CustomSelect
+            id="categoryId"
+            value={form.categoryId}
+            onChange={(value) => set("categoryId", value)}
+            options={(categories ?? []).map((category: Category) => ({ value: category.id, label: category.name }))}
+            placeholder="Select a category"
+            invalid={!!issues.categoryId}
+            describedBy={describedBy("categoryId")}
+          />
         </Field>
         <Field label="Condition" id="condition" error={issues.condition}>
-          <Select id="condition" value={form.condition} onChange={(event) => set("condition", event.target.value)}>
-            {Object.entries(conditionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </Select>
+          <CustomSelect
+            id="condition"
+            value={form.condition}
+            onChange={(value) => set("condition", value)}
+            options={Object.entries(conditionLabels).map(([value, label]) => ({ value, label }))}
+            invalid={!!issues.condition}
+          />
         </Field>
         <Field label="Used for" id="usageDuration" helper="Optional">
           <Input id="usageDuration" value={form.usageDuration} onChange={(event) => set("usageDuration", event.target.value)} placeholder="8 months" />
@@ -126,9 +136,13 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
           <Input id="city" value={form.city} onChange={(event) => set("city", event.target.value)} autoComplete="address-level2" aria-invalid={!!issues.city} placeholder="Bengaluru" />
         </Field>
         <Field label="Delivery" id="deliveryOption" error={issues.deliveryOption}>
-          <Select id="deliveryOption" value={form.deliveryOption} onChange={(event) => set("deliveryOption", event.target.value)}>
-            {Object.entries(deliveryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </Select>
+          <CustomSelect
+            id="deliveryOption"
+            value={form.deliveryOption}
+            onChange={(value) => set("deliveryOption", value)}
+            options={Object.entries(deliveryLabels).map(([value, label]) => ({ value, label }))}
+            invalid={!!issues.deliveryOption}
+          />
         </Field>
         <Field label="WhatsApp number" id="whatsappNumber" error={issues.whatsappNumber} className="sm:col-span-2">
           <Input id="whatsappNumber" value={form.whatsappNumber} onChange={(event) => set("whatsappNumber", event.target.value)} autoComplete="tel" aria-invalid={!!issues.whatsappNumber} placeholder="+91 98765 43210" />

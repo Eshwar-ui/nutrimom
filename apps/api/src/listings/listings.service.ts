@@ -18,6 +18,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
+import type { RequestUser } from '../common/decorators/current-user.decorator';
 
 export const withRefs = {
   category: true,
@@ -87,12 +88,26 @@ export class ListingsService {
     };
   }
 
-  async getPublic(id: string): Promise<Listing> {
+  /**
+   * Listing detail. Public callers only ever see live listings, but an admin
+   * has to be able to open a PENDING one to review it (that's the whole point
+   * of moderation), and a seller has to be able to preview their own before
+   * it's approved. Both are identified by the optional JWT on this route.
+   */
+  async getPublic(id: string, viewer?: RequestUser): Promise<Listing> {
     const row = await this.prisma.listing.findUnique({
       where: { id },
       include: withRefs,
     });
-    if (!row || !PUBLIC_STATUSES.includes(row.status as never)) {
+    if (!row) throw new NotFoundException('Listing not found');
+
+    const isAdmin = viewer?.role === 'ADMIN';
+    const isOwner = !!viewer && row.sellerId === viewer.id;
+    if (
+      !isAdmin &&
+      !isOwner &&
+      !PUBLIC_STATUSES.includes(row.status as never)
+    ) {
       throw new NotFoundException('Listing not found');
     }
     return toListingDto(row);

@@ -33,6 +33,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { ReviewForm } from "@/components/review-form";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
+import { ListingThumb } from "@/components/ui/listing-thumb";
 import { cn } from "@/lib/utils";
 
 const progress: OrderStatus[] = ["PENDING", "PAID", "SHIPPED", "DELIVERED"];
@@ -175,10 +176,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
             <div key={item.id}>
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-                  {item.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.image} alt={item.listingTitle} className="h-full w-full object-cover" />
-                  )}
+                  <ListingThumb src={item.image} alt={item.listingTitle} />
                 </div>
                 <p className="flex-1 font-medium text-foreground">{item.listingTitle}</p>
                 <span className="font-semibold text-foreground">{formatPaise(item.unitPriceInPaise)}</span>

@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
+import { ListingThumb } from "@/components/ui/listing-thumb";
 
 export default function SalesPage() {
   const { ready } = useRequireAuth();
@@ -148,16 +149,9 @@ function SaleCard({
       <div className="mt-4 space-y-2">
         {sale.items.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
-            {item.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={item.image}
-                alt=""
-                className="h-10 w-10 shrink-0 rounded-lg border border-border object-cover"
-              />
-            ) : (
-              <span className="h-10 w-10 shrink-0 rounded-lg border border-border bg-muted" />
-            )}
+            <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+              <ListingThumb src={item.image} alt="" />
+            </span>
             <span className="min-w-0 flex-1 truncate text-sm text-foreground">
               {item.title}
             </span>

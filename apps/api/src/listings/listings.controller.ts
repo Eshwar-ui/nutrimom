@@ -2,6 +2,11 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { listingQuerySchema, type ListingQuery } from '@nutrimom/shared';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
+import {
+  CurrentUser,
+  type RequestUser,
+} from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { ListingsService } from './listings.service';
 
@@ -16,9 +21,13 @@ export class ListingsController {
     return this.listings.browse(query);
   }
 
+  // Public, but token-aware: an admin reviewing a PENDING listing and a seller
+  // previewing their own must both be able to open it, while everyone else
+  // still gets a 404 for anything not live.
   @Get(':id')
-  detail(@Param('id') id: string) {
-    return this.listings.getPublic(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  detail(@Param('id') id: string, @CurrentUser() user?: RequestUser) {
+    return this.listings.getPublic(id, user);
   }
 
   // Authenticated (not just rate-limited) — the seller's phone number is PII
