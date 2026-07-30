@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      // Allow example.com for placeholder/test listing images
+      {
+        protocol: "https",
+        hostname: "example.com",
+      },
     ],
   },
 };
