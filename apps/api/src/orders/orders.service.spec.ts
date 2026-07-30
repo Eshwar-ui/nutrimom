@@ -103,6 +103,7 @@ describe('OrdersService — admin updateStatus transitions', () => {
       'ORDER_CANCELLED',
       expect.stringContaining('an admin'),
       'l1',
+      'o1',
       tx,
     );
     expect(refund).toHaveBeenCalledWith('pay_1', 40000);
@@ -136,6 +137,7 @@ describe('OrdersService — admin updateStatus transitions', () => {
       'ITEM_SOLD',
       expect.anything(),
       'l1',
+      'o1',
       tx,
     );
   });

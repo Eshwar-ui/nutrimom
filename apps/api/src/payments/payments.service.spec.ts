@@ -145,6 +145,8 @@ describe('PaymentsService — money path', () => {
       'b1',
       'PAYMENT_REFUNDED',
       expect.stringContaining('refunded'),
+      null,
+      'o1',
     );
   });
 
@@ -204,6 +206,8 @@ describe('PaymentsService — money path', () => {
       'b1',
       'PAYMENT_REFUNDED',
       expect.stringContaining('refunded'),
+      null,
+      'o1',
     );
   });
 

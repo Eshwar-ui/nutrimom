@@ -220,6 +220,7 @@ export class PaymentsService {
           'ITEM_SOLD',
           `Your item "${item.listingTitle}" has sold. Please arrange handover.`,
           item.listingId,
+          order.id,
           tx,
         );
       }
@@ -227,6 +228,7 @@ export class PaymentsService {
         'ORDER_PLACED',
         `New paid order ${order.id.slice(-6).toUpperCase()} — ${order.items.length} item(s).`,
         null,
+        order.id,
         tx,
       );
       return { kind: 'paid' as const };
@@ -269,6 +271,8 @@ export class PaymentsService {
         buyerId,
         'PAYMENT_REFUNDED',
         `Your payment for order ${orderId.slice(-6).toUpperCase()} was refunded — ${reason}.`,
+        null,
+        orderId,
       );
     } catch (err) {
       this.logger.error(

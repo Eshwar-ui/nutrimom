@@ -161,6 +161,29 @@ first, polish after.
 
 ---
 
+## Admin & Marketplace Backlog — Planning (2026-07-30)
+
+> 13 mixed bugs/features requested for the admin panel + customer app, planned in
+> [BACKLOG-PLAN.md](BACKLOG-PLAN.md) after grounding each item against the actual code (confirmed
+> root causes, not assumptions). Four architecture decisions were made: (1) seller verification
+> merges `isSellerVerified` + `registrationPaidAt` into one pipeline requiring **both** payment and
+> admin approval; (2) admin-created listings belong to a built-in **"Marketplace" system seller**;
+> (3) order cancellation becomes admin-configurable on **cutoff window + reason codes + refund %**
+> (no per-category/seller overrides); (4) order IDs become sequential, format **`NM-YYYYMMDD-NNN`**.
+> Phased: **P1** bug fixes ✅ **DONE (2026-07-30)** — `GET /admin/orders/:id` +
+> `admin/orders/[id]/page.tsx` (full order detail, was missing entirely); `PATCH /notifications/:id/read`
+> wired to the shared notifications page (was structurally impossible — no per-id endpoint existed);
+> `Notification.orderId` added + populated at every order-related notification so refund/order-placed
+> notifications are clickable instead of dead `<div>`s. Verified live, 19/19 tests pass. → **P2**
+> seller-identity foundation (verification merge + backfill, seller-only admin view w/ membership
+> details, gate Sales/My-listings nav on registration status, split the customer Membership tab into
+> explainer-vs-management) → **P3** order lifecycle (sequential IDs, cancellation policy) → **P4**
+> greenfield content tools (admin listing creation, blog CMS, contact-form → admin inbox — all
+> currently nonexistent/mocked). See [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail and open
+> questions before P2 begins.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.

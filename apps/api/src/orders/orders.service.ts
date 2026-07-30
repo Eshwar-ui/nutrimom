@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
+  AdminOrderDetail,
   CreateOrderInput,
   Order,
   ShippingAddress,
@@ -238,6 +239,7 @@ export class OrdersService {
             ? `The order for "${item.listingTitle}" was cancelled by the buyer.`
             : `The order for "${item.listingTitle}" was cancelled by an admin.`,
           item.listingId,
+          order.id,
           tx,
         );
       }
@@ -291,6 +293,8 @@ export class OrdersService {
         buyerId,
         'PAYMENT_REFUNDED',
         `Your payment for order ${orderId.slice(-6).toUpperCase()} was refunded after cancellation.`,
+        null,
+        orderId,
       );
     } catch (err) {
       this.logger.error(
@@ -308,6 +312,44 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
     });
     return rows.map(toOrderDto);
+  }
+
+  /** Full detail for the admin order-detail view — a plain Order DTO plus
+   * buyer contact, gateway/refund ids, and per-seller shipment status. */
+  async getAdminDetail(id: string): Promise<AdminOrderDetail> {
+    const row = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: true,
+        buyer: {
+          select: { id: true, name: true, email: true, whatsappNumber: true },
+        },
+        shipments: true,
+      },
+    });
+    if (!row) throw new NotFoundException('Order not found');
+
+    const sellerIds = [...new Set(row.items.map((item) => item.sellerId))];
+    const sellers = await this.prisma.user.findMany({
+      where: { id: { in: sellerIds } },
+      select: { id: true, name: true },
+    });
+
+    return {
+      ...toOrderDto(row),
+      buyer: row.buyer,
+      sellers,
+      razorpayPaymentId: row.razorpayPaymentId,
+      refundId: row.refundId,
+      updatedAt: row.updatedAt.toISOString(),
+      shipments: row.shipments.map((s) => ({
+        sellerId: s.sellerId,
+        status: s.status,
+        courier: s.courier,
+        trackingId: s.trackingId,
+        shippedAt: s.shippedAt?.toISOString() ?? null,
+      })),
+    };
   }
 
   /**
@@ -356,6 +398,7 @@ export class OrdersService {
             'ITEM_SOLD',
             `Your item "${item.listingTitle}" has sold. Please arrange handover.`,
             item.listingId,
+            order.id,
             tx,
           );
         }

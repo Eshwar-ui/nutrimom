@@ -550,6 +550,26 @@ export interface Order {
   createdAt: string;
 }
 
+// Everything an admin needs to see about one order — the buyer's contact
+// info, gateway/refund ids, and per-seller shipment status — none of which
+// belongs in the plain `Order` DTO returned to a buyer about their own order.
+export interface AdminOrderDetail extends Order {
+  buyer: { id: string; name: string; email: string; whatsappNumber: string | null };
+  // Every distinct seller with an item on this order — items/shipments only
+  // carry the id, so the detail view has names to show alongside them.
+  sellers: { id: string; name: string }[];
+  razorpayPaymentId: string | null;
+  refundId: string | null;
+  updatedAt: string;
+  shipments: {
+    sellerId: string;
+    status: ShipmentStatus;
+    courier: string | null;
+    trackingId: string | null;
+    shippedAt: string | null;
+  }[];
+}
+
 export const updateOrderStatusSchema = z.object({
   status: z.enum([
     OrderStatus.PENDING,
@@ -590,6 +610,7 @@ export interface Notification {
   type: NotificationType;
   message: string;
   listingId: string | null;
+  orderId: string | null;
   read: boolean;
   createdAt: string;
 }

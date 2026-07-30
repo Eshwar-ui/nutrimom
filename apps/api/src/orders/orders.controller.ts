@@ -64,6 +64,11 @@ export class AdminOrdersController {
     return this.orders.adminList();
   }
 
+  @Get(':id')
+  getDetail(@Param('id') id: string) {
+    return this.orders.getAdminDetail(id);
+  }
+
   @Patch(':id/status')
   updateStatus(
     @Param('id') id: string,

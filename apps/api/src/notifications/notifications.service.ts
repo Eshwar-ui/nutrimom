@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Notification, NotificationType } from '@nutrimom/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,10 +13,17 @@ export class NotificationsService {
     type: NotificationType,
     message: string,
     listingId?: string | null,
+    orderId?: string | null,
     tx: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
     return tx.notification.create({
-      data: { userId, type, message, listingId: listingId ?? null },
+      data: {
+        userId,
+        type,
+        message,
+        listingId: listingId ?? null,
+        orderId: orderId ?? null,
+      },
     });
   }
 
@@ -31,9 +38,22 @@ export class NotificationsService {
       type: n.type,
       message: n.message,
       listingId: n.listingId,
+      orderId: n.orderId,
       read: n.read,
       createdAt: n.createdAt.toISOString(),
     }));
+  }
+
+  /** Ownership-checked: a userId that doesn't own this notification 404s
+   * rather than silently marking someone else's notification read. */
+  async markOneRead(userId: string, id: string) {
+    const result = await this.prisma.notification.updateMany({
+      where: { id, userId },
+      data: { read: true },
+    });
+    if (result.count === 0)
+      throw new NotFoundException('Notification not found');
+    return { ok: true };
   }
 
   async markAllRead(userId: string) {
@@ -49,6 +69,7 @@ export class NotificationsService {
     type: NotificationType,
     message: string,
     listingId: string | null,
+    orderId: string | null,
     tx: Prisma.TransactionClient,
   ) {
     const admins = await tx.user.findMany({
@@ -57,7 +78,7 @@ export class NotificationsService {
     });
     for (const a of admins) {
       await tx.notification.create({
-        data: { userId: a.id, type, message, listingId },
+        data: { userId: a.id, type, message, listingId, orderId },
       });
     }
   }

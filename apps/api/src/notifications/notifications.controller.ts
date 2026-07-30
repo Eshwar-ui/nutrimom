@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -14,6 +14,11 @@ export class NotificationsController {
   @Get()
   list(@CurrentUser() user: RequestUser) {
     return this.notifications.listForUser(user.id);
+  }
+
+  @Patch(':id/read')
+  readOne(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.notifications.markOneRead(user.id, id);
   }
 
   @Post('read-all')

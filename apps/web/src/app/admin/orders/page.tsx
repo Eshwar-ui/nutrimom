@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatPaise, OrderStatus, type Order, type OrderStatus as OrderStatusType } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
@@ -46,7 +48,10 @@ export default function AdminOrdersPage() {
             {orders.map((order) => (
               <Card key={order.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div><p className="font-semibold text-foreground">#{order.id.slice(-8).toUpperCase()}</p><p className="mt-1 text-sm text-muted-foreground">{order.shippingAddress.fullName}</p></div>
+                  <Link href={`/admin/orders/${order.id}`} className="group">
+                    <p className="font-semibold text-foreground group-hover:underline">#{order.id.slice(-8).toUpperCase()}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{order.shippingAddress.fullName}</p>
+                  </Link>
                   <OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} />
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
@@ -59,16 +64,23 @@ export default function AdminOrdersPage() {
 
           <Card className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[640px] text-sm">
-              <thead><tr className="border-b border-border text-left text-muted-foreground"><Th>Order</Th><Th>Customer</Th><Th>Total</Th><Th>Payment</Th><Th>Status</Th><Th>Update</Th></tr></thead>
+              <thead><tr className="border-b border-border text-left text-muted-foreground"><Th>Order</Th><Th>Customer</Th><Th>Total</Th><Th>Payment</Th><Th>Status</Th><Th>Update</Th><Th /></tr></thead>
               <tbody>
                 {orders.map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0">
-                    <Td className="font-medium text-foreground">#{order.id.slice(-8).toUpperCase()}</Td>
+                    <Td className="font-medium text-foreground">
+                      <Link href={`/admin/orders/${order.id}`} className="hover:underline">#{order.id.slice(-8).toUpperCase()}</Link>
+                    </Td>
                     <Td>{order.shippingAddress.fullName}</Td>
                     <Td>{formatPaise(order.totalInPaise)}</Td>
                     <Td>{order.paymentMethod === "COD" ? "COD" : "Online"}</Td>
                     <Td><OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} /></Td>
                     <Td>{statusSelect(order)}</Td>
+                    <Td>
+                      <Link href={`/admin/orders/${order.id}`} aria-label="View order" className="text-muted-foreground hover:text-foreground">
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
@@ -80,5 +92,5 @@ export default function AdminOrdersPage() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) { return <th className="px-4 py-3 font-medium">{children}</th>; }
+function Th({ children }: { children?: React.ReactNode }) { return <th className="px-4 py-3 font-medium">{children}</th>; }
 function Td({ children, className }: { children: React.ReactNode; className?: string }) { return <td className={`px-4 py-3 ${className ?? ""}`}>{children}</td>; }

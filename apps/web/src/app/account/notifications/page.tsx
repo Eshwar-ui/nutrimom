@@ -22,7 +22,7 @@ const icons: Record<NotificationType, typeof Tag> = {
 };
 
 export default function NotificationsPage() {
-  const { ready } = useRequireAuth();
+  const { ready, user } = useRequireAuth();
   const qc = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -34,6 +34,15 @@ export default function NotificationsPage() {
   const readAll = useMutation({
     mutationFn: () => authedRequest("/notifications/read-all", { method: "POST" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const readOne = useMutation({
+    mutationFn: (id: string) => authedRequest(`/notifications/${id}/read`, { method: "PATCH" }),
+    onMutate: (id: string) => {
+      qc.setQueryData<Notification[]>(["notifications"], (old) =>
+        old?.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      );
+    },
   });
 
   if (!ready) return <PageSkeleton rows={4} />;
@@ -87,16 +96,23 @@ export default function NotificationsPage() {
               </Card>
             );
             // A rejected listing isn't publicly viewable — send the seller
-            // to their own edit page instead of a link that would 404.
-            const href = !n.listingId
-              ? null
-              : n.type === "LISTING_REJECTED"
+            // to their own edit page instead of a link that would 404. Order
+            // notifications (refunds, admin's "new order" alert) carry no
+            // listingId, so fall back to the order itself.
+            const href = n.listingId
+              ? n.type === "LISTING_REJECTED"
                 ? `/account/listings/${n.listingId}/edit`
-                : `/listings/${n.listingId}`;
+                : `/listings/${n.listingId}`
+              : n.orderId
+                ? user?.role === "ADMIN"
+                  ? `/admin/orders/${n.orderId}`
+                  : `/orders/${n.orderId}`
+                : null;
+            const onOpen = () => { if (!n.read) readOne.mutate(n.id); };
             return href ? (
-              <Link key={n.id} href={href}>{body}</Link>
+              <Link key={n.id} href={href} onClick={onOpen}>{body}</Link>
             ) : (
-              <div key={n.id}>{body}</div>
+              <div key={n.id} onClick={onOpen} className={n.read ? undefined : "cursor-pointer"}>{body}</div>
             );
           })}
         </div>
