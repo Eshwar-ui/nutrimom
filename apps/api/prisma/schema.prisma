@@ -96,6 +96,9 @@ model User {
   bio                           String?
   isSellerVerified              Boolean        @default(false)
   sellerVerificationRequestedAt DateTime?
+  // The built-in "Marketplace" account admin-created listings are attributed
+  // to (roadmap 4.1) — not a real seller, never logged into by a person.
+  isSystemSeller                Boolean        @default(false)
   // Monetization: ₹100 one-time registration fee gate (paid online). Must be
   // set before a seller can buy a membership plan or create listings.
   registrationPaidAt            DateTime?
@@ -341,4 +344,43 @@ model Shipment {
 
   @@unique([orderId, sellerId])
   @@index([sellerId])
+}
+
+// Admin-authored marketplace journal content (roadmap 4.2). authorName is a
+// free-text label, not a User relation — the admin who wrote it doesn't need
+// to stay resolvable if their account is later removed.
+model BlogPost {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  excerpt       String?
+  bodyMarkdown  String
+  coverImageUrl String?
+  published     Boolean   @default(false)
+  publishedAt   DateTime?
+  authorName    String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+enum ContactMessageStatus {
+  NEW
+  READ
+  RESPONDED
+}
+
+// "Send us a message" submissions from the public contact form (roadmap 4.3).
+model ContactMessage {
+  id        String               @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    ContactMessageStatus @default(NEW)
+  createdAt DateTime             @default(now())
+
+  @@index([status])
 }

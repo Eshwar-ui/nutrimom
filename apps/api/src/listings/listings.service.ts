@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -328,6 +329,52 @@ export class ListingsService {
       row.id,
     );
     return toListingDto(row);
+  }
+
+  /**
+   * Admin-authored listing (roadmap 4.1) — attributed to the built-in
+   * "Marketplace" system seller and auto-approved (an admin creating it
+   * *is* the review), unlike a real seller's submission which always
+   * starts PENDING via create().
+   */
+  async adminCreate(input: ListingInput): Promise<Listing> {
+    const marketplaceId = await this.marketplaceSellerId();
+    const created = await this.create(marketplaceId, input);
+    const row = await this.prisma.listing.update({
+      where: { id: created.id },
+      data: { status: 'APPROVED' },
+      include: withRefs,
+    });
+    return toListingDto(row);
+  }
+
+  /** Admin-only category reassignment — bypasses owner checks entirely,
+   * unlike the seller's own update() which is scoped to their listings. */
+  async adminUpdateCategory(id: string, categoryId: string): Promise<Listing> {
+    await this.assertCategory(categoryId);
+    try {
+      const row = await this.prisma.listing.update({
+        where: { id },
+        data: { categoryId },
+        include: withRefs,
+      });
+      return toListingDto(row);
+    } catch {
+      throw new NotFoundException('Listing not found');
+    }
+  }
+
+  private async marketplaceSellerId(): Promise<string> {
+    const marketplace = await this.prisma.user.findFirst({
+      where: { isSystemSeller: true },
+      select: { id: true },
+    });
+    if (!marketplace) {
+      throw new InternalServerErrorException(
+        'Marketplace system seller is not seeded — run prisma db seed',
+      );
+    }
+    return marketplace.id;
   }
 
   async setFeatured(id: string, isFeatured: boolean): Promise<Listing> {

@@ -679,6 +679,13 @@ export type ModerateListingInput = z.infer<typeof moderateListingSchema>;
 export const featureListingSchema = z.object({ isFeatured: z.boolean() });
 export type FeatureListingInput = z.infer<typeof featureListingSchema>;
 
+export const reassignListingCategorySchema = z.object({
+  categoryId: z.string().min(1),
+});
+export type ReassignListingCategoryInput = z.infer<
+  typeof reassignListingCategorySchema
+>;
+
 export const verifySellerSchema = z.object({ isSellerVerified: z.boolean() });
 export type VerifySellerInput = z.infer<typeof verifySellerSchema>;
 
@@ -705,6 +712,92 @@ export interface AdminUser {
   listingCount: number;
   createdAt: string;
 }
+
+/* ------------------------------------------------------------------ */
+/* Blog                                                                */
+/* ------------------------------------------------------------------ */
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  bodyMarkdown: string;
+  coverImageUrl: string | null;
+  published: boolean;
+  publishedAt: string | null;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const blogPostInputSchema = z.object({
+  title: z.string().min(3).max(160),
+  slug: z
+    .string()
+    .min(2)
+    .max(160)
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only"),
+  excerpt: z.string().max(300).optional().or(z.literal("")),
+  bodyMarkdown: z.string().min(10),
+  coverImageUrl: z.string().url().optional().or(z.literal("")),
+  authorName: z.string().min(2).max(80),
+});
+export type BlogPostInput = z.infer<typeof blogPostInputSchema>;
+
+export const setBlogPostPublishedSchema = z.object({ published: z.boolean() });
+export type SetBlogPostPublishedInput = z.infer<
+  typeof setBlogPostPublishedSchema
+>;
+
+export const blogQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(60).default(12),
+});
+export type BlogQuery = z.infer<typeof blogQuerySchema>;
+
+/* ------------------------------------------------------------------ */
+/* Contact                                                             */
+/* ------------------------------------------------------------------ */
+
+export const ContactMessageStatus = {
+  NEW: "NEW",
+  READ: "READ",
+  RESPONDED: "RESPONDED",
+} as const;
+export type ContactMessageStatus =
+  (typeof ContactMessageStatus)[keyof typeof ContactMessageStatus];
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: ContactMessageStatus;
+  createdAt: string;
+}
+
+export const contactMessageInputSchema = z.object({
+  name: z.string().min(2).max(120),
+  email: z.string().email(),
+  phone: phoneNumberSchema.optional().or(z.literal("")),
+  subject: z.string().min(3).max(160),
+  message: z.string().min(10).max(4000),
+});
+export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
+
+export const setContactMessageStatusSchema = z.object({
+  status: z.enum([
+    ContactMessageStatus.NEW,
+    ContactMessageStatus.READ,
+    ContactMessageStatus.RESPONDED,
+  ]),
+});
+export type SetContactMessageStatusInput = z.infer<
+  typeof setContactMessageStatusSchema
+>;
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */

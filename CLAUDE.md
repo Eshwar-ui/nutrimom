@@ -186,10 +186,17 @@ first, polish after.
 > per-day counter (backfilled + every display usage swapped over, including the shipping label
 > ref); a new admin-editable `CancellationPolicy` (cutoff window, reason codes, refund %) at
 > `/admin/settings`, enforced in `OrdersService.cancel`/`updateStatus` and applied to refund
-> amounts, with a shared reason-picker dialog replacing the old bare confirm. → **P4** greenfield
-> content tools (admin listing creation, blog CMS, contact-form → admin inbox — all currently
-> nonexistent/mocked). See [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail and open questions
-> before P4 begins.
+> amounts, with a shared reason-picker dialog replacing the old bare confirm. **P4** greenfield
+> content tools ✅ **DONE (2026-07-30)** — admin-created listings attributed to a seeded
+> "Marketplace" `isSystemSeller` account (`POST /admin/listings`, auto-approved) plus per-listing
+> category reassignment; a markdown Blog CMS (`BlogPost` model, public `/blog` + `/blog/:slug`, full
+> admin CRUD + publish/unpublish preserving first-publish date across republish cycles,
+> `MarkdownContent` render component — hit and fixed an SSR crash from plain `dompurify` needing
+> `window`/jsdom by switching to `isomorphic-dompurify`); the "Send us a message" contact form now
+> actually persists (`ContactMessage` model, public rate-limited `POST /contact`, was previously a
+> pure front-end mock) and surfaces in `admin/messages` with NEW→READ→RESPONDED tracking. **All 13
+> backlog items now shipped** — see [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail; nothing from
+> this backlog remains open.
 
 ---
 

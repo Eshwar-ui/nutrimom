@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, X, Star } from "lucide-react";
+import { Check, X, Star, Plus } from "lucide-react";
 import { formatPaise, type Listing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
@@ -46,7 +46,12 @@ export default function AdminListingsPage() {
 
   return (
     <div>
-      <header className="mb-7"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Moderation</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Listings</h1><p className="mt-2 text-muted-foreground">Review item details and decide what goes live.</p></header>
+      <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Moderation</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Listings</h1><p className="mt-2 text-muted-foreground">Review item details and decide what goes live.</p></div>
+        <Link href="/admin/listings/new" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground">
+          <Plus className="h-4 w-4" /> New listing
+        </Link>
+      </header>
 
       <div className="mb-6 flex gap-2">
         {filters.map((f) => (

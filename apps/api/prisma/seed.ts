@@ -458,6 +458,40 @@ async function main() {
     },
   });
 
+  // Marketplace system seller — never logged into by a person; owns listings
+  // admin creates directly (roadmap 4.1). Verified + registered + an
+  // effectively-permanent membership so ListingsService.create() never gates it.
+  const marketplaceEmail = "marketplace@nutrimom.local";
+  const marketplace = await prisma.user.upsert({
+    where: { email: marketplaceEmail },
+    update: {
+      isSystemSeller: true,
+      isSellerVerified: true,
+      registrationPaidAt: new Date(),
+    },
+    create: {
+      email: marketplaceEmail,
+      name: "Marketplace",
+      passwordHash: password,
+      isSystemSeller: true,
+      isSellerVerified: true,
+      registrationPaidAt: new Date(),
+    },
+  });
+  const marketplaceActive = await prisma.sellerMembership.findFirst({
+    where: { userId: marketplace.id, expiresAt: { gt: new Date() } },
+  });
+  if (!marketplaceActive) {
+    await prisma.sellerMembership.create({
+      data: {
+        userId: marketplace.id,
+        plan: "YEARLY",
+        // ~100 years — never expires in practice.
+        expiresAt: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
   // Additive & idempotent: create each listing only if its title isn't
   // already present, so re-seeding tops up new items without duplicating.
   let created = 0;

@@ -18,6 +18,8 @@ import { ShippingModule } from './shipping/shipping.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SettingsModule } from './settings/settings.module';
+import { BlogModule } from './blog/blog.module';
+import { ContactModule } from './contact/contact.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -42,6 +44,8 @@ import { AppService } from './app.service';
     NotificationsModule,
     ReviewsModule,
     SettingsModule,
+    BlogModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

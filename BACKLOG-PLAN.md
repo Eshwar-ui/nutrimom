@@ -264,7 +264,35 @@ always-full refund. No settings table, no admin UI for any of it.
 
 ---
 
-## Phase 4 — Content & catalog admin tools (greenfield, independent of each other)
+## Phase 4 — Content & catalog admin tools (greenfield, independent of each other) ✅ DONE (2026-07-30)
+
+> Shipped: a built-in `User.isSystemSeller` "Marketplace" account (seeded with an ~100-year
+> membership so `assertCanList` always passes) backs `POST /admin/listings`
+> (`ListingsService.adminCreate`, auto-approved) and `PATCH /admin/listings/:id/category`
+> (`adminUpdateCategory`) — new `admin/listings/new/page.tsx` form and a category-reassign control
+> on the existing listing detail page. `BlogPost` model + `apps/api/src/blog/*` (public paginated
+> `GET /blog` + `GET /blog/:slug`, admin CRUD + publish/unpublish preserving the original
+> `publishedAt` across republish cycles) + `admin/blog/*` pages with a shared `BlogPostForm`
+> (markdown textarea, Preview/Edit toggle via a new `MarkdownContent` component, cover image via
+> `ImageUploader` with a new `max` prop capped at 1) + real `/blog` and `/blog/[slug]` Server
+> Component pages replacing the static placeholder. `ContactMessage` model + `apps/api/src/contact/*`
+> (public rate-limited `POST /contact`, admin list + status PATCH) + `contact-form.tsx` wired to
+> actually POST instead of a fake-delay mock + `admin/messages/page.tsx` (click-to-expand
+> auto-marks NEW→READ, explicit "Mark responded" action, mailto reply link). Admin nav gained Blog
+> and Messages tabs. Hit and fixed one significant bug along the way: `MarkdownContent` originally
+> used plain `dompurify`, whose default export needs `window`/jsdom and crashed Next's SSR when the
+> component rendered inside the Server Component `/blog/[slug]/page.tsx` ("switched to client
+> rendering because the server rendering errored"); fixed by switching to `isomorphic-dompurify` and
+> dropping `"use client"`/`useMemo` so the component works unchanged in both Server and Client
+> contexts. Verified live end-to-end for all three: admin-created listing appeared
+> `APPROVED`/`seller: Marketplace`, category reassignment reflected immediately in the UI; a draft
+> blog post was confirmed hidden from the public list, then published and confirmed visible on both
+> `/blog` and `/blog/[slug]` with correctly rendered sanitized markdown and clean SSR (checked via a
+> fresh tab + raw HTML fetch, no console errors); a real contact submission was confirmed via the
+> network tab to hit `POST /contact` (not a mock), appeared in the admin inbox as NEW, flipped to
+> READ on expand, and to RESPONDED on the explicit action. All test data cleaned up afterward.
+> Typecheck, lint (0 errors — the 8 pre-existing `no-unsafe-argument` warnings are in unrelated spec
+> files), and 22/22 API tests pass.
 
 ### 4.1 Admin-created listings + "add items in category" (merged)
 Treating these as one feature: an admin creating a listing directly *is* "adding an item into a
@@ -327,11 +355,13 @@ soon" placeholder; no `Blog`/`Post` model anywhere in the schema, no API module,
 Phase 1 (bug fixes)        → 1.1, 1.2, 1.3          — ✅ DONE (2026-07-30)
 Phase 2 (seller identity)  → 2.1, 2.2, 2.3, 2.4       — ✅ DONE (2026-07-30)
 Phase 3 (order lifecycle)  → 3.1, 3.2                — ✅ DONE (2026-07-30)
-Phase 4 (content/catalog)  → 4.1, 4.2, 4.3           — fully independent, any order, lowest urgency
+Phase 4 (content/catalog)  → 4.1, 4.2, 4.3           — ✅ DONE (2026-07-30)
 ```
 
 Phase 2 is the one phase where sequencing within it matters (2.1 before 2.2/2.3/2.4); everything
 else can be parallelized across sessions/PRs.
+
+**All 13 backlog items shipped as of 2026-07-30.** See CLAUDE.md for the running project summary.
 
 ---
 

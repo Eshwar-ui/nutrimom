@@ -5,7 +5,7 @@ import { AlertCircle, ImageUp, Loader2, Star, X } from "lucide-react";
 import { authedUpload } from "@/lib/api";
 import { compressImage } from "@/lib/compress-image";
 
-const MAX = 10;
+const DEFAULT_MAX = 10;
 
 type Tile = {
   key: string;
@@ -19,10 +19,13 @@ export function ImageUploader({
   initialImages = [],
   onChange,
   error,
+  max = DEFAULT_MAX,
 }: {
   initialImages?: string[];
   onChange: (urls: string[]) => void;
   error?: string;
+  /** Cap on how many photos can be added — e.g. 1 for a single cover image. */
+  max?: number;
 }) {
   const [tiles, setTiles] = useState<Tile[]>(() =>
     initialImages.map((url) => ({ key: url, status: "done", url })),
@@ -72,7 +75,7 @@ export function ImageUploader({
     (files: FileList | null) => {
       if (!files) return;
       setTiles((current) => {
-        const room = MAX - current.length;
+        const room = max - current.length;
         if (room <= 0) return current;
         const picked = Array.from(files)
           .filter((f) => f.type.startsWith("image/"))
@@ -89,7 +92,7 @@ export function ImageUploader({
         return [...current, ...next];
       });
     },
-    [uploadOne],
+    [uploadOne, max],
   );
 
   const remove = (key: string) =>
@@ -109,7 +112,7 @@ export function ImageUploader({
       return copy;
     });
 
-  const full = tiles.length >= MAX;
+  const full = tiles.length >= max;
 
   return (
     <div>
@@ -212,7 +215,7 @@ export function ImageUploader({
 
       <div className="mt-1.5 flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          {tiles.length}/{MAX} photos · first photo is the cover · JPG, PNG or WebP
+          {tiles.length}/{max} photos · first photo is the cover · JPG, PNG or WebP
         </p>
       </div>
       {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}

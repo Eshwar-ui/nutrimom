@@ -4,15 +4,20 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   Role,
+  listingInputSchema,
   moderateListingSchema,
   featureListingSchema,
+  reassignListingCategorySchema,
+  type ListingInput,
   type ModerateListingInput,
   type FeatureListingInput,
+  type ReassignListingCategoryInput,
 } from '@nutrimom/shared';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -31,6 +36,11 @@ export class AdminListingsController {
     return this.listings.adminList(status);
   }
 
+  @Post()
+  create(@Body(new ZodValidationPipe(listingInputSchema)) dto: ListingInput) {
+    return this.listings.adminCreate(dto);
+  }
+
   @Patch(':id/moderate')
   moderate(
     @Param('id') id: string,
@@ -46,5 +56,14 @@ export class AdminListingsController {
     @Body(new ZodValidationPipe(featureListingSchema)) dto: FeatureListingInput,
   ) {
     return this.listings.setFeatured(id, dto.isFeatured);
+  }
+
+  @Patch(':id/category')
+  reassignCategory(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(reassignListingCategorySchema))
+    dto: ReassignListingCategoryInput,
+  ) {
+    return this.listings.adminUpdateCategory(id, dto.categoryId);
   }
 }

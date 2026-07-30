@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { request, ApiError } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
 import { Mail, Send, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Input, Textarea, Label } from "@/components/ui/primitives";
@@ -32,13 +33,22 @@ export function ContactForm() {
   } = useForm<ContactInput>({ resolver: zodResolver(contactSchema), defaultValues: { topic: "" } });
 
   const onSubmit = async (data: ContactInput) => {
-    // ponytail: front-end only — no /contact backend endpoint yet. Wire this
-    // to a POST once the operator's inbox/support address is set (the page's
-    // pre-launch banner tracks that). Until then we acknowledge locally.
-    await new Promise((r) => setTimeout(r, 600));
-    setSent(data.name.split(" ")[0]);
-    toast.success("Thanks — your message is on its way!");
-    reset();
+    try {
+      await request("/contact", {
+        method: "POST",
+        body: {
+          name: data.name,
+          email: data.email,
+          subject: data.topic,
+          message: data.message,
+        },
+      });
+      setSent(data.name.split(" ")[0]);
+      toast.success("Thanks — your message is on its way!");
+      reset();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't send your message. Please try again.");
+    }
   };
 
   if (sent) {
