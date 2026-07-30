@@ -44,20 +44,36 @@ export class UsersService {
   async adminList(): Promise<AdminUser[]> {
     const rows = await this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { listings: true } } },
+      include: {
+        _count: { select: { listings: true } },
+        memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+      },
     });
-    return rows.map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      city: u.city,
-      isSellerVerified: u.isSellerVerified,
-      sellerVerificationRequestedAt:
-        u.sellerVerificationRequestedAt?.toISOString() ?? null,
-      listingCount: u._count.listings,
-      createdAt: u.createdAt.toISOString(),
-    }));
+    const now = new Date();
+    return rows.map((u) => {
+      const latest = u.memberships[0];
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        city: u.city,
+        isSellerVerified: u.isSellerVerified,
+        sellerVerificationRequestedAt:
+          u.sellerVerificationRequestedAt?.toISOString() ?? null,
+        registrationPaidAt: u.registrationPaidAt?.toISOString() ?? null,
+        membership: latest
+          ? {
+              plan: latest.plan,
+              startsAt: latest.startsAt.toISOString(),
+              expiresAt: latest.expiresAt.toISOString(),
+              active: latest.expiresAt > now,
+            }
+          : null,
+        listingCount: u._count.listings,
+        createdAt: u.createdAt.toISOString(),
+      };
+    });
   }
 
   async verifySeller(id: string, isSellerVerified: boolean) {
@@ -94,6 +110,7 @@ export class UsersService {
       isSellerVerified: user.isSellerVerified,
       sellerVerificationRequestedAt:
         user.sellerVerificationRequestedAt?.toISOString() ?? null,
+      registrationPaidAt: user.registrationPaidAt?.toISOString() ?? null,
     };
   }
 }

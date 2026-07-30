@@ -141,13 +141,18 @@ export type VerifySellerPaymentInput = z.infer<
 export interface SellerBillingStatus {
   registrationPaid: boolean;
   registrationFeePaise: number;
+  // The single "verified seller" status: paid registration AND admin
+  // approval (isSellerVerified). Both are required — paying alone or being
+  // approved alone isn't enough. Can be true even while canList is false
+  // (verified but no active membership).
+  sellerVerified: boolean;
   activePlan: MembershipPlan | null;
   membershipExpiresAt: string | null; // ISO, null if none/expired
   // The most recent membership's end date, when it's the reason canList is
   // false (a lapsed plan) rather than "never subscribed" — lets the UI show
   // "expired on X — renew" instead of just silently hiding the status card.
   lastMembershipExpiredAt: string | null;
-  canList: boolean; // registrationPaid && active membership
+  canList: boolean; // sellerVerified && active membership
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,6 +315,9 @@ export interface AuthUser {
   bio: string | null;
   isSellerVerified: boolean;
   sellerVerificationRequestedAt: string | null;
+  // ISO, null until the ₹100 registration fee is paid. Drives whether the
+  // Sales/My-listings nav tabs show at all — see account-shell.tsx.
+  registrationPaidAt: string | null;
 }
 
 export interface AuthTokens {
@@ -644,6 +652,18 @@ export interface AdminUser {
   city: string | null;
   isSellerVerified: boolean;
   sellerVerificationRequestedAt: string | null;
+  // ISO, null until the ₹100 registration fee is paid. Approving
+  // (isSellerVerified) a user before this is set has no gating effect —
+  // both are required to list, per the merged verification pipeline.
+  registrationPaidAt: string | null;
+  // The most recent SellerMembership (by expiresAt), if the user has ever
+  // bought a plan — null for a user who registered but never subscribed.
+  membership: {
+    plan: MembershipPlan;
+    startsAt: string;
+    expiresAt: string;
+    active: boolean;
+  } | null;
   listingCount: number;
   createdAt: string;
 }

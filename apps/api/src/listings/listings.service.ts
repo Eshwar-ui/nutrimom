@@ -350,9 +350,21 @@ export class ListingsService {
     return row;
   }
 
-  // Monetization gate: a seller may create a listing only while holding an
-  // active membership window. Enforced here (server-side), not just in the UI.
+  // Monetization + trust gate: a seller may create a listing only once
+  // verified (paid registration AND admin-approved — see the merged
+  // pipeline in SellerBillingService.status) AND holding an active
+  // membership window. Enforced here (server-side), not just in the UI.
   private async assertCanList(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { registrationPaidAt: true, isSellerVerified: true },
+    });
+    if (!user?.registrationPaidAt || !user.isSellerVerified) {
+      throw new ForbiddenException(
+        'Your seller account must be verified — registered and approved by an admin — before you can list items.',
+      );
+    }
+
     const active = await this.prisma.sellerMembership.findFirst({
       where: { userId, expiresAt: { gt: new Date() } },
       select: { id: true },

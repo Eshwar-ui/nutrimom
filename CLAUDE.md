@@ -174,13 +174,17 @@ first, polish after.
 > `admin/orders/[id]/page.tsx` (full order detail, was missing entirely); `PATCH /notifications/:id/read`
 > wired to the shared notifications page (was structurally impossible — no per-id endpoint existed);
 > `Notification.orderId` added + populated at every order-related notification so refund/order-placed
-> notifications are clickable instead of dead `<div>`s. Verified live, 19/19 tests pass. → **P2**
-> seller-identity foundation (verification merge + backfill, seller-only admin view w/ membership
-> details, gate Sales/My-listings nav on registration status, split the customer Membership tab into
-> explainer-vs-management) → **P3** order lifecycle (sequential IDs, cancellation policy) → **P4**
-> greenfield content tools (admin listing creation, blog CMS, contact-form → admin inbox — all
-> currently nonexistent/mocked). See [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail and open
-> questions before P2 begins.
+> notifications are clickable instead of dead `<div>`s.
+> **P2** seller-identity foundation ✅ **DONE (2026-07-30)** — merged verification
+> (`SellerBillingStatus.sellerVerified` = paid + admin-approved; `assertCanList` now checks both, not
+> just membership), a grandfather-backfill migration so no already-paying seller got locked out;
+> admin `Users` split into Sellers/Customers tabs with plan/expiry chips; `account-shell.tsx` hides
+> My-listings/Sales for anyone who hasn't registered; `/account/membership` and `/sell` now show
+> three distinct states (not registered / awaiting admin approval / needs a plan), with a
+> non-seller-facing explainer replacing the raw purchase form. → **P3** order lifecycle (sequential
+> IDs, cancellation policy) → **P4** greenfield content tools (admin listing creation, blog CMS,
+> contact-form → admin inbox — all currently nonexistent/mocked). See
+> [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail and open questions before P3 begins.
 
 ---
 

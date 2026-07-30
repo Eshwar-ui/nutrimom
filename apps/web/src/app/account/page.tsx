@@ -82,10 +82,10 @@ export default function AccountPage() {
           </p>
           <p className="text-sm text-muted-foreground">
             {user.isSellerVerified
-              ? "The verified badge shows on your listings and shop page."
+              ? "Your trust badge shows on your listings and shop page. Combined with a paid registration, this is what lets you list items."
               : user.sellerVerificationRequestedAt
-                ? "An admin will review your account soon."
-                : "Verified sellers get a trust badge buyers can see."}
+                ? "An admin will review your account soon. You'll need this, plus a paid registration, before you can list items."
+                : "Verified sellers get a trust badge buyers can see, and it's required (along with registration) before you can list items."}
           </p>
         </div>
         {!user.isSellerVerified && !user.sellerVerificationRequestedAt && (

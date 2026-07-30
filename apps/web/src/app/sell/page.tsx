@@ -45,19 +45,23 @@ export default function SellPage() {
             </span>
             <div>
               <h2 className="text-lg font-semibold text-foreground">
-                {status?.registrationPaid
-                  ? "An active membership is required to list"
-                  : "Become a verified seller to list"}
+                {!status?.registrationPaid
+                  ? "Become a verified seller to list"
+                  : !status?.sellerVerified
+                    ? "Awaiting admin approval"
+                    : "An active membership is required to list"}
               </h2>
               <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-                {status?.registrationPaid
-                  ? "Your seller registration is complete. Choose a membership plan to start listing items."
-                  : `A one-time ${formatPaise(REGISTRATION_FEE_PAISE)} seller registration, then a membership plan from ${formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}/mo, unlocks listing.`}
+                {!status?.registrationPaid
+                  ? `A one-time ${formatPaise(REGISTRATION_FEE_PAISE)} seller registration, then a membership plan from ${formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}/mo, unlocks listing.`
+                  : !status?.sellerVerified
+                    ? "Your registration is complete — an admin needs to approve your account before you can list. You can still choose a membership plan in the meantime."
+                    : "Your seller account is verified. Choose a membership plan to start listing items."}
               </p>
             </div>
             <Link href="/account/membership" className={buttonVariants()}>
               <BadgeCheck className="h-4 w-4" />
-              {status?.registrationPaid ? "Choose a plan" : "Get started"}
+              {!status?.registrationPaid ? "Get started" : !status?.sellerVerified ? "View status" : "Choose a plan"}
             </Link>
           </Card>
         )}

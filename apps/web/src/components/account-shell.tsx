@@ -23,8 +23,12 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/account", label: "Profile", icon: User, exact: true },
-  { href: "/account/listings", label: "My listings", icon: Tag },
-  { href: "/account/sales", label: "Sales", icon: Truck },
+  // Seller-only — hidden for a plain customer who's never registered to
+  // sell (see sellerOnly filtering below). Gated on registrationPaidAt
+  // rather than an active membership, so a lapsed seller still sees their
+  // own history instead of losing access to it.
+  { href: "/account/listings", label: "My listings", icon: Tag, sellerOnly: true },
+  { href: "/account/sales", label: "Sales", icon: Truck, sellerOnly: true },
   { href: "/account/membership", label: "Membership", icon: BadgeCheck },
   { href: "/account/orders", label: "My orders", icon: Package },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
@@ -52,8 +56,11 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
     return <Container className="py-12"><PageSkeleton rows={4} /></Container>;
   }
 
+  const isSeller = user.registrationPaidAt !== null;
   const links = (mobile: boolean) =>
-    nav.map((item) => {
+    nav
+      .filter((item) => !item.sellerOnly || isSeller)
+      .map((item) => {
       const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
       return (
         <Link

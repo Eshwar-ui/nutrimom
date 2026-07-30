@@ -106,7 +106,21 @@ have no dedicated bell UI anywhere — they use this same shared page.
 
 ---
 
-## Phase 2 — Seller identity foundation (everything below depends on this)
+## Phase 2 — Seller identity foundation (everything below depends on this) ✅ DONE (2026-07-30)
+
+> Shipped: `SellerBillingStatus.sellerVerified` (registrationPaid && isSellerVerified) + tightened
+> `assertCanList` (was membership-only) + backfill migration `20260730081719_backfill_seller_verification`
+> (idempotent, grandfathered 10 existing paying sellers so none were locked out — confirmed by the
+> operator). Admin `Users` page split into Sellers/Customers tabs with plan/expiry chips, verify
+> button now disabled + labeled "Awaiting payment" until registration is paid. `AuthUser.registrationPaidAt`
+> added; `account-shell.tsx` hides My-listings/Sales for anyone who hasn't registered (gated on
+> registration, not active membership, so lapsed sellers keep their history); the auth store is
+> refreshed on registration payment so the nav unlocks without a re-login. `/account/membership` and
+> `/sell` now distinguish three states (not registered / awaiting approval / needs a plan) instead of
+> two. Non-sellers get an explainer + CTA on `/account/membership` instead of the raw purchase form.
+> Verified live end-to-end (including the awaiting-approval state, simulated via direct DB write
+> since it requires a real payment + admin action to reach naturally) with a throwaway test account,
+> since cleaned up. Typecheck, lint, and 19/19 API tests pass.
 
 ### 2.1 Single seller verification pipeline
 **Root cause (confirmed):** two disconnected mechanisms both call themselves "verification":
@@ -289,7 +303,7 @@ soon" placeholder; no `Blog`/`Post` model anywhere in the schema, no API module,
 
 ```
 Phase 1 (bug fixes)        → 1.1, 1.2, 1.3          — ✅ DONE (2026-07-30)
-Phase 2 (seller identity)  → 2.1 → 2.2, 2.3, 2.4     — 2.1 is foundational; 2.2-2.4 consume it
+Phase 2 (seller identity)  → 2.1, 2.2, 2.3, 2.4       — ✅ DONE (2026-07-30)
 Phase 3 (order lifecycle)  → 3.1, 3.2                — independent of Phase 2, can run in parallel
 Phase 4 (content/catalog)  → 4.1, 4.2, 4.3           — fully independent, any order, lowest urgency
 ```

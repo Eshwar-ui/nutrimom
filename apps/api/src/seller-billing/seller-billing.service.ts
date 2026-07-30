@@ -33,10 +33,13 @@ export class SellerBillingService {
   async status(userId: string): Promise<SellerBillingStatus> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { registrationPaidAt: true },
+      select: { registrationPaidAt: true, isSellerVerified: true },
     });
     const active = await this.activeMembership(userId);
     const registrationPaid = !!user?.registrationPaidAt;
+    // Both payment and admin approval are required — the merged
+    // verification pipeline (see ListingsService.assertCanList).
+    const sellerVerified = registrationPaid && !!user?.isSellerVerified;
 
     let lastMembershipExpiredAt: string | null = null;
     if (!active) {
@@ -50,10 +53,11 @@ export class SellerBillingService {
     return {
       registrationPaid,
       registrationFeePaise: REGISTRATION_FEE_PAISE,
+      sellerVerified,
       activePlan: active?.plan ?? null,
       membershipExpiresAt: active?.expiresAt.toISOString() ?? null,
       lastMembershipExpiredAt,
-      canList: registrationPaid && !!active,
+      canList: sellerVerified && !!active,
     };
   }
 
