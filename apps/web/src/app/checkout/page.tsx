@@ -100,7 +100,7 @@ export default function CheckoutPage() {
         amount: pay.amountInPaise,
         currency: pay.currency,
         name: "Preloved by The Nurture Moms",
-        description: `Order ${order.id.slice(-6).toUpperCase()}`,
+        description: `Order ${order.orderNumber}`,
         order_id: pay.razorpayOrderId,
         prefill: {
           name: address.fullName,

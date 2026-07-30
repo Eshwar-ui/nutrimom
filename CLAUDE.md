@@ -181,10 +181,15 @@ first, polish after.
 > admin `Users` split into Sellers/Customers tabs with plan/expiry chips; `account-shell.tsx` hides
 > My-listings/Sales for anyone who hasn't registered; `/account/membership` and `/sell` now show
 > three distinct states (not registered / awaiting admin approval / needs a plan), with a
-> non-seller-facing explainer replacing the raw purchase form. → **P3** order lifecycle (sequential
-> IDs, cancellation policy) → **P4** greenfield content tools (admin listing creation, blog CMS,
-> contact-form → admin inbox — all currently nonexistent/mocked). See
-> [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail and open questions before P3 begins.
+> non-seller-facing explainer replacing the raw purchase form. **P3** order lifecycle ✅
+> **DONE (2026-07-30)** — sequential `Order.orderNumber` (`NM-YYYYMMDD-NNN`) via an atomic
+> per-day counter (backfilled + every display usage swapped over, including the shipping label
+> ref); a new admin-editable `CancellationPolicy` (cutoff window, reason codes, refund %) at
+> `/admin/settings`, enforced in `OrdersService.cancel`/`updateStatus` and applied to refund
+> amounts, with a shared reason-picker dialog replacing the old bare confirm. → **P4** greenfield
+> content tools (admin listing creation, blog CMS, contact-form → admin inbox — all currently
+> nonexistent/mocked). See [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail and open questions
+> before P4 begins.
 
 ---
 

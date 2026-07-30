@@ -32,6 +32,7 @@ import { Container, Card } from "@/components/ui/primitives";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { ReviewForm } from "@/components/review-form";
+import { CancelOrderDialog } from "@/components/cancel-order-dialog";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { ListingThumb } from "@/components/ui/listing-thumb";
 import { cn } from "@/lib/utils";
@@ -48,10 +49,11 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
 
   const { data: order, isLoading } = useQuery({ queryKey: ["order", id], queryFn: () => authedRequest<Order>(`/orders/${id}`), enabled: hydrated && !!user });
   const cancel = useMutation({
-    mutationFn: () => authedRequest<Order>(`/orders/${id}/cancel`, { method: "PATCH" }),
-    onSuccess: (updated) => { queryClient.setQueryData(["order", id], updated); queryClient.invalidateQueries({ queryKey: ["my-orders"] }); toast.success("Order cancelled"); },
+    mutationFn: (reason: string) => authedRequest<Order>(`/orders/${id}/cancel`, { method: "PATCH", body: { reason } }),
+    onSuccess: (updated) => { queryClient.setQueryData(["order", id], updated); queryClient.invalidateQueries({ queryKey: ["my-orders"] }); toast.success("Order cancelled"); setCancelling(false); },
     onError: (caught) => toast.error(caught instanceof ApiError ? caught.message : "Couldn't cancel this order."),
   });
+  const [cancelling, setCancelling] = useState(false);
   const [paying, setPaying] = useState(false);
   const [outcome, setOutcome] = useState<PaymentOutcome | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -90,7 +92,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         amount: pay.amountInPaise,
         currency: pay.currency,
         name: "Preloved by The Nurture Moms",
-        description: `Order ${order.id.slice(-6).toUpperCase()}`,
+        description: `Order ${order.orderNumber}`,
         order_id: pay.razorpayOrderId,
         prefill: {
           name: order.shippingAddress.fullName,
@@ -155,7 +157,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       <header className="text-center">
         {confirmed && <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary/10"><CheckCircle2 className="h-8 w-8 text-primary" /></div>}
         <h1 className="mt-5 font-display text-4xl font-semibold text-foreground">{order.status === "DELIVERED" ? "Delivered" : order.status === "CANCELLED" ? "Order cancelled" : confirmed ? "Your order is confirmed" : "Awaiting payment"}</h1>
-        <p className="mt-2 text-muted-foreground">Order <span className="font-medium text-foreground">#{order.id.slice(-8).toUpperCase()}</span></p>
+        <p className="mt-2 text-muted-foreground">Order <span className="font-medium text-foreground">{order.orderNumber}</span></p>
         <div className="mt-3 flex justify-center"><OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} /></div>
         {isCod && order.status !== "CANCELLED" && <p className="mt-3 text-sm text-muted-foreground">Cash on Delivery · pay <span className="font-medium text-foreground">{formatPaise(order.totalInPaise)}</span> when your order is handed over.</p>}
         {payable && <p className="mt-3 text-sm text-muted-foreground">Your order is saved but payment hasn&apos;t gone through yet.</p>}
@@ -204,8 +206,16 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       {cancellable && (
         <div className="mt-10 border-t border-border pt-6 text-center print:hidden">
           <p className="text-sm text-muted-foreground">Need to stop this order? Cancellation after payment may require support review.</p>
-          <Button variant="ghost" className="mt-3 gap-1.5 text-danger hover:bg-danger/10" disabled={cancel.isPending} onClick={() => { if (window.confirm("Cancel this order? This can't be undone.")) cancel.mutate(); }}><XCircle className="h-4 w-4" /> {cancel.isPending ? "Cancelling…" : "Cancel order"}</Button>
+          <Button variant="ghost" className="mt-3 gap-1.5 text-danger hover:bg-danger/10" disabled={cancel.isPending} onClick={() => setCancelling(true)}><XCircle className="h-4 w-4" /> {cancel.isPending ? "Cancelling…" : "Cancel order"}</Button>
         </div>
+      )}
+
+      {cancelling && (
+        <CancelOrderDialog
+          pending={cancel.isPending}
+          onCancel={() => setCancelling(false)}
+          onConfirm={(reason) => cancel.mutate(reason)}
+        />
       )}
 
       <PaymentVerifyingOverlay open={verifying} />

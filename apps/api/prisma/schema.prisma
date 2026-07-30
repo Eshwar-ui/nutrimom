@@ -190,6 +190,10 @@ model WishlistItem {
 
 model Order {
   id                String      @id @default(cuid())
+  // Human-readable display id, e.g. "NM-20260730-014" — generated from
+  // DailyOrderSequence at creation time. `id` stays the real PK; this is
+  // purely for display (admin UI, notifications, customer-facing pages).
+  orderNumber       String      @unique
   buyer             User        @relation(fields: [buyerId], references: [id])
   buyerId           String
   status            OrderStatus   @default(PENDING)
@@ -200,6 +204,9 @@ model Order {
   razorpayPaymentId String?       @unique
   refundId          String?
   refundedAt        DateTime?
+  // One of CancellationPolicy.reasonCodes at the time of cancellation — not
+  // a foreign key, since the policy's codes can change afterward.
+  cancellationReason String?
   items             OrderItem[]
   reviews           Review[]
   shipments         Shipment[]
@@ -209,6 +216,25 @@ model Order {
 
   @@index([buyerId])
   @@index([status])
+}
+
+// Atomic per-day counter backing Order.orderNumber generation — incremented
+// via a raw upsert (INSERT ... ON CONFLICT DO UPDATE ... RETURNING count)
+// inside the same transaction as order creation, so concurrent checkouts on
+// the same day never collide.
+model DailyOrderSequence {
+  date  String @id // "YYYYMMDD", UTC
+  count Int    @default(0)
+}
+
+// Single global row (id is always "global") — admin-editable rules for
+// buyer/admin order cancellation. Read by OrdersService.cancel/updateStatus.
+model CancellationPolicy {
+  id               String   @id @default("global")
+  cutoffHours      Int      @default(24)
+  reasonCodes      String[] @default(["Changed my mind", "Ordered by mistake", "Found a better price elsewhere", "Seller delay", "Other"])
+  refundPercentage Int      @default(100)
+  updatedAt        DateTime @updatedAt
 }
 
 model OrderItem {

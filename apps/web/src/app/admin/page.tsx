@@ -51,7 +51,7 @@ export default function AdminDashboard() {
           {(orders.data ?? []).slice(0, 8).map((o) => (
             <div key={o.id} className="flex items-center justify-between gap-4 p-4">
               <div>
-                <p className="font-medium text-foreground">#{o.id.slice(-8).toUpperCase()}</p>
+                <p className="font-medium text-foreground">{o.orderNumber}</p>
                 <p className="text-sm text-muted-foreground">
                   {o.shippingAddress.fullName} · {o.items.length} item(s)
                 </p>

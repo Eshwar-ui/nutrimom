@@ -17,7 +17,7 @@ export class ManualLabelProvider implements ShippingProvider {
   readonly name = 'manual';
 
   createLabel(order: LabelOrder, seller: LabelSeller): Promise<GeneratedLabel> {
-    const ref = `NM-${order.orderId.slice(-6).toUpperCase()}`;
+    const ref = order.orderNumber;
     const a = order.shippingAddress;
     const line2 = a.line2 ? `${esc(a.line2)}<br/>` : '';
     const items = order.items.map((i) => `<li>${esc(i.title)}</li>`).join('');

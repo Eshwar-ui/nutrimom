@@ -189,6 +189,7 @@ export interface GenerateLabelResponse {
 // One row in a seller's "sales to fulfil" list.
 export interface SellerSale {
   orderId: string;
+  orderNumber: string;
   createdAt: string;
   shipmentStatus: ShipmentStatus;
   courier: string | null;
@@ -548,6 +549,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  orderNumber: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   totalInPaise: number;
@@ -568,6 +570,7 @@ export interface AdminOrderDetail extends Order {
   sellers: { id: string; name: string }[];
   razorpayPaymentId: string | null;
   refundId: string | null;
+  cancellationReason: string | null;
   updatedAt: string;
   shipments: {
     sellerId: string;
@@ -578,16 +581,51 @@ export interface AdminOrderDetail extends Order {
   }[];
 }
 
-export const updateOrderStatusSchema = z.object({
-  status: z.enum([
-    OrderStatus.PENDING,
-    OrderStatus.PAID,
-    OrderStatus.SHIPPED,
-    OrderStatus.DELIVERED,
-    OrderStatus.CANCELLED,
-  ]),
-});
+// `reason` is only required when moving to CANCELLED — the admin manual
+// status override otherwise has no use for it. Which strings actually count
+// as a valid reason is admin-configurable (CancellationPolicy.reasonCodes),
+// so that part can only be checked server-side, not by this shape alone.
+export const updateOrderStatusSchema = z
+  .object({
+    status: z.enum([
+      OrderStatus.PENDING,
+      OrderStatus.PAID,
+      OrderStatus.SHIPPED,
+      OrderStatus.DELIVERED,
+      OrderStatus.CANCELLED,
+    ]),
+    reason: z.string().min(1).max(80).optional(),
+  })
+  .refine((v) => v.status !== OrderStatus.CANCELLED || !!v.reason, {
+    message: 'A cancellation reason is required',
+    path: ['reason'],
+  });
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
+export const cancelOrderSchema = z.object({
+  reason: z.string().min(1).max(80),
+});
+export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Cancellation policy                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface CancellationPolicy {
+  cutoffHours: number;
+  reasonCodes: string[];
+  refundPercentage: number;
+  updatedAt: string;
+}
+
+export const cancellationPolicyInputSchema = z.object({
+  cutoffHours: z.number().int().min(1).max(24 * 90),
+  reasonCodes: z.array(z.string().min(1).max(80)).min(1).max(20),
+  refundPercentage: z.number().int().min(0).max(100),
+});
+export type CancellationPolicyInput = z.infer<
+  typeof cancellationPolicyInputSchema
+>;
 
 /* ------------------------------------------------------------------ */
 /* Payments (Razorpay)                                                 */

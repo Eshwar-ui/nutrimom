@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { Card } from "@/components/ui/primitives";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { CancelOrderDialog } from "@/components/cancel-order-dialog";
 
 const statusOptions = Object.values(OrderStatus);
 
@@ -16,16 +18,24 @@ export default function AdminOrdersPage() {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery({ queryKey: ["admin-orders"], queryFn: () => authedRequest<Order[]>("/admin/orders") });
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: OrderStatusType }) => authedRequest<Order>(`/admin/orders/${id}/status`, { method: "PATCH", body: { status } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
+    mutationFn: ({ id, status, reason }: { id: string; status: OrderStatusType; reason?: string }) => authedRequest<Order>(`/admin/orders/${id}/status`, { method: "PATCH", body: { status, reason } }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-orders"] }); setCancellingOrder(null); },
   });
+
+  // The status dropdown needs a reason before it can submit CANCELLED, so
+  // that pick is intercepted here rather than mutating immediately.
+  const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
 
   const statusSelect = (order: Order) => (
     <CustomSelect
       id={`order-status-${order.id}`}
-      ariaLabel={`Update order ${order.id.slice(-8)} status`}
+      ariaLabel={`Update order ${order.orderNumber} status`}
       value={order.status}
-      onChange={(status) => updateStatus.mutate({ id: order.id, status: status as OrderStatusType })}
+      onChange={(status) =>
+        status === "CANCELLED"
+          ? setCancellingOrder(order)
+          : updateStatus.mutate({ id: order.id, status: status as OrderStatusType })
+      }
       options={statusOptions.map((status) => ({ value: status, label: status }))}
       disabled={updateStatus.isPending}
       className="w-40"
@@ -49,7 +59,7 @@ export default function AdminOrdersPage() {
               <Card key={order.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <Link href={`/admin/orders/${order.id}`} className="group">
-                    <p className="font-semibold text-foreground group-hover:underline">#{order.id.slice(-8).toUpperCase()}</p>
+                    <p className="font-semibold text-foreground group-hover:underline">{order.orderNumber}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{order.shippingAddress.fullName}</p>
                   </Link>
                   <OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} />
@@ -69,7 +79,7 @@ export default function AdminOrdersPage() {
                 {orders.map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0">
                     <Td className="font-medium text-foreground">
-                      <Link href={`/admin/orders/${order.id}`} className="hover:underline">#{order.id.slice(-8).toUpperCase()}</Link>
+                      <Link href={`/admin/orders/${order.id}`} className="hover:underline">{order.orderNumber}</Link>
                     </Td>
                     <Td>{order.shippingAddress.fullName}</Td>
                     <Td>{formatPaise(order.totalInPaise)}</Td>
@@ -87,6 +97,17 @@ export default function AdminOrdersPage() {
             </table>
           </Card>
         </>
+      )}
+
+      {cancellingOrder && (
+        <CancelOrderDialog
+          title={`Cancel order ${cancellingOrder.orderNumber}?`}
+          pending={updateStatus.isPending}
+          onCancel={() => setCancellingOrder(null)}
+          onConfirm={(reason) =>
+            updateStatus.mutate({ id: cancellingOrder.id, status: "CANCELLED", reason })
+          }
+        />
       )}
     </div>
   );

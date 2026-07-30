@@ -40,6 +40,7 @@ export class ShippingService {
       const shipment = order.shipments[0];
       return {
         orderId: order.id,
+        orderNumber: order.orderNumber,
         createdAt: order.createdAt.toISOString(),
         shipmentStatus: shipment?.status ?? 'PENDING',
         courier: shipment?.courier ?? null,
@@ -86,6 +87,7 @@ export class ShippingService {
     const label = await this.provider.createLabel(
       {
         orderId: order.id,
+        orderNumber: order.orderNumber,
         createdAt: order.createdAt,
         buyerName: order.buyer.name,
         shippingAddress: order.shippingAddress as unknown as ShippingAddress,

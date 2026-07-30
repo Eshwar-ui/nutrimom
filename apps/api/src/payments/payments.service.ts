@@ -146,6 +146,7 @@ export class PaymentsService {
         return {
           kind: 'refund' as const,
           orderId: order.id,
+          orderNumber: order.orderNumber,
           buyerId: order.buyerId,
           amountInPaise: order.totalInPaise,
           reason: 'your order was cancelled before payment completed',
@@ -207,6 +208,7 @@ export class PaymentsService {
         return {
           kind: 'refund' as const,
           orderId: order.id,
+          orderNumber: order.orderNumber,
           buyerId: order.buyerId,
           amountInPaise: order.totalInPaise,
           reason:
@@ -226,7 +228,7 @@ export class PaymentsService {
       }
       await this.notifications.notifyAdmins(
         'ORDER_PLACED',
-        `New paid order ${order.id.slice(-6).toUpperCase()} — ${order.items.length} item(s).`,
+        `New paid order ${order.orderNumber} — ${order.items.length} item(s).`,
         null,
         order.id,
         tx,
@@ -237,6 +239,7 @@ export class PaymentsService {
     if (outcome?.kind === 'refund') {
       await this.issueRefund(
         outcome.orderId,
+        outcome.orderNumber,
         outcome.buyerId,
         paymentId,
         outcome.amountInPaise,
@@ -253,6 +256,7 @@ export class PaymentsService {
    */
   private async issueRefund(
     orderId: string,
+    orderNumber: string,
     buyerId: string,
     gatewayPaymentId: string,
     amountInPaise: number,
@@ -270,7 +274,7 @@ export class PaymentsService {
       await this.notifications.create(
         buyerId,
         'PAYMENT_REFUNDED',
-        `Your payment for order ${orderId.slice(-6).toUpperCase()} was refunded — ${reason}.`,
+        `Your payment for order ${orderNumber} was refunded — ${reason}.`,
         null,
         orderId,
       );

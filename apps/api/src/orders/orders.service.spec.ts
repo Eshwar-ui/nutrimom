@@ -22,8 +22,21 @@ function makeService() {
     parseWebhook: jest.fn(),
     refund,
   };
-  const svc = new OrdersService(prisma as any, notifications as any, provider);
-  return { svc, prisma, tx, notifications, provider, refund };
+  const settings = {
+    getCancellationPolicy: jest.fn().mockResolvedValue({
+      cutoffHours: 24,
+      reasonCodes: ['Changed my mind'],
+      refundPercentage: 100,
+      updatedAt: new Date().toISOString(),
+    }),
+  };
+  const svc = new OrdersService(
+    prisma as any,
+    notifications as any,
+    settings as any,
+    provider,
+  );
+  return { svc, prisma, tx, notifications, provider, refund, settings };
 }
 
 describe('OrdersService — admin updateStatus transitions', () => {
@@ -83,7 +96,10 @@ describe('OrdersService — admin updateStatus transitions', () => {
       items: [],
     });
 
-    await svc.updateStatus('o1', { status: 'CANCELLED' });
+    await svc.updateStatus('o1', {
+      status: 'CANCELLED',
+      reason: 'Changed my mind',
+    });
 
     expect(tx.listing.updateMany).toHaveBeenCalledWith({
       where: {
@@ -158,17 +174,20 @@ describe('OrdersService — admin updateStatus transitions', () => {
 });
 
 describe('OrdersService — buyer cancel', () => {
+  const validReason = { reason: 'Changed my mind' };
+
   it('refuses to cancel once a seller has generated a shipping label', async () => {
     const { svc, tx } = makeService();
     tx.order.findUnique.mockResolvedValue({
       id: 'o1',
       buyerId: 'b1',
       status: 'PAID',
+      createdAt: new Date(),
       items: [],
     });
     tx.shipment.count.mockResolvedValue(1);
 
-    await expect(svc.cancel('b1', 'o1')).rejects.toBeInstanceOf(
+    await expect(svc.cancel('b1', 'o1', validReason)).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
@@ -182,8 +201,72 @@ describe('OrdersService — buyer cancel', () => {
       items: [],
     });
 
-    await expect(svc.cancel('b1', 'o1')).rejects.toBeInstanceOf(
+    await expect(svc.cancel('b1', 'o1', validReason)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+
+  it('rejects a reason not in the configured policy', async () => {
+    const { svc } = makeService();
+
+    await expect(
+      svc.cancel('b1', 'o1', { reason: 'Not a real reason' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects cancelling outside the configured cutoff window', async () => {
+    const { svc, tx } = makeService();
+    tx.order.findUnique.mockResolvedValue({
+      id: 'o1',
+      buyerId: 'b1',
+      status: 'PENDING',
+      createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000), // 25h ago > 24h cutoff
+      items: [],
+    });
+
+    await expect(svc.cancel('b1', 'o1', validReason)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('applies the policy refund percentage to a partial refund', async () => {
+    const { svc, tx, prisma, refund, settings } = makeService();
+    settings.getCancellationPolicy.mockResolvedValue({
+      cutoffHours: 24,
+      reasonCodes: ['Changed my mind'],
+      refundPercentage: 50,
+      updatedAt: new Date().toISOString(),
+    });
+    tx.order.findUnique.mockResolvedValue({
+      id: 'o1',
+      buyerId: 'b1',
+      status: 'PAID',
+      totalInPaise: 40000,
+      razorpayPaymentId: 'pay_1',
+      createdAt: new Date(),
+      items: [],
+    });
+    tx.order.update.mockResolvedValue({
+      id: 'o1',
+      buyerId: 'b1',
+      status: 'CANCELLED',
+      totalInPaise: 40000,
+      razorpayPaymentId: 'pay_1',
+      shippingAddress: {},
+      createdAt: new Date(),
+      items: [],
+    });
+    prisma.order.update.mockResolvedValue({});
+    prisma.order.findUnique.mockResolvedValue({
+      id: 'o1',
+      status: 'CANCELLED',
+      shippingAddress: {},
+      createdAt: new Date(),
+      items: [],
+    });
+
+    await svc.cancel('b1', 'o1', validReason);
+
+    expect(refund).toHaveBeenCalledWith('pay_1', 20000);
   });
 });

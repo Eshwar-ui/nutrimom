@@ -69,12 +69,15 @@ export class SellerListingsController {
   @Post('images')
   @UseInterceptors(FilesInterceptor('images', 10))
   async uploadImages(@UploadedFiles() files: UploadedImage[] = []) {
-    if (!files.length) throw new BadRequestException('Upload at least one image');
+    if (!files.length)
+      throw new BadRequestException('Upload at least one image');
 
     const urls = await Promise.all(
       files.map(async (file) => {
         if (!allowedImageTypes.has(file.mimetype)) {
-          throw new BadRequestException('Only JPG, PNG, and WebP images are allowed');
+          throw new BadRequestException(
+            'Only JPG, PNG, and WebP images are allowed',
+          );
         }
         if (file.size > maxImageBytes) {
           throw new BadRequestException('Each image must be 5 MB or smaller');

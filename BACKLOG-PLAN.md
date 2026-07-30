@@ -199,7 +199,29 @@ there's no buyer-oriented explanation anywhere.
 
 ---
 
-## Phase 3 — Order lifecycle
+## Phase 3 — Order lifecycle ✅ DONE (2026-07-30)
+
+> Shipped: `Order.orderNumber` (`NM-YYYYMMDD-NNN`) generated via an atomic `DailyOrderSequence`
+> upsert (`INSERT ... ON CONFLICT DO UPDATE ... RETURNING`) inside the same transaction as order
+> creation — no naive count()+1 race. Migration backfilled all 19 existing orders (verified
+> per-day sequential, e.g. `NM-20260728-001..010`) and seeded the counter table so new orders
+> continue correctly. Every id.slice(-N) display usage replaced across admin list/detail, customer
+> order list/detail, checkout Razorpay description, and the shipping label ref (which now reuses
+> orderNumber instead of computing its own ad hoc "NM-" string). New `CancellationPolicy` model
+> (single global row) + `SettingsService`/`SettingsController` (`GET /cancellation-policy` for any
+> signed-in user, `PATCH /admin/cancellation-policy` for admins) + `admin/settings` page to edit
+> cutoff hours / reason codes / refund %. `OrdersService.cancel()` now enforces the cutoff window
+> and validates the reason against the configured codes; `updateStatus()`'s admin CANCELLED path
+> requires the same. `refundCancelledOrder` scales the gateway refund by the configured percentage
+> (skips the gateway call entirely at 0%). A new shared `CancelOrderDialog` component (reason
+> picker sourced live from the policy) replaced the buyer's `window.confirm` and is reused by the
+> admin status dropdown. `Order.cancellationReason` persists what was picked and shows on the
+> admin order detail. Verified live end-to-end: edited the policy (cutoff/refund%/reasons) and
+> confirmed persistence after reload; cancelled a real PAID test order from the admin UI with an
+> 80% refund policy active — reason dialog showed the live-edited reason list, the real Razorpay
+> test-gateway refund succeeded, and the order detail correctly showed `Cancelled`, the chosen
+> reason, and the refund id. 22/22 API tests pass (3 new: invalid reason, cutoff rejection, partial
+> refund math), typecheck and lint clean.
 
 ### 3.1 Sequential order IDs
 **Root cause (confirmed):** `Order.id` is a random `cuid()`; there's no order-number column, no
@@ -304,7 +326,7 @@ soon" placeholder; no `Blog`/`Post` model anywhere in the schema, no API module,
 ```
 Phase 1 (bug fixes)        → 1.1, 1.2, 1.3          — ✅ DONE (2026-07-30)
 Phase 2 (seller identity)  → 2.1, 2.2, 2.3, 2.4       — ✅ DONE (2026-07-30)
-Phase 3 (order lifecycle)  → 3.1, 3.2                — independent of Phase 2, can run in parallel
+Phase 3 (order lifecycle)  → 3.1, 3.2                — ✅ DONE (2026-07-30)
 Phase 4 (content/catalog)  → 4.1, 4.2, 4.3           — fully independent, any order, lowest urgency
 ```
 

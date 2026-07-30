@@ -9,6 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import type {
   AdminOrderDetail,
+  CancelOrderInput,
   CreateOrderInput,
   Order,
   ShippingAddress,
@@ -16,6 +17,7 @@ import type {
 } from '@nutrimom/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SettingsService } from '../settings/settings.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -50,6 +52,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly settings: SettingsService,
     @Inject(PAYMENT_PROVIDER) private readonly paymentProvider: PaymentProvider,
   ) {}
 
@@ -95,6 +98,7 @@ export class OrdersService {
       const order = await tx.order.create({
         data: {
           buyerId,
+          orderNumber: await this.nextOrderNumber(tx),
           status: 'PENDING',
           paymentMethod: 'ONLINE',
           totalInPaise,
@@ -135,6 +139,24 @@ export class OrdersService {
     });
   }
 
+  /**
+   * Atomically claims the next `NM-YYYYMMDD-NNN` number for today (UTC),
+   * via a raw upsert — `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` is a
+   * single atomic statement, so two concurrent checkouts on the same day can
+   * never be handed the same count (unlike a naive count()+1 read-then-write).
+   * Must run inside the same transaction as the order it numbers.
+   */
+  private async nextOrderNumber(tx: Prisma.TransactionClient): Promise<string> {
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const rows = await tx.$queryRaw<{ count: number }[]>`
+      INSERT INTO "DailyOrderSequence" ("date", "count")
+      VALUES (${day}, 1)
+      ON CONFLICT ("date") DO UPDATE SET "count" = "DailyOrderSequence"."count" + 1
+      RETURNING "count"
+    `;
+    return `NM-${day}-${String(rows[0].count).padStart(3, '0')}`;
+  }
+
   async listMine(buyerId: string): Promise<Order[]> {
     const rows = await this.prisma.order.findMany({
       where: { buyerId },
@@ -155,20 +177,30 @@ export class OrdersService {
   }
 
   /**
-   * Buyer-initiated cancellation. Only from PENDING/PAID — once a seller has
-   * generated a shipping label (let alone shipped), the item is already in
-   * motion and cancellation has to go through support instead. A PENDING
-   * order holds its listings RESERVED (see create()); a PAID order has
-   * flipped them to SOLD. Either way we release only listings this order is
-   * still the recorded `holdOrderId` for — never another order's claim, even
-   * if it happens to point at the same listing (e.g. this order lost the
-   * checkout race and its hold already expired, or the listing has since
-   * been re-sold to someone else). A PAID cancellation also refunds the
-   * captured payment; seller notification only fires for a PAID
-   * cancellation, since only then did the seller get an ITEM_SOLD notice in
-   * the first place.
+   * Buyer-initiated cancellation. Only from PENDING/PAID and within the
+   * admin-configured cutoff window — once a seller has generated a shipping
+   * label (let alone shipped), the item is already in motion and
+   * cancellation has to go through support instead. A PENDING order holds
+   * its listings RESERVED (see create()); a PAID order has flipped them to
+   * SOLD. Either way we release only listings this order is still the
+   * recorded `holdOrderId` for — never another order's claim, even if it
+   * happens to point at the same listing (e.g. this order lost the checkout
+   * race and its hold already expired, or the listing has since been
+   * re-sold to someone else). A PAID cancellation also refunds the captured
+   * payment (per the policy's refund %); seller notification only fires for
+   * a PAID cancellation, since only then did the seller get an ITEM_SOLD
+   * notice in the first place.
    */
-  async cancel(buyerId: string, id: string): Promise<Order> {
+  async cancel(
+    buyerId: string,
+    id: string,
+    input: CancelOrderInput,
+  ): Promise<Order> {
+    const policy = await this.settings.getCancellationPolicy();
+    if (!policy.reasonCodes.includes(input.reason)) {
+      throw new BadRequestException('Not a valid cancellation reason');
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id },
@@ -182,6 +214,14 @@ export class OrdersService {
         );
       }
 
+      const hoursSincePlaced =
+        (Date.now() - order.createdAt.getTime()) / (60 * 60 * 1000);
+      if (hoursSincePlaced > policy.cutoffHours) {
+        throw new BadRequestException(
+          `Orders can only be cancelled within ${policy.cutoffHours} hours of being placed — contact support for help`,
+        );
+      }
+
       const shipmentCount = await tx.shipment.count({
         where: { orderId: id },
       });
@@ -191,10 +231,10 @@ export class OrdersService {
         );
       }
 
-      return this.cancelWithinTx(tx, order, 'buyer');
+      return this.cancelWithinTx(tx, order, 'buyer', input.reason);
     });
 
-    return this.finishStatusChange(result, buyerId);
+    return this.finishStatusChange(result, buyerId, policy.refundPercentage);
   }
 
   /**
@@ -210,10 +250,11 @@ export class OrdersService {
     tx: Prisma.TransactionClient,
     order: OrderRow,
     cancelledBy: 'buyer' | 'admin',
+    reason: string,
   ): Promise<{ updated: OrderRow; wasPaid: boolean }> {
     const updated = await tx.order.update({
       where: { id: order.id },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', cancellationReason: reason },
       include: withItems,
     });
 
@@ -236,8 +277,8 @@ export class OrdersService {
           item.sellerId,
           'ORDER_CANCELLED',
           cancelledBy === 'buyer'
-            ? `The order for "${item.listingTitle}" was cancelled by the buyer.`
-            : `The order for "${item.listingTitle}" was cancelled by an admin.`,
+            ? `The order for "${item.listingTitle}" was cancelled by the buyer (${reason}).`
+            : `The order for "${item.listingTitle}" was cancelled by an admin (${reason}).`,
           item.listingId,
           order.id,
           tx,
@@ -252,13 +293,16 @@ export class OrdersService {
   private async finishStatusChange(
     result: { updated: OrderRow; wasPaid: boolean },
     buyerId: string,
+    refundPercentage: number,
   ): Promise<Order> {
     if (result.wasPaid && result.updated.razorpayPaymentId) {
       await this.refundCancelledOrder(
         result.updated.id,
+        result.updated.orderNumber,
         buyerId,
         result.updated.razorpayPaymentId,
         result.updated.totalInPaise,
+        refundPercentage,
       );
       const refreshed = await this.prisma.order.findUnique({
         where: { id: result.updated.id },
@@ -270,20 +314,36 @@ export class OrdersService {
   }
 
   /**
-   * Best-effort refund for a buyer-cancelled PAID order. Failure is logged
-   * for manual follow-up rather than thrown — the cancellation itself has
-   * already committed by the time this runs.
+   * Best-effort refund for a buyer-cancelled PAID order, scaled by the
+   * cancellation policy's refund %. Failure is logged for manual follow-up
+   * rather than thrown — the cancellation itself has already committed by
+   * the time this runs. A 0% policy skips the gateway call entirely (a
+   * refund of nothing isn't a real gateway operation) but still tells the
+   * buyer why no money is coming back.
    */
   private async refundCancelledOrder(
     orderId: string,
+    orderNumber: string,
     buyerId: string,
     gatewayPaymentId: string,
-    amountInPaise: number,
+    totalInPaise: number,
+    refundPercentage: number,
   ) {
+    const refundAmount = Math.round((totalInPaise * refundPercentage) / 100);
+    if (refundAmount <= 0) {
+      await this.notifications.create(
+        buyerId,
+        'PAYMENT_REFUNDED',
+        `Order ${orderNumber} was cancelled. Per the current cancellation policy, this cancellation isn't eligible for a refund.`,
+        null,
+        orderId,
+      );
+      return;
+    }
     try {
       const refund = await this.paymentProvider.refund(
         gatewayPaymentId,
-        amountInPaise,
+        refundAmount,
       );
       await this.prisma.order.update({
         where: { id: orderId },
@@ -292,7 +352,9 @@ export class OrdersService {
       await this.notifications.create(
         buyerId,
         'PAYMENT_REFUNDED',
-        `Your payment for order ${orderId.slice(-6).toUpperCase()} was refunded after cancellation.`,
+        refundPercentage < 100
+          ? `${refundPercentage}% of your payment for order ${orderNumber} was refunded after cancellation.`
+          : `Your payment for order ${orderNumber} was refunded after cancellation.`,
         null,
         orderId,
       );
@@ -341,6 +403,7 @@ export class OrdersService {
       sellers,
       razorpayPaymentId: row.razorpayPaymentId,
       refundId: row.refundId,
+      cancellationReason: row.cancellationReason,
       updatedAt: row.updatedAt.toISOString(),
       shipments: row.shipments.map((s) => ({
         sellerId: s.sellerId,
@@ -364,6 +427,15 @@ export class OrdersService {
    * that status isn't otherwise unreachable.
    */
   async updateStatus(id: string, dto: UpdateOrderStatusInput): Promise<Order> {
+    let refundPercentage = 100;
+    if (dto.status === 'CANCELLED') {
+      const policy = await this.settings.getCancellationPolicy();
+      if (!dto.reason || !policy.reasonCodes.includes(dto.reason)) {
+        throw new BadRequestException('Not a valid cancellation reason');
+      }
+      refundPercentage = policy.refundPercentage;
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id },
@@ -379,7 +451,7 @@ export class OrdersService {
       }
 
       if (dto.status === 'CANCELLED') {
-        return this.cancelWithinTx(tx, order, 'admin');
+        return this.cancelWithinTx(tx, order, 'admin', dto.reason!);
       }
 
       if (dto.status === 'PAID') {
@@ -425,13 +497,18 @@ export class OrdersService {
       return { updated, wasPaid: false };
     });
 
-    return this.finishStatusChange(result, result.updated.buyerId);
+    return this.finishStatusChange(
+      result,
+      result.updated.buyerId,
+      refundPercentage,
+    );
   }
 }
 
 function toOrderDto(row: OrderRow): Order {
   return {
     id: row.id,
+    orderNumber: row.orderNumber,
     status: row.status,
     paymentMethod: row.paymentMethod,
     totalInPaise: row.totalInPaise,

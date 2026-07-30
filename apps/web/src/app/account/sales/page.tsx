@@ -120,7 +120,7 @@ function SaleCard({
   onLabel: (id: string) => void;
   onShip: (id: string) => void;
 }) {
-  const ref = sale.orderId.slice(-6).toUpperCase();
+  const ref = sale.orderNumber;
   const total = sale.items.reduce((s, i) => s + i.unitPriceInPaise, 0);
   const labelBusy = busy === `${sale.orderId}:label`;
   const shipBusy = busy === `${sale.orderId}:ship`;
@@ -132,7 +132,7 @@ function SaleCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <span className="font-mono text-sm font-bold text-foreground">
-            #{ref}
+            {ref}
           </span>
           <StatusBadge status={sale.shipmentStatus} />
         </div>

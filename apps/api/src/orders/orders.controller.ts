@@ -9,8 +9,10 @@ import {
 } from '@nestjs/common';
 import {
   Role,
+  cancelOrderSchema,
   createOrderSchema,
   updateOrderStatusSchema,
+  type CancelOrderInput,
   type CreateOrderInput,
   type UpdateOrderStatusInput,
 } from '@nutrimom/shared';
@@ -48,8 +50,12 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
-  cancel(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.orders.cancel(user.id, id);
+  cancel(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(cancelOrderSchema)) dto: CancelOrderInput,
+  ) {
+    return this.orders.cancel(user.id, id, dto);
   }
 }
 

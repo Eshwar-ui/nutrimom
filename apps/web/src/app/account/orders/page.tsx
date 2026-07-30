@@ -40,7 +40,7 @@ export default function OrdersPage() {
                 <div>
                   <div className="flex items-center gap-3">
                     <p className="font-medium text-foreground">
-                      #{order.id.slice(-8).toUpperCase()}
+                      {order.orderNumber}
                     </p>
                     <OrderStatusBadge status={order.status} paymentMethod={order.paymentMethod} />
                   </div>

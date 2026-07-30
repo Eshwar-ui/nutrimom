@@ -13,6 +13,7 @@ export interface LabelSeller {
 
 export interface LabelOrder {
   orderId: string;
+  orderNumber: string;
   createdAt: Date;
   buyerName: string;
   shippingAddress: ShippingAddress;

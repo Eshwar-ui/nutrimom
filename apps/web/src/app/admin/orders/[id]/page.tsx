@@ -58,7 +58,7 @@ export default function AdminOrderDetailPage({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Order</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            #{order.id.slice(-8).toUpperCase()}
+            {order.orderNumber}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Placed {new Date(order.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
@@ -138,6 +138,15 @@ export default function AdminOrderDetailPage({
               )}
             </dl>
           </Card>
+
+          {order.cancellationReason && (
+            <Card className="p-5">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Cancellation</h2>
+              <dl className="space-y-2 text-sm">
+                <Row label="Reason" value={order.cancellationReason} />
+              </dl>
+            </Card>
+          )}
         </div>
       </div>
     </div>
