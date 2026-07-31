@@ -39,6 +39,7 @@ export class NotificationsService {
       message: n.message,
       listingId: n.listingId,
       orderId: n.orderId,
+      relatedUserId: n.relatedUserId,
       read: n.read,
       createdAt: n.createdAt.toISOString(),
     }));
@@ -64,13 +65,15 @@ export class NotificationsService {
     return { ok: true };
   }
 
-  /** Notify every admin — used when a new order is placed. */
+  /** Notify every admin — used when a new order is placed, or a seller pays
+   * their registration fee. */
   async notifyAdmins(
     type: NotificationType,
     message: string,
     listingId: string | null,
     orderId: string | null,
     tx: Prisma.TransactionClient,
+    relatedUserId: string | null = null,
   ) {
     const admins = await tx.user.findMany({
       where: { role: 'ADMIN' },
@@ -78,7 +81,14 @@ export class NotificationsService {
     });
     for (const a of admins) {
       await tx.notification.create({
-        data: { userId: a.id, type, message, listingId, orderId },
+        data: {
+          userId: a.id,
+          type,
+          message,
+          listingId,
+          orderId,
+          relatedUserId,
+        },
       });
     }
   }

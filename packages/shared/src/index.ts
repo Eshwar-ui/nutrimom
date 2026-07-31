@@ -241,6 +241,7 @@ export const NotificationType = {
   ORDER_PLACED: "ORDER_PLACED",
   ORDER_CANCELLED: "ORDER_CANCELLED",
   PAYMENT_REFUNDED: "PAYMENT_REFUNDED",
+  SELLER_REGISTERED: "SELLER_REGISTERED",
 } as const;
 export type NotificationType =
   (typeof NotificationType)[keyof typeof NotificationType];
@@ -250,27 +251,29 @@ export type NotificationType =
 /* ------------------------------------------------------------------ */
 
 export const registerSchema = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
-  password: z.string().min(8).max(72),
+  name: z.string().min(2, "Enter your full name").max(80),
+  email: z.string().email("Enter a valid email address"),
+  password: z.string().min(8, "Use at least 8 characters").max(72),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email("Enter a valid email address"),
+  password: z.string().min(1, "Enter your password"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 export type RefreshInput = z.infer<typeof refreshSchema>;
 
-export const forgotPasswordSchema = z.object({ email: z.string().email() });
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+});
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(8).max(72),
+  password: z.string().min(8, "Use at least 8 characters").max(72),
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
@@ -299,7 +302,7 @@ export const indianMobileNumberSchema = z
   );
 
 export const profileUpdateSchema = z.object({
-  name: z.string().min(2).max(80).optional(),
+  name: z.string().min(2, "Enter your full name").max(80).optional(),
   whatsappNumber: phoneNumberSchema.optional().or(z.literal("")),
   city: z.string().max(80).optional().or(z.literal("")),
   bio: z.string().max(400).optional().or(z.literal("")),
@@ -342,10 +345,10 @@ export interface Category {
 }
 
 export const categoryInputSchema = z.object({
-  name: z.string().min(2).max(60),
+  name: z.string().min(2, "Enter a category name").max(60),
   slug: z
     .string()
-    .min(2)
+    .min(2, "Enter a slug")
     .max(60)
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only"),
 });
@@ -358,9 +361,9 @@ export type CategoryInput = z.infer<typeof categoryInputSchema>;
 // Prices are integer paise everywhere.
 export const listingInputSchema = z
   .object({
-    title: z.string().min(3).max(140),
-    description: z.string().min(10).max(4000),
-    categoryId: z.string().min(1),
+    title: z.string().min(3, "Title needs at least 3 characters").max(140),
+    description: z.string().min(10, "Description needs at least 10 characters").max(4000),
+    categoryId: z.string().min(1, "Choose a category"),
     condition: z.enum([
       Condition.NEW,
       Condition.LIKE_NEW,
@@ -372,7 +375,7 @@ export const listingInputSchema = z
     purchaseDate: z.string().datetime().optional().or(z.literal("")),
     usageDuration: z.string().max(60).optional().or(z.literal("")),
     reasonForSelling: z.string().max(300).optional().or(z.literal("")),
-    city: z.string().min(2).max(80),
+    city: z.string().min(2, "Enter your city").max(80),
     deliveryOption: z.enum([
       DeliveryOption.PICKUP,
       DeliveryOption.DELIVERY,
@@ -391,9 +394,13 @@ export const listingInputSchema = z
 export type ListingInput = z.infer<typeof listingInputSchema>;
 
 export const listingUpdateSchema = z.object({
-  title: z.string().min(3).max(140).optional(),
-  description: z.string().min(10).max(4000).optional(),
-  categoryId: z.string().min(1).optional(),
+  title: z.string().min(3, "Title needs at least 3 characters").max(140).optional(),
+  description: z
+    .string()
+    .min(10, "Description needs at least 10 characters")
+    .max(4000)
+    .optional(),
+  categoryId: z.string().min(1, "Choose a category").optional(),
   condition: z
     .enum([Condition.NEW, Condition.LIKE_NEW, Condition.GOOD, Condition.FAIR])
     .optional(),
@@ -401,7 +408,7 @@ export const listingUpdateSchema = z.object({
   sellingPriceInPaise: z.number().int().positive().optional(),
   usageDuration: z.string().max(60).optional().or(z.literal("")),
   reasonForSelling: z.string().max(300).optional().or(z.literal("")),
-  city: z.string().min(2).max(80).optional(),
+  city: z.string().min(2, "Enter your city").max(80).optional(),
   deliveryOption: z
     .enum([DeliveryOption.PICKUP, DeliveryOption.DELIVERY, DeliveryOption.BOTH])
     .optional(),
@@ -518,14 +525,17 @@ export interface Review {
 /* ------------------------------------------------------------------ */
 
 export const shippingAddressSchema = z.object({
-  fullName: z.string().min(2).max(120),
+  fullName: z.string().min(2, "Enter the recipient's full name").max(120),
   phone: indianMobileNumberSchema,
-  line1: z.string().min(2).max(200),
+  line1: z.string().min(2, "Enter your street address").max(200),
   line2: z.string().max(200).optional().or(z.literal("")),
-  city: z.string().min(1).max(80),
-  state: z.string().min(1).max(80),
-  postalCode: z.string().min(3).max(12),
-  country: z.string().min(2).max(60).default("India"),
+  city: z.string().min(1, "Enter your city").max(80),
+  state: z.string().min(1, "Enter your state").max(80),
+  postalCode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter a valid 6-digit postal code"),
+  country: z.string().min(2, "Enter your country").max(60).default("India"),
 });
 export type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
@@ -657,6 +667,9 @@ export interface Notification {
   message: string;
   listingId: string | null;
   orderId: string | null;
+  // Who this notification is about (not the recipient) — currently only set
+  // for an admin's SELLER_REGISTERED alert, to link to that seller's profile.
+  relatedUserId: string | null;
   read: boolean;
   createdAt: string;
 }
@@ -713,6 +726,36 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// Everything an admin needs when drilling into one user — contact details not
+// shown in the list row, plus recent marketplace activity on both sides
+// (what they've bought, sold as listings, and sold via orders as a seller).
+export interface AdminUserDetail extends AdminUser {
+  whatsappNumber: string | null;
+  bio: string | null;
+  recentListings: {
+    id: string;
+    title: string;
+    status: ListingStatus;
+    sellingPriceInPaise: number;
+    createdAt: string;
+  }[];
+  recentOrders: {
+    id: string;
+    orderNumber: string;
+    status: OrderStatus;
+    totalInPaise: number;
+    createdAt: string;
+  }[];
+  recentSales: {
+    orderId: string;
+    orderNumber: string;
+    orderStatus: OrderStatus;
+    listingTitle: string;
+    unitPriceInPaise: number;
+    createdAt: string;
+  }[];
+}
+
 /* ------------------------------------------------------------------ */
 /* Blog                                                                */
 /* ------------------------------------------------------------------ */
@@ -732,16 +775,16 @@ export interface BlogPost {
 }
 
 export const blogPostInputSchema = z.object({
-  title: z.string().min(3).max(160),
+  title: z.string().min(3, "Title needs at least 3 characters").max(160),
   slug: z
     .string()
-    .min(2)
+    .min(2, "Enter a slug")
     .max(160)
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only"),
   excerpt: z.string().max(300).optional().or(z.literal("")),
-  bodyMarkdown: z.string().min(10),
+  bodyMarkdown: z.string().min(10, "Write at least 10 characters"),
   coverImageUrl: z.string().url().optional().or(z.literal("")),
-  authorName: z.string().min(2).max(80),
+  authorName: z.string().min(2, "Enter an author name").max(80),
 });
 export type BlogPostInput = z.infer<typeof blogPostInputSchema>;
 
@@ -780,11 +823,11 @@ export interface ContactMessage {
 }
 
 export const contactMessageInputSchema = z.object({
-  name: z.string().min(2).max(120),
-  email: z.string().email(),
+  name: z.string().min(2, "Enter your name").max(120),
+  email: z.string().email("Enter a valid email address"),
   phone: phoneNumberSchema.optional().or(z.literal("")),
-  subject: z.string().min(3).max(160),
-  message: z.string().min(10).max(4000),
+  subject: z.string().min(3, "Enter a subject").max(160),
+  message: z.string().min(10, "A little more detail helps us help you").max(4000),
 });
 export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
 

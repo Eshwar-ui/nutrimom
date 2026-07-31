@@ -21,6 +21,11 @@ export class AdminUsersController {
     return this.users.adminList();
   }
 
+  @Get(':id')
+  getDetail(@Param('id') id: string) {
+    return this.users.adminGet(id);
+  }
+
   @Patch(':id/verify')
   verify(
     @Param('id') id: string,

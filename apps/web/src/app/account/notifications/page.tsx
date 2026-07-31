@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw } from "lucide-react";
+import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw, UserCheck } from "lucide-react";
 import type { Notification, NotificationType } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
@@ -19,6 +19,7 @@ const icons: Record<NotificationType, typeof Tag> = {
   ORDER_PLACED: ShoppingBag,
   ORDER_CANCELLED: XCircle,
   PAYMENT_REFUNDED: RotateCcw,
+  SELLER_REGISTERED: UserCheck,
 };
 
 export default function NotificationsPage() {
@@ -98,7 +99,9 @@ export default function NotificationsPage() {
             // A rejected listing isn't publicly viewable — send the seller
             // to their own edit page instead of a link that would 404. Order
             // notifications (refunds, admin's "new order" alert) carry no
-            // listingId, so fall back to the order itself.
+            // listingId, so fall back to the order itself. An admin's
+            // SELLER_REGISTERED alert carries neither — it points at the
+            // seller's profile via relatedUserId instead.
             const href = n.listingId
               ? n.type === "LISTING_REJECTED"
                 ? `/account/listings/${n.listingId}/edit`
@@ -107,7 +110,9 @@ export default function NotificationsPage() {
                 ? user?.role === "ADMIN"
                   ? `/admin/orders/${n.orderId}`
                   : `/orders/${n.orderId}`
-                : null;
+                : n.relatedUserId && user?.role === "ADMIN"
+                  ? `/admin/users/${n.relatedUserId}`
+                  : null;
             const onOpen = () => { if (!n.read) readOne.mutate(n.id); };
             return href ? (
               <Link key={n.id} href={href} onClick={onOpen}>{body}</Link>

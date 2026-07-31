@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck } from "lucide-react";
 import { MEMBERSHIP_PLANS, type AdminUser } from "@nutrimom/shared";
@@ -76,7 +77,7 @@ export default function AdminUsersPage() {
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/12 font-bold text-primary">
                 {u.name[0]}
               </span>
-              <div className="min-w-0 flex-1">
+              <Link href={`/admin/users/${u.id}`} className="min-w-0 flex-1 hover:opacity-80">
                 <p className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
                   {u.name}
                   {u.isSellerVerified && <BadgeCheck className="h-4 w-4 text-primary" />}
@@ -106,7 +107,7 @@ export default function AdminUsersPage() {
                     {u.membership && ` · Plan ${u.membership.active ? "expires" : "expired"} ${fmtDate(u.membership.expiresAt)}`}
                   </p>
                 )}
-              </div>
+              </Link>
               {u.role !== "ADMIN" && tab === "Sellers" && (
                 <Button
                   variant={u.isSellerVerified ? "ghost" : "outline"}

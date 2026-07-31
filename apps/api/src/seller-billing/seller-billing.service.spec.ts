@@ -39,8 +39,13 @@ function makeService() {
     }),
     refund: jest.fn(),
   };
-  const svc = new SellerBillingService(prisma as any, provider);
-  return { svc, tx, calls };
+  const notifications = { notifyAdmins: jest.fn() };
+  const svc = new SellerBillingService(
+    prisma as any,
+    notifications as any,
+    provider,
+  );
+  return { svc, tx, calls, notifications };
 }
 
 describe('SellerBillingService — membership stacking', () => {
@@ -109,5 +114,49 @@ describe('SellerBillingService — membership stacking', () => {
 
     expect(tx.$executeRaw).not.toHaveBeenCalled();
     expect(tx.sellerMembership.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('SellerBillingService — registration notifies admins', () => {
+  it('notifies admins with the seller id once registration settles', async () => {
+    const { svc, tx, notifications } = makeService();
+    tx.sellerPayment.findUnique.mockResolvedValue({
+      id: 'sp1',
+      userId: 'u1',
+      gatewayOrderId: 'gw_1',
+      status: 'PENDING',
+      type: 'REGISTRATION',
+      plan: null,
+    });
+    tx.sellerPayment.updateMany.mockResolvedValue({ count: 1 });
+    tx.user.update.mockResolvedValue({ id: 'u1', name: 'Priya Sharma' });
+
+    await svc.handleWebhook(Buffer.from('{}'), 'sig');
+
+    expect(notifications.notifyAdmins).toHaveBeenCalledWith(
+      'SELLER_REGISTERED',
+      expect.stringContaining('Priya Sharma'),
+      null,
+      null,
+      tx,
+      'u1',
+    );
+  });
+
+  it('does not notify again on an already-settled registration', async () => {
+    const { svc, tx, notifications } = makeService();
+    tx.sellerPayment.findUnique.mockResolvedValue({
+      id: 'sp1',
+      userId: 'u1',
+      gatewayOrderId: 'gw_1',
+      status: 'PAID',
+      type: 'REGISTRATION',
+      plan: null,
+    });
+    tx.sellerPayment.updateMany.mockResolvedValue({ count: 0 });
+
+    await svc.handleWebhook(Buffer.from('{}'), 'sig');
+
+    expect(notifications.notifyAdmins).not.toHaveBeenCalled();
   });
 });

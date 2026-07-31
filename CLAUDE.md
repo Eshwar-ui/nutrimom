@@ -198,6 +198,26 @@ first, polish after.
 > backlog items now shipped** — see [BACKLOG-PLAN.md](BACKLOG-PLAN.md) for full detail; nothing from
 > this backlog remains open.
 
+**Post-backlog follow-up fixes (2026-07-30):** three more gaps reported after the backlog closed.
+(1) Admins had no signal when a customer paid the ₹100 seller-registration fee — `SellerBillingService.settle()`
+now calls `NotificationsService.notifyAdmins('SELLER_REGISTERED', ...)` on the REGISTRATION payment
+path (mirroring how `PaymentsService.settle()` already does for `ORDER_PLACED`); a new
+`Notification.relatedUserId` column lets the notification deep-link to the seller's admin profile
+when there's no order/listing to link to instead. (2) `admin/users` was a flat list with no
+drill-down — added `GET /admin/users/:id` + `admin/users/[id]/page.tsx` showing contact info
+(email/WhatsApp/city/role), seller status (verified/registered/membership), and recent
+listings/orders-as-buyer/sales-as-seller, mirroring the order-detail pattern from Phase 1. (3) Several
+shared Zod schemas (`shippingAddressSchema`, `registerSchema`, `blogPostInputSchema`,
+`contactMessageInputSchema`, `listingInputSchema`, etc.) relied on Zod's raw default messages
+("String must contain at least 1 character(s)") instead of friendly copy — every `.min()`/`.max()`
+on a user-typed field now carries a specific message, and `shippingAddressSchema.postalCode` was
+tightened from a loose `min(3).max(12)` (accepted non-numeric junk) to a real 6-digit regex. Verified
+live: a real `SELLER_REGISTERED` notification fired and linked correctly (via a script that exercises
+the actual `SellerBillingService.settle()` transaction, since triggering it through the UI needs a
+real Razorpay payment), the new admin user-detail page rendered full profile + activity for a real
+seller, and the checkout/blog forms now show the friendly messages instead of raw Zod text. 24/24
+API tests pass (2 new), typecheck and lint clean.
+
 ---
 
 ## Build order recommendation (to sequence roadmap + issues)

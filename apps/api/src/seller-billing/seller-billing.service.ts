@@ -15,6 +15,7 @@ import {
 } from '@nutrimom/shared';
 import type { SellerPaymentType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -26,6 +27,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export class SellerBillingService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
 
@@ -222,10 +224,18 @@ export class SellerBillingService {
       if (transitioned.count === 0) return; // already settled — idempotent
 
       if (payment.type === 'REGISTRATION') {
-        await tx.user.update({
+        const seller = await tx.user.update({
           where: { id: payment.userId },
           data: { registrationPaidAt: new Date() },
         });
+        await this.notifications.notifyAdmins(
+          'SELLER_REGISTERED',
+          `${seller.name} paid the seller registration fee — review and verify their account.`,
+          null,
+          null,
+          tx,
+          seller.id,
+        );
         return;
       }
 

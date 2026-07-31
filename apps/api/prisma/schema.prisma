@@ -82,6 +82,7 @@ enum NotificationType {
   ORDER_PLACED // to the admin
   ORDER_CANCELLED // to the seller
   PAYMENT_REFUNDED // to the buyer
+  SELLER_REGISTERED // to the admin, on the ₹100 registration payment
 }
 
 model User {
@@ -263,6 +264,10 @@ model Notification {
   message   String
   listingId String?
   orderId   String?
+  // The user this notification is *about* (not the recipient) — e.g. the
+  // seller who just registered, for an admin's SELLER_REGISTERED alert. Only
+  // set when there's no listing/order to link to instead.
+  relatedUserId String?
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
 
