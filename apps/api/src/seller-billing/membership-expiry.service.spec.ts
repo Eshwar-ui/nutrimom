@@ -11,14 +11,22 @@ interface MembershipRow {
 }
 
 function makeService() {
+  const tx = {
+    sellerMembership: {
+      // Defaults to winning the claim; a test simulating a concurrent sweep
+      // overrides it with { count: 0 }.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
+  };
   const prisma = {
     sellerMembership: {
       findMany: jest.fn<Promise<MembershipRow[]>, []>().mockResolvedValue([]),
       groupBy: jest
         .fn<Promise<{ userId: string; _max: { expiresAt: Date } }[]>, []>()
         .mockResolvedValue([]),
-      update: jest.fn(),
+      updateMany: tx.sellerMembership.updateMany,
     },
+    $transaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
   };
   const notifications = { create: jest.fn() };
   const svc = new MembershipExpiryService(prisma as any, notifications as any);
@@ -39,10 +47,15 @@ describe('MembershipExpiryService', () => {
     const result = await svc.sweep();
 
     expect(result).toEqual({ warned: 1, expired: 0 });
+    // Trailing args: no listing/order to link to, and the tx the stamp was
+    // claimed in — the notice and the stamp commit together or not at all.
     expect(notifications.create).toHaveBeenCalledWith(
       'u1',
       'MEMBERSHIP_EXPIRING',
       expect.stringContaining('3 days'),
+      null,
+      null,
+      expect.anything(),
     );
   });
 
@@ -63,17 +76,40 @@ describe('MembershipExpiryService', () => {
       'u1',
       'MEMBERSHIP_EXPIRED',
       expect.stringContaining('expired'),
+      null,
+      null,
+      expect.anything(),
     );
     // Both stamps set, so an already-lapsed window never emits a pointless
     // "expiring soon" notice afterwards.
-    expect(prisma.sellerMembership.update).toHaveBeenCalledWith(
+    expect(prisma.sellerMembership.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        // Claimed conditionally on the stamp still being unset, so two
+        // overlapping sweeps can't both send.
+        where: expect.objectContaining({
+          expiredNoticeSentAt: null,
+        }) as object,
         data: expect.objectContaining({
           expiredNoticeSentAt: expect.any(Date) as Date,
           expiryWarningSentAt: expect.any(Date) as Date,
         }) as object,
       }) as object,
     );
+  });
+
+  it('sends nothing when a concurrent sweep already claimed the notice', async () => {
+    const { svc, prisma, notifications } = makeService();
+    const expiresAt = new Date(Date.now() - DAY_MS);
+    prisma.sellerMembership.findMany.mockResolvedValue([
+      { id: 'm1', userId: 'u1', expiresAt, expiryWarningSentAt: null },
+    ]);
+    prisma.sellerMembership.groupBy.mockResolvedValue([
+      { userId: 'u1', _max: { expiresAt } },
+    ]);
+    prisma.sellerMembership.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(svc.sweep()).resolves.toEqual({ warned: 0, expired: 0 });
+    expect(notifications.create).not.toHaveBeenCalled();
   });
 
   it('stays quiet when a later purchase already extended the window', async () => {

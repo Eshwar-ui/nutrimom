@@ -393,9 +393,14 @@ model SellerMembership {
 // is the rate at sale time, and gross = commission + net exactly.
 model SellerPayout {
   id                 String       @id @default(cuid())
-  order              Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: this is a money ledger. Cascading would let
+  // deleting an order or a seller account silently erase both an outstanding
+  // debt and the audit record of a transfer that already went out. Mirrors
+  // OrderItem's Restrict on Listing — a row someone was paid for can't be
+  // deleted out from under the record.
+  order              Order        @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderId            String
-  seller             User         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller             User         @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   sellerId           String
   status             PayoutStatus @default(PENDING)
   grossInPaise       Int

@@ -14,6 +14,13 @@ export interface LabelSeller {
 export interface LabelOrder {
   orderId: string;
   orderNumber: string;
+  /**
+   * Unique per (order, seller) — an order can span sellers, so each seller's
+   * parcel is a separate consignment and needs its own courier reference.
+   * A vendor that rejects duplicate active references (Shiprocket does) would
+   * otherwise fail the second seller's label.
+   */
+  reference: string;
   createdAt: Date;
   buyerName: string;
   shippingAddress: ShippingAddress;

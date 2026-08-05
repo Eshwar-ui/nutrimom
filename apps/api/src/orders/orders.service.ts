@@ -248,6 +248,13 @@ export class OrdersService {
    * Only the buyer's own SHIPPED order can move, and the same side effects
    * run as the admin path: shipments cascade to DELIVERED and the seller's
    * payout leaves hold.
+   *
+   * The transition is *claimed* with a conditional update rather than read
+   * then written. Under READ COMMITTED two concurrent confirmations both read
+   * SHIPPED and both proceed; the shipment cascade and payout move are
+   * idempotent, but notifications are not, so every seller would get a
+   * duplicate "buyer confirmed delivery" notice. Same claim pattern as
+   * PaymentsService.settle().
    */
   async confirmDelivery(buyerId: string, id: string): Promise<Order> {
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -263,6 +270,15 @@ export class OrdersService {
             ? 'This order is already marked delivered'
             : 'This order has not shipped yet',
         );
+      }
+
+      const claimed = await tx.order.updateMany({
+        where: { id, status: 'SHIPPED' },
+        data: { status: 'DELIVERED' },
+      });
+      if (claimed.count === 0) {
+        // Someone else confirmed between the read above and this write.
+        throw new BadRequestException('This order is already marked delivered');
       }
 
       await tx.shipment.updateMany({
@@ -282,9 +298,8 @@ export class OrdersService {
         );
       }
 
-      return tx.order.update({
+      return tx.order.findUniqueOrThrow({
         where: { id },
-        data: { status: 'DELIVERED' },
         include: withItems,
       });
     });

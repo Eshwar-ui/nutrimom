@@ -13,8 +13,11 @@ export interface JwtPayload {
   /**
    * User.tokenVersion at mint time. Checked on refresh only — verifying it on
    * every access-token request would add a DB read to every authenticated
-   * call. Optional so tokens issued before this shipped still validate; they
-   * simply can't be revoked (and expire within the refresh TTL anyway).
+   * call, and the 15-minute access TTL already bounds the window.
+   *
+   * Optional on the type because a token from before this shipped genuinely
+   * won't carry it — but `refresh()` rejects that case rather than treating
+   * it as legacy-and-allowed, which would leave revocation bypassable.
    */
   tv?: number;
 }

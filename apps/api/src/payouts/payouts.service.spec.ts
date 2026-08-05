@@ -1,5 +1,6 @@
 import { BadRequestException, Logger } from '@nestjs/common';
 import { PayoutsService } from './payouts.service';
+import { AdminPayoutsController } from './payouts.controller';
 
 // The shape createForOrder writes. Typed so the assertions below read the
 // real fields instead of poking at `any`.
@@ -132,6 +133,42 @@ describe('PayoutsService — lifecycle', () => {
       where: { orderId: 'o1', status: 'PENDING' },
       data: { status: 'PAYABLE' },
     });
+  });
+});
+
+describe('AdminPayoutsController — status filter', () => {
+  function makeController() {
+    const payouts = { listForAdmin: jest.fn().mockResolvedValue([]) };
+    return {
+      ctrl: new AdminPayoutsController(payouts as unknown as PayoutsService),
+      payouts,
+    };
+  }
+
+  it('accepts a real status', async () => {
+    const { ctrl, payouts } = makeController();
+    await ctrl.list('PAYABLE');
+    expect(payouts.listForAdmin).toHaveBeenCalledWith('PAYABLE');
+  });
+
+  it('lists everything when no status is given', async () => {
+    const { ctrl, payouts } = makeController();
+    await ctrl.list(undefined);
+    expect(payouts.listForAdmin).toHaveBeenCalledWith(undefined);
+  });
+
+  it('rejects a prototype key instead of 500ing on it', () => {
+    const { ctrl, payouts } = makeController();
+    // PayoutStatus is a plain object, so an `in` check would let
+    // "constructor" through to Prisma, which fails as an unhandled 500.
+    expect(() => ctrl.list('constructor')).toThrow(BadRequestException);
+    expect(() => ctrl.list('toString')).toThrow(BadRequestException);
+    expect(payouts.listForAdmin).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown status', () => {
+    const { ctrl } = makeController();
+    expect(() => ctrl.list('BANANA')).toThrow(BadRequestException);
   });
 });
 
