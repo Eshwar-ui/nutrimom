@@ -70,10 +70,29 @@ export class AuthService {
     }
     const user = await this.users.findById(payload.sub);
     if (!user) throw new UnauthorizedException('Invalid refresh token');
+    // Revocation check. A token minted before the user's current
+    // tokenVersion is dead — that's how password reset and "sign out
+    // everywhere" kill sessions they can't otherwise reach. `tv` is optional
+    // so tokens issued before this shipped keep working until they expire.
+    if (payload.tv !== undefined && payload.tv !== user.tokenVersion) {
+      throw new UnauthorizedException(
+        'This session has been signed out. Please sign in again.',
+      );
+    }
     return this.issueTokens(user);
-    // ponytail: stateless refresh — no server-side revocation. Add a
-    // tokenVersion column on User and check it here if you need logout-all /
-    // revoke-on-compromise.
+  }
+
+  /**
+   * Invalidate every refresh token this user holds — the "sign out
+   * everywhere" action, and what a password reset triggers. Already-issued
+   * access tokens stay valid for the remainder of their short TTL.
+   */
+  async revokeSessions(userId: string): Promise<{ ok: true }> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    return { ok: true };
   }
 
   /**
@@ -118,7 +137,9 @@ export class AuthService {
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: record.userId },
-        data: { passwordHash },
+        // Resetting a password has to sign out sessions opened with the old
+        // one — otherwise whoever prompted the reset keeps their access.
+        data: { passwordHash, tokenVersion: { increment: 1 } },
       }),
       this.prisma.passwordResetToken.update({
         where: { id: record.id },
@@ -137,6 +158,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      tv: user.tokenVersion,
     };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {

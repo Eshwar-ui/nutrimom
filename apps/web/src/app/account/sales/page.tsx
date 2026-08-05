@@ -5,10 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Package, Printer, Truck } from "lucide-react";
 import {
   formatPaise,
+  payoutStatusLabels,
   shipmentStatusLabels,
   type SellerSale,
 } from "@nutrimom/shared";
 import { generateLabel, getSales, markShipped, openLabel } from "@/lib/sales";
+import { getMyPayoutSummary } from "@/lib/payouts";
 import { useRequireAuth } from "@/lib/use-auth";
 import { toast } from "@/lib/toast-store";
 import { ApiError } from "@/lib/api";
@@ -26,6 +28,12 @@ export default function SalesPage() {
   const { data: sales, isLoading } = useQuery({
     queryKey: ["seller-sales"],
     queryFn: getSales,
+    enabled: ready,
+  });
+
+  const { data: payouts } = useQuery({
+    queryKey: ["seller-payout-summary"],
+    queryFn: getMyPayoutSummary,
     enabled: ready,
   });
 
@@ -70,6 +78,29 @@ export default function SalesPage() {
         title="Sales"
         description="Orders to fulfil — generate a shipping label, print it, then mark it shipped."
       />
+
+      {payouts &&
+        payouts.onHoldInPaise + payouts.payableInPaise + payouts.paidInPaise >
+          0 && (
+          <Card className="grid grid-cols-3 divide-x divide-border p-0">
+            <PayoutStat
+              label="On hold"
+              hint="Until delivered"
+              amount={payouts.onHoldInPaise}
+            />
+            <PayoutStat
+              label="Owed to you"
+              hint="Awaiting transfer"
+              amount={payouts.payableInPaise}
+            />
+            <PayoutStat
+              label="Paid out"
+              hint="Already transferred"
+              amount={payouts.paidInPaise}
+            />
+          </Card>
+        )}
+
       {!sales || sales.length === 0 ? (
         <StatePanel
           icon={Package}
@@ -89,6 +120,28 @@ export default function SalesPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function PayoutStat({
+  label,
+  hint,
+  amount,
+}: {
+  label: string;
+  hint: string;
+  amount: number;
+}) {
+  return (
+    <div className="p-4 text-center">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-bold text-foreground">
+        {formatPaise(amount)}
+      </p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -121,7 +174,11 @@ function SaleCard({
   onShip: (id: string) => void;
 }) {
   const ref = sale.orderNumber;
-  const total = sale.items.reduce((s, i) => s + i.unitPriceInPaise, 0);
+  // Legacy orders predating the payout ledger have no payout row — fall back
+  // to the item total rather than showing nothing.
+  const total =
+    sale.payout?.netInPaise ??
+    sale.items.reduce((s, i) => s + i.unitPriceInPaise, 0);
   const labelBusy = busy === `${sale.orderId}:label`;
   const shipBusy = busy === `${sale.orderId}:ship`;
   const shipped =
@@ -164,10 +221,21 @@ function SaleCard({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <div className="text-sm">
-          <span className="text-muted-foreground">Payout total </span>
+          <span className="text-muted-foreground">Your payout </span>
           <span className="font-semibold text-foreground">
             {formatPaise(total)}
           </span>
+          {sale.payout && (
+            <>
+              <span className="ml-2 text-xs text-muted-foreground">
+                ({formatPaise(sale.payout.grossInPaise)} less{" "}
+                {formatPaise(sale.payout.commissionInPaise)} marketplace fee)
+              </span>
+              <span className="ml-2 text-xs font-semibold text-muted-foreground">
+                · {payoutStatusLabels[sale.payout.status]}
+              </span>
+            </>
+          )}
           {sale.trackingId && (
             <span className="ml-3 text-xs text-muted-foreground">
               Ref {sale.trackingId}

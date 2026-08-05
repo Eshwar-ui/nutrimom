@@ -197,6 +197,15 @@ export interface SellerSale {
   shipToCity: string;
   shipToState: string;
   items: { title: string; unitPriceInPaise: number; image: string | null }[];
+  // What this sale actually pays the seller, after commission. Null only for
+  // legacy orders that predate the payout ledger.
+  payout: {
+    status: PayoutStatus;
+    grossInPaise: number;
+    commissionInPaise: number;
+    netInPaise: number;
+    paidAt: string | null;
+  } | null;
 }
 
 /**
@@ -242,6 +251,8 @@ export const NotificationType = {
   ORDER_CANCELLED: "ORDER_CANCELLED",
   PAYMENT_REFUNDED: "PAYMENT_REFUNDED",
   SELLER_REGISTERED: "SELLER_REGISTERED",
+  MEMBERSHIP_EXPIRING: "MEMBERSHIP_EXPIRING",
+  MEMBERSHIP_EXPIRED: "MEMBERSHIP_EXPIRED",
 } as const;
 export type NotificationType =
   (typeof NotificationType)[keyof typeof NotificationType];
@@ -636,6 +647,198 @@ export const cancellationPolicyInputSchema = z.object({
 export type CancellationPolicyInput = z.infer<
   typeof cancellationPolicyInputSchema
 >;
+
+/* ------------------------------------------------------------------ */
+/* Business profile (legal pages)                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The operator's real business identity. Indian e-commerce rules (and
+ * Razorpay's KYC) require a named legal entity, a registered address, working
+ * support contacts, and a grievance officer on the policy pages — so the
+ * legal pages read these rather than hardcoding anything.
+ */
+export interface BusinessProfile {
+  legalEntityName: string;
+  tradeName: string;
+  registeredAddress: string;
+  supportEmail: string;
+  supportPhone: string;
+  grievanceOfficerName: string;
+  grievanceOfficerEmail: string;
+  gstin: string | null;
+  cin: string | null;
+  updatedAt: string;
+}
+
+export const businessProfileInputSchema = z.object({
+  legalEntityName: z
+    .string()
+    .max(120, "Legal entity name is too long")
+    .trim(),
+  tradeName: z.string().max(120, "Trade name is too long").trim(),
+  registeredAddress: z
+    .string()
+    .max(400, "Registered address is too long")
+    .trim(),
+  supportEmail: z
+    .string()
+    .max(160, "Email is too long")
+    .trim()
+    .refine((v) => v === "" || z.string().email().safeParse(v).success, {
+      message: "Enter a valid email address",
+    }),
+  supportPhone: z.string().max(20, "Phone number is too long").trim(),
+  grievanceOfficerName: z.string().max(120, "Name is too long").trim(),
+  grievanceOfficerEmail: z
+    .string()
+    .max(160, "Email is too long")
+    .trim()
+    .refine((v) => v === "" || z.string().email().safeParse(v).success, {
+      message: "Enter a valid email address",
+    }),
+  gstin: z.string().max(20, "GSTIN is too long").trim().nullable(),
+  cin: z.string().max(30, "CIN is too long").trim().nullable(),
+});
+export type BusinessProfileInput = z.infer<typeof businessProfileInputSchema>;
+
+// Every field a legal page has to name. GSTIN/CIN are excluded: not every
+// operator is GST-registered or incorporated.
+export const REQUIRED_BUSINESS_FIELDS = [
+  "legalEntityName",
+  "tradeName",
+  "registeredAddress",
+  "supportEmail",
+  "supportPhone",
+  "grievanceOfficerName",
+  "grievanceOfficerEmail",
+] as const satisfies readonly (keyof BusinessProfile)[];
+
+/**
+ * Whether the legal pages may be published. The gate is deliberately all-or-
+ * nothing: a policy page naming a grievance officer but no address is not a
+ * compliant page, so partial completion must not flip it live.
+ */
+export function isBusinessProfileComplete(
+  profile: BusinessProfile | null | undefined,
+): boolean {
+  if (!profile) return false;
+  return REQUIRED_BUSINESS_FIELDS.every(
+    (field) => String(profile[field] ?? "").trim().length > 0,
+  );
+}
+
+export function missingBusinessFields(
+  profile: BusinessProfile | null | undefined,
+): string[] {
+  if (!profile) return [...REQUIRED_BUSINESS_FIELDS];
+  return REQUIRED_BUSINESS_FIELDS.filter(
+    (field) => String(profile[field] ?? "").trim().length === 0,
+  );
+}
+
+export const businessFieldLabels: Record<
+  (typeof REQUIRED_BUSINESS_FIELDS)[number],
+  string
+> = {
+  legalEntityName: "Registered legal entity name",
+  tradeName: "Trading name",
+  registeredAddress: "Registered address",
+  supportEmail: "Support email",
+  supportPhone: "Support phone",
+  grievanceOfficerName: "Grievance officer name",
+  grievanceOfficerEmail: "Grievance officer email",
+};
+
+/* ------------------------------------------------------------------ */
+/* Seller payouts                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What the marketplace owes one seller for one order. Buyers pay the
+ * marketplace, not the seller, so every paid order creates a payout row per
+ * seller — that ledger is the only record of the debt.
+ */
+export const PayoutStatus = {
+  PENDING: "PENDING", // order paid, still cancellable — not yet owed
+  PAYABLE: "PAYABLE", // order delivered — the marketplace owes this
+  PAID: "PAID", // transferred to the seller, reference recorded
+  CANCELLED: "CANCELLED", // order cancelled; the item went back unsold
+} as const;
+export type PayoutStatus = (typeof PayoutStatus)[keyof typeof PayoutStatus];
+
+export const payoutStatusLabels: Record<PayoutStatus, string> = {
+  PENDING: "On hold",
+  PAYABLE: "Ready to pay",
+  PAID: "Paid out",
+  CANCELLED: "Cancelled",
+};
+
+export interface SellerPayout {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  status: PayoutStatus;
+  grossInPaise: number;
+  // Commission rate snapshotted at sale time — the policy can change later,
+  // and an already-earned payout must not move when it does.
+  commissionBps: number;
+  commissionInPaise: number;
+  netInPaise: number;
+  reference: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+// Admin queue row — same ledger entry, plus who it's owed to.
+export interface AdminPayout extends SellerPayout {
+  sellerId: string;
+  sellerName: string;
+  sellerEmail: string;
+  sellerWhatsapp: string | null;
+  itemCount: number;
+}
+
+export interface PayoutPolicy {
+  commissionBps: number;
+  updatedAt: string;
+}
+
+// Basis points, so a rate like 5.5% (550) is expressible without floats.
+export const payoutPolicyInputSchema = z.object({
+  commissionBps: z
+    .number()
+    .int("Commission must be a whole number of basis points")
+    .min(0, "Commission cannot be negative")
+    .max(10000, "Commission cannot exceed 100%"),
+});
+export type PayoutPolicyInput = z.infer<typeof payoutPolicyInputSchema>;
+
+export const markPayoutPaidSchema = z.object({
+  reference: z
+    .string()
+    .min(1, "Enter the transfer reference (UTR / bank ref)")
+    .max(80, "Reference is too long"),
+});
+export type MarkPayoutPaidInput = z.infer<typeof markPayoutPaidSchema>;
+
+/**
+ * The single definition of how a sale splits. Commission is rounded to the
+ * nearest paise and the seller's net is the remainder, so gross always equals
+ * commission + net exactly — no drift, whatever the rate.
+ */
+export function splitPayout(
+  grossInPaise: number,
+  commissionBps: number,
+): { commissionInPaise: number; netInPaise: number } {
+  const commissionInPaise = Math.round((grossInPaise * commissionBps) / 10000);
+  return { commissionInPaise, netInPaise: grossInPaise - commissionInPaise };
+}
+
+/** 550 → "5.5%", 1000 → "10%". */
+export function formatBps(bps: number): string {
+  return `${Number((bps / 100).toFixed(2))}%`;
+}
 
 /* ------------------------------------------------------------------ */
 /* Payments (Razorpay)                                                 */

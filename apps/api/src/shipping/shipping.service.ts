@@ -31,13 +31,20 @@ export class ShippingService {
         status: { in: ['PAID', 'SHIPPED', 'DELIVERED'] },
         items: { some: { sellerId } },
       },
-      include: { items: true, shipments: { where: { sellerId } } },
+      include: {
+        items: true,
+        shipments: { where: { sellerId } },
+        // What this sale actually pays out, after commission — the seller
+        // should never be shown the gross as if it were their money.
+        payouts: { where: { sellerId } },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
     return orders.map((order) => {
       const addr = order.shippingAddress as unknown as ShippingAddress;
       const shipment = order.shipments[0];
+      const payout = order.payouts[0];
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
@@ -54,6 +61,15 @@ export class ShippingService {
             unitPriceInPaise: i.unitPriceInPaise,
             image: i.image,
           })),
+        payout: payout
+          ? {
+              status: payout.status,
+              grossInPaise: payout.grossInPaise,
+              commissionInPaise: payout.commissionInPaise,
+              netInPaise: payout.netInPaise,
+              paidAt: payout.paidAt?.toISOString() ?? null,
+            }
+          : null,
       };
     });
   }

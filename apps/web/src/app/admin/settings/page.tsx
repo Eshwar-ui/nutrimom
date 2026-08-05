@@ -3,17 +3,44 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
-import type { CancellationPolicy, CancellationPolicyInput } from "@nutrimom/shared";
+import {
+  businessFieldLabels,
+  formatBps,
+  formatPaise,
+  isBusinessProfileComplete,
+  missingBusinessFields,
+  splitPayout,
+  type BusinessProfile,
+  type BusinessProfileInput,
+  type CancellationPolicy,
+  type CancellationPolicyInput,
+  type PayoutPolicy,
+} from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
+import {
+  getBusinessProfileAdmin,
+  getPayoutPolicy,
+  updateBusinessProfile,
+  updatePayoutPolicy,
+} from "@/lib/payouts";
 import { toast } from "@/lib/toast-store";
-import { Card, Input, Label } from "@/components/ui/primitives";
+import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/states";
+import { cn } from "@/lib/utils";
 
 export default function AdminSettingsPage() {
   const { data: policy, isLoading } = useQuery({
     queryKey: ["cancellation-policy"],
     queryFn: () => authedRequest<CancellationPolicy>("/cancellation-policy"),
+  });
+  const { data: payoutPolicy, isLoading: payoutLoading } = useQuery({
+    queryKey: ["payout-policy"],
+    queryFn: getPayoutPolicy,
+  });
+  const { data: business, isLoading: businessLoading } = useQuery({
+    queryKey: ["business-profile"],
+    queryFn: getBusinessProfileAdmin,
   });
 
   return (
@@ -21,15 +48,206 @@ export default function AdminSettingsPage() {
       <header className="mb-7">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Marketplace policy</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Settings</h1>
-        <p className="mt-2 text-muted-foreground">Rules for when and how buyers and admins can cancel an order.</p>
+        <p className="mt-2 text-muted-foreground">Cancellation rules, and the commission the marketplace keeps on each sale.</p>
       </header>
 
-      {isLoading || !policy ? (
-        <PageSkeleton rows={3} />
-      ) : (
-        <CancellationPolicyForm key={policy.updatedAt} policy={policy} />
-      )}
+      <div className="space-y-8">
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Cancellations</h2>
+          {isLoading || !policy ? (
+            <PageSkeleton rows={3} />
+          ) : (
+            <CancellationPolicyForm key={policy.updatedAt} policy={policy} />
+          )}
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Commission</h2>
+          {payoutLoading || !payoutPolicy ? (
+            <PageSkeleton rows={2} />
+          ) : (
+            <PayoutPolicyForm key={payoutPolicy.updatedAt} policy={payoutPolicy} />
+          )}
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-lg font-semibold text-foreground">Business &amp; grievance details</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Required on the legal pages by Indian e-commerce rules. Until every field below is
+            filled in, Terms, Privacy, Refunds and Contact stay unindexed and show a draft banner.
+          </p>
+          {businessLoading || !business ? (
+            <PageSkeleton rows={4} />
+          ) : (
+            <BusinessProfileForm key={business.updatedAt} profile={business} />
+          )}
+        </section>
+      </div>
     </div>
+  );
+}
+
+/**
+ * The gate on publishing the legal pages. It's all-or-nothing on purpose:
+ * a policy page naming a grievance officer but no registered address is not
+ * a compliant page, so partial completion must not flip it live.
+ */
+function BusinessProfileForm({ profile }: { profile: BusinessProfile }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<BusinessProfileInput>({
+    legalEntityName: profile.legalEntityName,
+    tradeName: profile.tradeName,
+    registeredAddress: profile.registeredAddress,
+    supportEmail: profile.supportEmail,
+    supportPhone: profile.supportPhone,
+    grievanceOfficerName: profile.grievanceOfficerName,
+    grievanceOfficerEmail: profile.grievanceOfficerEmail,
+    gstin: profile.gstin ?? "",
+    cin: profile.cin ?? "",
+  });
+
+  const save = useMutation({
+    mutationFn: () => updateBusinessProfile(form),
+    onSuccess: (updated) => {
+      qc.setQueryData(["business-profile"], updated);
+      toast.success(
+        isBusinessProfileComplete(updated)
+          ? "Saved — the legal pages are now publishable"
+          : "Saved — the legal pages stay unindexed until every field is filled",
+      );
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Couldn't save the details"),
+  });
+
+  const set = (key: keyof BusinessProfileInput) => (value: string) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const missing = missingBusinessFields({ ...profile, ...form });
+  const dirty = (Object.keys(form) as (keyof BusinessProfileInput)[]).some(
+    (k) => (form[k] ?? "") !== (profile[k] ?? ""),
+  );
+
+  const fields: { key: keyof BusinessProfileInput; label: string; hint?: string; textarea?: boolean }[] = [
+    { key: "legalEntityName", label: "Registered legal entity name", hint: "As it appears on your GST / incorporation documents." },
+    { key: "tradeName", label: "Trading name", hint: "The name customers know you by." },
+    { key: "registeredAddress", label: "Registered address", textarea: true },
+    { key: "supportEmail", label: "Support email" },
+    { key: "supportPhone", label: "Support phone" },
+    { key: "grievanceOfficerName", label: "Grievance officer name" },
+    { key: "grievanceOfficerEmail", label: "Grievance officer email" },
+    { key: "gstin", label: "GSTIN (optional)" },
+    { key: "cin", label: "CIN (optional)" },
+  ];
+
+  return (
+    <Card className="max-w-2xl space-y-5 p-6">
+      <div
+        className={cn(
+          "rounded-xl border p-3 text-sm",
+          missing.length === 0
+            ? "border-primary/30 bg-primary/10 text-foreground"
+            : "border-gold/40 bg-gold/10 text-foreground",
+        )}
+      >
+        {missing.length === 0 ? (
+          <span className="font-semibold">All set — the legal pages are published and indexable.</span>
+        ) : (
+          <>
+            <span className="font-semibold">
+              {missing.length} field{missing.length === 1 ? "" : "s"} still needed
+            </span>{" "}
+            before the legal pages can go live: {missing.map((m) => businessFieldLabels[m as keyof typeof businessFieldLabels]).join(", ")}.
+          </>
+        )}
+      </div>
+
+      {fields.map((f) => (
+        <div key={f.key}>
+          <Label htmlFor={`bp-${f.key}`}>{f.label}</Label>
+          {f.textarea ? (
+            <Textarea
+              id={`bp-${f.key}`}
+              rows={3}
+              value={form[f.key] ?? ""}
+              onChange={(e) => set(f.key)(e.target.value)}
+              className="mt-1.5"
+            />
+          ) : (
+            <Input
+              id={`bp-${f.key}`}
+              value={form[f.key] ?? ""}
+              onChange={(e) => set(f.key)(e.target.value)}
+              className="mt-1.5"
+            />
+          )}
+          {f.hint && <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p>}
+        </div>
+      ))}
+
+      <div className="border-t border-border pt-5">
+        <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
+          {save.isPending ? "Saving…" : "Save details"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * The commission is stored in basis points so a rate like 5.5% needs no
+ * floats. Editing it never moves money already earned — each payout snapshots
+ * the rate that was in force when the sale settled.
+ */
+function PayoutPolicyForm({ policy }: { policy: PayoutPolicy }) {
+  const qc = useQueryClient();
+  const [percent, setPercent] = useState(policy.commissionBps / 100);
+
+  const save = useMutation({
+    mutationFn: () => updatePayoutPolicy({ commissionBps: Math.round(percent * 100) }),
+    onSuccess: (updated) => {
+      qc.setQueryData(["payout-policy"], updated);
+      toast.success(`Commission set to ${formatBps(updated.commissionBps)}`);
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Couldn't save the commission"),
+  });
+
+  const valid = Number.isFinite(percent) && percent >= 0 && percent <= 100;
+  const dirty = valid && Math.round(percent * 100) !== policy.commissionBps;
+  // A worked example beats a percentage — it's the number the seller sees.
+  const example = splitPayout(100000, valid ? Math.round(percent * 100) : policy.commissionBps);
+
+  return (
+    <Card className="max-w-2xl space-y-6 p-6">
+      <div>
+        <Label htmlFor="commission">Marketplace commission (%)</Label>
+        <Input
+          id="commission"
+          type="number"
+          min={0}
+          max={100}
+          step={0.1}
+          value={percent}
+          onChange={(e) => setPercent(Number(e.target.value))}
+          className="mt-1.5 max-w-[10rem]"
+        />
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Deducted from every sale before the seller is paid. On a{" "}
+          {formatPaise(100000)} item the seller receives{" "}
+          <span className="font-semibold text-foreground">{formatPaise(example.netInPaise)}</span> and
+          the marketplace keeps {formatPaise(example.commissionInPaise)}.
+        </p>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Changing this only affects future sales — payouts already recorded keep the rate they sold at.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 border-t border-border pt-5">
+        <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
+          {save.isPending ? "Saving…" : "Save commission"}
+        </Button>
+        {!valid && <p className="text-xs text-danger">Enter a percentage between 0 and 100.</p>}
+      </div>
+    </Card>
   );
 }
 

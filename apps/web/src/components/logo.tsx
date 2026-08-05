@@ -18,6 +18,8 @@ export function FullLogo({
   alt?: string;
 }) {
   return (
+    // Plain <img> on purpose: this is a local SVG, which next/image can't
+    // optimise and only serves behind `dangerouslyAllowSVG`. Nothing to gain.
     // eslint-disable-next-line @next/next/no-img-element
     <img src="/logo.svg" alt={alt} className={cn("h-auto w-full", className)} />
   );

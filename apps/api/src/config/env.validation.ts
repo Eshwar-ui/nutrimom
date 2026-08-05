@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 // Fail fast at boot if the environment is misconfigured.
 const envSchema = z.object({
+  NODE_ENV: z.string().default('development'),
   DATABASE_URL: z.string().url(),
   PORT: z.coerce.number().default(4001),
   CORS_ORIGIN: z.string().default('http://localhost:4000'),
@@ -17,9 +18,16 @@ const envSchema = z.object({
 
   // Active payment gateway. Extend the enum + add an adapter to support more.
   PAYMENT_PROVIDER: z.enum(['razorpay']).default('razorpay'),
-  // Shipping label provider. 'manual' = built-in printable label (no vendor);
-  // add 'shiprocket' etc. with an adapter for real courier AWBs.
-  SHIPPING_PROVIDER: z.enum(['manual']).default('manual'),
+  // Shipping label provider. 'manual' = built-in printable label (no vendor,
+  // no scannable AWB); 'shiprocket' books a real courier pickup and returns a
+  // hosted AWB label. Shiprocket additionally needs the three vars below and
+  // a pickup location configured in their dashboard.
+  SHIPPING_PROVIDER: z.enum(['manual', 'shiprocket']).default('manual'),
+  SHIPROCKET_EMAIL: z.string().optional(),
+  SHIPROCKET_PASSWORD: z.string().optional(),
+  // Must exactly match a pickup location name in the Shiprocket dashboard.
+  SHIPROCKET_PICKUP_LOCATION: z.string().default('Primary'),
+
   RAZORPAY_KEY_ID: z.string().min(1),
   RAZORPAY_KEY_SECRET: z.string().min(1),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1),
@@ -38,6 +46,11 @@ const envSchema = z.object({
   // must be on a domain verified in that Resend account.
   RESEND_API_KEY: z.string().min(1),
   MAIL_FROM_EMAIL: z.string().email().default('onboarding@resend.dev'),
+
+  // Where unhandled server errors are POSTed as JSON. Optional — unset means
+  // errors are logged only. Any JSON sink works (Slack/Discord incoming
+  // webhook, Better Stack, Axiom); see ErrorReporter.
+  ERROR_WEBHOOK_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -48,6 +61,19 @@ export function validateEnv(config: Record<string, unknown>): Env {
     throw new Error(
       `Invalid environment variables:\n${JSON.stringify(parsed.error.flatten().fieldErrors, null, 2)}`,
     );
+  }
+  // Cross-field: selecting a provider without its credentials would only fail
+  // at the first label generation — i.e. in front of a seller mid-fulfilment.
+  // Fail at boot instead.
+  if (parsed.data.SHIPPING_PROVIDER === 'shiprocket') {
+    const missing = (
+      ['SHIPROCKET_EMAIL', 'SHIPROCKET_PASSWORD'] as const
+    ).filter((k) => !parsed.data[k]);
+    if (missing.length > 0) {
+      throw new Error(
+        `SHIPPING_PROVIDER=shiprocket requires ${missing.join(' and ')}`,
+      );
+    }
   }
   return parsed.data;
 }

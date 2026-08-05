@@ -1,12 +1,32 @@
+import type { BusinessProfile } from "@nutrimom/shared";
 import { LegalDoc, type LegalSection } from "@/components/legal-doc";
+import { getBusinessProfile, legalMetadata } from "@/lib/business-profile";
 
-export const metadata = { title: "Terms & Conditions", robots: { index: false, follow: false } };
+export const generateMetadata = () => legalMetadata("Terms & Conditions");
 
-const sections: LegalSection[] = [
+/**
+ * The operator is named from the business profile rather than hardcoded — the
+ * same source the publish gate checks, so these terms can never go live
+ * saying the entity is still to be filled in.
+ */
+function buildSections(profile: BusinessProfile | null): LegalSection[] {
+  return [
   {
     id: "who-we-are",
     title: "Who we are",
-    body: (
+    body: profile?.legalEntityName ? (
+      <p>
+        This Platform is operated by{" "}
+        <strong className="font-medium text-foreground">
+          {profile.legalEntityName}
+        </strong>
+        {profile.tradeName && profile.tradeName !== profile.legalEntityName
+          ? ` under the brand ${profile.tradeName}`
+          : ""}
+        . Its registered office and statutory contact details are set out at the
+        end of this document.
+      </p>
+    ) : (
       <p>
         The marketplace operator runs this Platform under the brand The Nurture Moms.
         Its verified legal name, registration number, registered office and public
@@ -79,7 +99,9 @@ const sections: LegalSection[] = [
     body: (
       <p>
         These terms are governed by the laws of India. Any dispute shall be
-        subject to the exclusive jurisdiction of the courts of [CITY, STATE].
+        subject to the exclusive jurisdiction of the courts having jurisdiction
+        over the operator&apos;s registered office, as stated at the end of this
+        document.
       </p>
     ),
   },
@@ -93,16 +115,18 @@ const sections: LegalSection[] = [
       </p>
     ),
   },
-];
+  ];
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const profile = await getBusinessProfile();
   return (
     <LegalDoc
       title="Terms & Conditions"
-      lastUpdated="11 July 2026"
+      lastUpdated="5 August 2026"
       currentHref="/terms"
       intro="The ground rules for using The Nurture Moms as a buyer or a seller."
-      sections={sections}
+      sections={buildSections(profile)}
     />
   );
 }

@@ -66,6 +66,10 @@ export function FlyToCart() {
             className="absolute left-0 top-0 grid place-items-center overflow-hidden bg-primary text-primary-foreground shadow-lg ring-2 ring-background"
           >
             {f.image ? (
+              // Plain <img> for the same reason as ListingThumb: this is a
+              // snapshot URL captured when the item was added to the cart, so
+              // it may not match next.config's remote allowlist — and
+              // next/image throws on a host it doesn't recognise.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={f.image} alt="" className="h-full w-full object-cover" />
             ) : (

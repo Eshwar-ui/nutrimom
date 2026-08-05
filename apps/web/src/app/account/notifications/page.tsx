@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw, UserCheck } from "lucide-react";
+import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw, UserCheck, CalendarClock } from "lucide-react";
 import type { Notification, NotificationType } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
@@ -20,6 +20,8 @@ const icons: Record<NotificationType, typeof Tag> = {
   ORDER_CANCELLED: XCircle,
   PAYMENT_REFUNDED: RotateCcw,
   SELLER_REGISTERED: UserCheck,
+  MEMBERSHIP_EXPIRING: CalendarClock,
+  MEMBERSHIP_EXPIRED: CalendarClock,
 };
 
 export default function NotificationsPage() {
@@ -112,7 +114,11 @@ export default function NotificationsPage() {
                   : `/orders/${n.orderId}`
                 : n.relatedUserId && user?.role === "ADMIN"
                   ? `/admin/users/${n.relatedUserId}`
-                  : null;
+                  : // Membership notices carry no listing/order/user id — the
+                    // action they want is always "go renew".
+                    n.type === "MEMBERSHIP_EXPIRING" || n.type === "MEMBERSHIP_EXPIRED"
+                    ? "/account/membership"
+                    : null;
             const onOpen = () => { if (!n.read) readOne.mutate(n.id); };
             return href ? (
               <Link key={n.id} href={href} onClick={onOpen}>{body}</Link>

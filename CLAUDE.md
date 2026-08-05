@@ -66,8 +66,9 @@ Original spec (for reference):
 > `GET /seller/sales`, `POST /seller/sales/:orderId/label`, `POST /seller/sales/:orderId/ship`;
 > selected by env `SHIPPING_PROVIDER` (only `manual` today). Marking all sellers shipped advances the
 > order to SHIPPED; re-generating a label never downgrades a shipped shipment. Verified live.
-> **Remaining:** a `ShiprocketProvider` adapter for real scannable AWBs (needs their Shiprocket keys)
-> + seller fulfilment UI. Original spec:
+> Seller fulfilment UI is live at `/account/sales` (generate/print label, mark shipped, payout
+> summary per order). **Remaining:** a `ShiprocketProvider` adapter for real scannable AWBs
+> (needs their Shiprocket keys). Original spec:
 
 Order → seller ships, using a **marketplace-generated shipping label**:
 1. Seller prepares the product for shipment.
@@ -124,11 +125,16 @@ Dashboard → Settings → Webhooks when registering the `/payments/webhook` URL
 rejected (verify-on-return still settles orders, so this only costs you the async safety net).
 Swap the test key pair for live keys before taking real money.
 
-**#2 — Test coverage points at the (formerly) dead path.** The only real test suite is
-[payments.service.spec.ts](apps/api/src/payments/payments.service.spec.ts) (Razorpay). Now that
-online pay is core, this is correctly aimed — but the settlement/stock logic still needs tests for
-the online flow end-to-end (order → pay → verify → listing SOLD → notify). The COD settlement in
-`orders.service.ts` will be deleted, so don't invest tests there.
+**#2 — Test coverage. ✅ ADDRESSED.** Was: the only suite was
+[payments.service.spec.ts](apps/api/src/payments/payments.service.spec.ts) (Razorpay), aimed at a
+then-dead path. Now the online money path is covered end to end across
+[payments.service.spec.ts](apps/api/src/payments/payments.service.spec.ts) (signature tampering,
+settle → listing SOLD → notify, idempotent re-settle, refund-on-lost-hold, refund-on-already-cancelled,
+captured-amount mismatch, webhook HMAC), [orders.service.spec.ts](apps/api/src/orders/orders.service.spec.ts)
+(admin transition legality, claim/release, buyer cancel + policy cutoff/reason/refund-%),
+and [seller-billing.service.spec.ts](apps/api/src/seller-billing/seller-billing.service.spec.ts)
+(membership stacking, advisory lock, idempotent settle, admin registration alert).
+Still thin: reviews and wishlist.
 
 **#3 — Core gap: no image upload. ✅ DONE (2026-07-15) — Supabase Storage.**
 Sellers now upload photos (camera/drag-drop, client-compressed) via `POST /seller/uploads`
@@ -150,11 +156,14 @@ product (preloved C2C marketplace, online-only payments, seller membership, Supa
 `prisma/` so build output lands at `dist/main.js` (was nesting at `dist/src/main.js`).
 
 **#6 — Marketplace built complete before first sale.** Seller verification, reservation holds,
-notifications, wishlist, seller reviews are all wired but unvalidated. Note: **reservation holds set
-`reservedUntil` (2 days) with no sweeper job that ever releases an expired hold** — latent
-inventory bug ([listings.service.ts:244](apps/api/src/listings/listings.service.ts#L244)).
+notifications, wishlist, seller reviews are all wired but unvalidated. ~~Reservation holds set
+`reservedUntil` (2 days) with no sweeper job that ever releases an expired hold~~ ✅ **FIXED** —
+[reservation-sweeper.service.ts](apps/api/src/listings/reservation-sweeper.service.ts) releases
+expired holds back to APPROVED at boot and every 10 min (plain unref'd interval, no scheduler dep).
 
-**#7 — Decoration before essentials.** ~850 LOC of animation/decor (playful-background, section-wave,
+**#7 — Decoration before essentials.** ✅ **RESOLVED (2026-08-05)** — photo upload, payments and
+real legal copy all landed; the legal pages now publish themselves off an admin-filled
+`BusinessProfile`. Original finding: ~850 LOC of animation/decor (playful-background, section-wave,
 confetti, fly-to-cart, home-sections) shipped while legal pages are unindexable placeholder drafts
 and photo upload is missing. Not deleting — re-sequence: photo upload + real legal copy + payment
 first, polish after.
@@ -220,15 +229,106 @@ API tests pass (2 new), typecheck and lint clean.
 
 ---
 
+## Gap-closing pass (2026-08-05)
+
+> Audited the repo against these notes, then closed every gap that didn't need the operator's
+> own credentials. **Test keys stay in place** — Razorpay live keys are a deliberate deferral,
+> not an oversight. 52/52 API tests pass (28 new), typecheck + lint clean, both apps build.
+
+**1. Seller payouts — the big one. ✅ NEW.** There was **no payout system at all**: buyers paid the
+marketplace, and nothing anywhere recorded what was owed to each seller. `/account/sales` even
+showed a "Payout total" that was just the item sum, with no commission and no way to pay it.
+Now: a `SellerPayout` ledger row per **(order, seller)**, created inside the same transaction that
+marks an order PAID — so a settled sale can't exist without its debt. Lifecycle
+`PENDING → PAYABLE → PAID`, plus `CANCELLED`; delivery moves it to PAYABLE, order cancellation
+cancels it (never touching an already-PAID row — that logs for manual recovery). Commission is a
+new admin-editable `PayoutPolicy` in **basis points** (default 1000 = 10%), **snapshotted onto
+each payout at sale time** so changing the rate never moves money already earned. `splitPayout()`
+in shared is the single definition of the split; gross always equals commission + net exactly.
+API `apps/api/src/payouts/*` — `GET /seller/payouts`, `/seller/payouts/summary`,
+`GET /admin/payouts?status=`, `POST /admin/payouts/:id/pay` (requires a UTR/transfer reference;
+only a PAYABLE row can be paid, and never twice). Web: `/admin/payouts` queue with an outstanding
+total, `/admin/settings` commission field with a worked example, and `/account/sales` now shows
+real net + gross + fee + status, with an on-hold/owed/paid summary. Migration backfills all 16
+historical orders. **Nothing here moves money** — India needs Razorpay Route or a bank transfer to
+pay a third party, so the transfer is done out of band and recorded with its reference. Verified
+live end to end against the real DB (13 checks: lifecycle, guards, role isolation, and that a
+rate change leaves earned payouts untouched).
+
+**2. Membership expiry warnings. ✅ NEW.** `expiresAt` was only read at gate-check time, so a
+paying seller's window lapsed in silence and the first sign was being refused a listing.
+`MembershipExpiryService` (mirrors `ReservationSweeperService`: boot + every 6h, unref'd interval,
+no scheduler dep) warns 7 days out and once on expiry, via new `MEMBERSHIP_EXPIRING` /
+`MEMBERSHIP_EXPIRED` notification types that deep-link to `/account/membership`. Notices are
+stamped on the membership row so a seller is told once per window. **The trap it avoids:**
+memberships stack as separate rows, so an old row can look "expiring" while a later purchase
+already extended the seller — only the user's latest-expiring row speaks for them.
+
+**3. Buyer delivery confirmation. ✅ NEW.** `DELIVERED` was admin-only, which doesn't survive any
+volume — and since delivery releases the seller's payout, sellers were waiting on admin data
+entry to get paid. `PATCH /orders/:id/confirm-delivery` lets the buyer confirm their own SHIPPED
+order, running the same side effects as the admin path (shipments cascade, payout leaves hold,
+seller notified).
+
+**4. Legal pages are now publishable. ✅ NEW** (this was the last item blocked "pending the
+operator's details"). New `BusinessProfile` global row (legal entity, trade name, registered
+address, support email/phone, grievance officer + email, optional GSTIN/CIN), editable at
+`/admin/settings` with a live "N fields still needed" gate. The legal pages read it server-side:
+until **every** required field is filled they keep `noindex` + the draft banner; once complete the
+banner drops, the pages become indexable, and a statutory "Operator & grievance contact" block
+renders on each. Copy that named missing details is now driven by the profile — Terms §1 names the
+real entity, Privacy names the real grievance officer, and `[CITY, STATE]` in governing law became
+the standard "courts having jurisdiction over the operator's registered office". The refunds page
+reads the **live** `CancellationPolicy` (window + refund %) so it can't drift from what
+`OrdersService.cancel` actually enforces; `GET /cancellation-policy` became public for this (it's
+published policy — nothing sensitive). `[X] business days` became a truthful description of the
+real flow: refunds are initiated automatically on cancellation, gateway settlement 5–7 working
+days. **One number is an assumption, not a system rule:** `CONDITION_DISPUTE_HOURS = 48` in
+[refunds/page.tsx](apps/web/src/app/refunds/page.tsx) — confirm or change it. Verified live in the
+browser both ways: incomplete profile → noindex + banner, complete → indexable, banner gone,
+operator block rendered, zero placeholders left.
+
+**5. Shiprocket adapter. ✅ CODE-COMPLETE, UNVERIFIED.** `ShiprocketProvider` behind
+`SHIPPING_PROVIDER=shiprocket` (+ `SHIPROCKET_EMAIL` / `_PASSWORD` / `_PICKUP_LOCATION`, validated
+at boot so a misconfig fails on startup rather than in front of a seller mid-fulfilment). Three
+calls per label: create order → assign AWB → generate label, with a cached bearer token and one
+re-auth on 401. **Not tested against the live Shiprocket API** — that needs their account. `manual`
+remains the default, so nothing changes until it's switched on.
+
+**6. Error tracking. ✅ NEW, vendor-free.** A global `AllExceptionsFilter` + `ErrorReporter`:
+expected 4xx pass through untouched, everything else is reported and the client gets a generic
+message instead of a stack or ORM text. Sink is `ERROR_WEBHOOK_URL` (optional) — works today with
+Slack/Discord/Better Stack/any JSON endpoint, so **no vendor decision was forced**. Unset = log
+only. Adding Sentry later means one adapter implementing `capture`.
+
+**7. Refresh-token revocation. ✅ NEW.** `User.tokenVersion`, carried in the JWT as `tv` and
+checked on refresh. Bumped by password reset (so resetting actually signs out sessions opened with
+the old password — it previously didn't) and by a new `POST /auth/logout-all`. Access tokens are
+deliberately **not** checked against it: that would add a DB read per request, and their 15-minute
+TTL is what bounds the window.
+
+**8. Coverage + polish.** New suites for payouts, membership expiry, reviews and wishlist (24→52
+tests). The two listing-grid `<img>` tags became `next/image`; the remaining two are documented
+deliberate exceptions (a local SVG logo, and a cart-snapshot URL that may not match the remote
+allowlist — `next/image` throws on unknown hosts).
+
+**Still open, and why:** Razorpay **live** keys (deferred by choice — test keys work end to end);
+Shiprocket live verification (needs their account); and the `CONDITION_DISPUTE_HOURS` figure above.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
 2. ~~**Online payments + remove COD** (#1)~~ ✅ **DONE** — provider-agnostic, online-only.
 3. ~~**Seller registration fee + membership gating** (roadmap #1)~~ ✅ **DONE** — see below.
-4. **Shipping label flow** (roadmap #4) — 🟡 **FOUNDATION DONE** (vendor-agnostic `ShippingProvider` +
-   built-in manual printable label + `Shipment` model + seller endpoints, verified live). **Remaining:**
-   Shiprocket adapter (needs their keys) + seller fulfilment UI (`/account/sales`).
+4. **Shipping label flow** (roadmap #4) — 🟡 **DONE except live courier** (vendor-agnostic
+   `ShippingProvider` + manual printable label + `Shipment` model + seller endpoints +
+   `/account/sales`, verified live; `ShiprocketProvider` written but unverified — needs their keys).
 5. ~~**Latest Listings homepage section** (roadmap #3)~~ ✅ **DONE** — home page fetches newest approved.
-6. **Cleanup:** ~~rewrite README (#4)~~ ✅ · ~~delete `.firebaserc` (#5)~~ ✅ · ~~fix `node dist/main` (start:prod)~~ ✅
-   (tsconfig.build excludes `prisma` → output is `dist/main.js`) · reservation sweeper or drop (#6) ⬅ TODO ·
-   real legal copy (#7) ⬅ TODO (needs the operator's business/grievance/contact details).
+6. ~~**Seller payouts**~~ ✅ **DONE (2026-08-05)** — `SellerPayout` ledger + commission policy +
+   admin payout queue. Recording only; the transfer itself is out of band (see gap-closing pass).
+7. **Cleanup:** ~~rewrite README (#4)~~ ✅ · ~~delete `.firebaserc` (#5)~~ ✅ · ~~fix `node dist/main` (start:prod)~~ ✅
+   (tsconfig.build excludes `prisma` → output is `dist/main.js`) · ~~reservation sweeper (#6)~~ ✅ ·
+   ~~real legal copy (#7)~~ ✅ (admin-editable `BusinessProfile` gates publishing; operator just
+   fills it in at `/admin/settings`).

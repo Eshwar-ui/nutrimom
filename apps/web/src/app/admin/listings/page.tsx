@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X, Star, Plus } from "lucide-react";
@@ -73,8 +74,13 @@ export default function AdminListingsPage() {
             <Card key={l.id} className="flex flex-wrap items-center gap-4 p-4">
               <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
                 {l.images[0] && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={l.images[0]} alt={l.title} className="h-full w-full object-cover" />
+                  <Image
+                    src={l.images[0]}
+                    alt={l.title}
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                  />
                 )}
               </div>
               <div className="min-w-0 flex-1">

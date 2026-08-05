@@ -3,11 +3,20 @@ import { SettingsService } from './settings.service';
 import {
   SettingsController,
   AdminSettingsController,
+  AdminPayoutPolicyController,
+  BusinessProfileController,
+  AdminBusinessProfileController,
 } from './settings.controller';
 
 @Module({
   providers: [SettingsService],
-  controllers: [SettingsController, AdminSettingsController],
+  controllers: [
+    SettingsController,
+    AdminSettingsController,
+    AdminPayoutPolicyController,
+    BusinessProfileController,
+    AdminBusinessProfileController,
+  ],
   exports: [SettingsService],
 })
 export class SettingsModule {}

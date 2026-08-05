@@ -53,6 +53,17 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
     onSuccess: (updated) => { queryClient.setQueryData(["order", id], updated); queryClient.invalidateQueries({ queryKey: ["my-orders"] }); toast.success("Order cancelled"); setCancelling(false); },
     onError: (caught) => toast.error(caught instanceof ApiError ? caught.message : "Couldn't cancel this order."),
   });
+  // Confirming delivery is what releases the seller's payout from hold, so
+  // it can't wait on an admin editing each order by hand.
+  const confirmDelivery = useMutation({
+    mutationFn: () => authedRequest<Order>(`/orders/${id}/confirm-delivery`, { method: "PATCH" }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["order", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+      toast.success("Thanks — delivery confirmed");
+    },
+    onError: (caught) => toast.error(caught instanceof ApiError ? caught.message : "Couldn't confirm delivery."),
+  });
   const [cancelling, setCancelling] = useState(false);
   const [paying, setPaying] = useState(false);
   const [outcome, setOutcome] = useState<PaymentOutcome | null>(null);
@@ -202,6 +213,15 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         <Button variant="outline" className="gap-1.5" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print receipt</Button>
         <Link href="/listings" className={buttonVariants()}>Keep browsing</Link>
       </div>
+
+      {order.status === "SHIPPED" && (
+        <div className="mt-10 border-t border-border pt-6 text-center print:hidden">
+          <p className="text-sm text-muted-foreground">Has your parcel arrived? Confirming helps us pay the seller.</p>
+          <Button className="mt-3 gap-1.5" disabled={confirmDelivery.isPending} onClick={() => confirmDelivery.mutate()}>
+            <CheckCircle2 className="h-4 w-4" /> {confirmDelivery.isPending ? "Confirming…" : "Confirm delivery"}
+          </Button>
+        </div>
+      )}
 
       {cancellable && (
         <div className="mt-10 border-t border-border pt-6 text-center print:hidden">
