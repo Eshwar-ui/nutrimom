@@ -631,9 +631,17 @@ Verified: anon 401, seller 403, unknown/missing scope 400, admin 200 for both sc
 route now 404s, and the blog unpublish→purge→republish cycle still drops and restores the post
 immediately.
 
-**Known, not addressed:** the sitemap lists `/terms`, `/privacy` and `/refunds` unconditionally,
-even while they are `noindex` drafts. Harmless (a crawler that fetches them obeys the meta tag)
-but inconsistent — the sitemap could gate on the same `isBusinessProfileComplete` check.
+**Sitemap gated to match. ✅ FIXED.** `/terms`, `/privacy` and `/refunds` were listed
+unconditionally even while `noindex` — advertising URLs the same response tells crawlers to
+ignore. They now enter the sitemap on the same `isBusinessProfileComplete` check that lifts the
+`noindex`, so the two can't disagree. `/policies` stays listed unconditionally: it is a
+plain-English hub, not a statutory document, and was never gated. `/sitemap.xml` joined the
+`legal` purge scope, since it now depends on the profile too.
+
+Verified both directions: blank → the three URLs absent and `/terms` `noindex`; filled → all
+three present and indexable; blanked again → gone. The sitemap serves one stale copy before
+regenerating (Next documents route-handler `revalidatePath` as taking effect on the next
+request), which is invisible to a crawler.
 
 ---
 

@@ -19,8 +19,10 @@ const SCOPES = {
   // The legal pages read the BusinessProfile server-side to decide whether
   // they may be indexed at all, so filling it in has to reach them promptly —
   // otherwise the operator saves their details and the pages still say
-  // "pre-launch draft".
-  legal: ["/terms", "/privacy", "/refunds", "/policies"],
+  // "pre-launch draft". The sitemap gates those three URLs on the same
+  // condition, so it has to be purged with them or it would keep advertising
+  // (or keep omitting) the wrong set.
+  legal: ["/terms", "/privacy", "/refunds", "/policies", "/sitemap.xml"],
 } as const;
 
 type Scope = keyof typeof SCOPES;

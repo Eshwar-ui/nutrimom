@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
+import { isBusinessProfileComplete } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { getBlogPostsForSitemap } from "@/lib/blog";
+import { getBusinessProfile } from "@/lib/business-profile";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4000";
 
@@ -27,11 +29,13 @@ async function getListingsForSitemap() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [categories, listingItems, blogPosts] = await Promise.all([
-    getCategories().catch(() => []),
-    getListingsForSitemap(),
-    getBlogPostsForSitemap(),
-  ]);
+  const [categories, listingItems, blogPosts, businessProfile] =
+    await Promise.all([
+      getCategories().catch(() => []),
+      getListingsForSitemap(),
+      getBlogPostsForSitemap(),
+      getBusinessProfile(),
+    ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
@@ -40,11 +44,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/sell`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/contact`, changeFrequency: "yearly", priority: 0.3 },
+    // Not gated: a plain-English guidelines hub, not a statutory document, so
+    // it publishes regardless of the operator's business details.
     { url: `${SITE_URL}/policies`, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${SITE_URL}/terms`, changeFrequency: "yearly", priority: 0.2 },
-    { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.2 },
-    { url: `${SITE_URL}/refunds`, changeFrequency: "yearly", priority: 0.2 },
   ];
+
+  // The three statutory pages carry `noindex` until the BusinessProfile names
+  // a real entity, address and grievance officer (see lib/business-profile).
+  // Listing them while they say exactly that is telling crawlers to fetch a
+  // page and then ignore it — so they enter the sitemap on the same condition.
+  const legalRoutes: MetadataRoute.Sitemap = isBusinessProfileComplete(
+    businessProfile,
+  )
+    ? ["/terms", "/privacy", "/refunds"].map((path) => ({
+        url: `${SITE_URL}${path}`,
+        changeFrequency: "yearly" as const,
+        priority: 0.2,
+      }))
+    : [];
 
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
     url: `${SITE_URL}/categories/${c.slug}`,
@@ -66,5 +83,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...listingRoutes];
+  return [
+    ...staticRoutes,
+    ...legalRoutes,
+    ...categoryRoutes,
+    ...blogRoutes,
+    ...listingRoutes,
+  ];
 }
