@@ -46,7 +46,7 @@ pnpm exec prisma db seed
 cd ../..
 ```
 
-Seeded admin: `admin@nutrimom.local` / `admin12345` (override via `ADMIN_EMAIL` /
+Seeded admin: `admin@gmail.com` / `admin@123` (override via `ADMIN_EMAIL` /
 `ADMIN_PASSWORD`). Seeded sellers: `<name>@nurture.local` / `password123` (granted
 registration + a membership so they can list immediately).
 

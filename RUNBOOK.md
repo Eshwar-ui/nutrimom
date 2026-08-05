@@ -79,8 +79,8 @@ run the resolve with the Render connection string, then redeploy. Empty/new
 databases need nothing: `migrate deploy` applies `0_init` cleanly.
 
 Seeded admin account:
-- **Email:** `admin@nutrimom.local`
-- **Password:** `admin12345`
+- **Email:** `admin@gmail.com`
+- **Password:** `admin@123`
 - (override via `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `apps/api/.env`, then re-seed)
 
 ---
@@ -250,4 +250,4 @@ The DB isn't seeded, or the API is down. Run `pnpm prisma db seed` and confirm
 | API health | http://localhost:1133/health |
 | Postgres | `postgresql://nutrimom:nutrimom@localhost:5432/nutrimom` |
 | Prisma Studio | http://localhost:5555 (`pnpm prisma studio`) |
-| Admin login | `admin@nutrimom.local` / `admin12345` |
+| Admin login | `admin@gmail.com` / `admin@123` |
