@@ -23,6 +23,7 @@ import {
   updateBusinessProfile,
   updatePayoutPolicy,
 } from "@/lib/payouts";
+import { revalidatePublicPages } from "@/lib/revalidate";
 import { toast } from "@/lib/toast-store";
 import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -110,9 +111,14 @@ function BusinessProfileForm({ profile }: { profile: BusinessProfile }) {
     mutationFn: () => updateBusinessProfile(form),
     onSuccess: (updated) => {
       qc.setQueryData(["business-profile"], updated);
+      // The legal pages read this profile server-side behind a 60s cache, so
+      // without a purge the operator saves their details and the pages still
+      // say "pre-launch draft" for up to a minute — and the same delay applies
+      // to blanking a field, which should un-publish them just as promptly.
+      void revalidatePublicPages("legal");
       toast.success(
         isBusinessProfileComplete(updated)
-          ? "Saved — the legal pages are now publishable"
+          ? "Saved — the legal pages are now live and indexable"
           : "Saved — the legal pages stay unindexed until every field is filled",
       );
     },
@@ -267,6 +273,11 @@ function CancellationPolicyForm({ policy }: { policy: CancellationPolicy }) {
       authedRequest<CancellationPolicy>("/admin/cancellation-policy", { method: "PATCH", body: dto }),
     onSuccess: (updated) => {
       qc.setQueryData(["cancellation-policy"], updated);
+      // /refunds publishes the live cutoff window and refund percentage, so a
+      // policy change has to reach it now — a published promise that lags
+      // behind what OrdersService.cancel actually enforces is the one thing
+      // that page must never do.
+      void revalidatePublicPages("legal");
       toast.success("Cancellation policy updated");
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Couldn't save the policy"),

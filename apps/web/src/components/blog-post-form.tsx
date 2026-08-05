@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, FileText, Image as ImageIcon } from "lucide-react";
 import { blogPostInputSchema, type BlogPost } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
-import { revalidateBlogPages } from "@/lib/revalidate-blog";
+import { revalidatePublicPages } from "@/lib/revalidate";
 import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/image-uploader";
@@ -52,7 +52,7 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
       else await authedRequest("/admin/blog", { method: "POST", body: parsed.data });
       // Edits to an already-published post should show on the live page now,
       // not whenever the 60s cache window happens to lapse.
-      await revalidateBlogPages();
+      await revalidatePublicPages("blog");
       router.push("/admin/blog");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Could not save this post");

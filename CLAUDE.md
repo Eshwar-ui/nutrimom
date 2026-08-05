@@ -611,6 +611,32 @@ itself.
 
 ---
 
+## Instant publish for the legal pages (2026-08-06)
+
+> Filling the `BusinessProfile` took **up to 60s** to actually publish the legal pages, and
+> blanking a field took just as long to un-publish them. Same staleness the blog had, on the
+> pages where it matters most. Now purged on save: measured **0.3s to publish, 0.2s to
+> un-publish**.
+
+The one-off `/api/revalidate-blog` route became **`/api/revalidate`** taking a `scope`
+(`blog` | `legal`), so the admin-token gate lives in one place rather than being copy-pasted per
+page group; `lib/revalidate-blog.ts` became `lib/revalidate.ts` exporting
+`revalidatePublicPages(scope)`. Wired into three saves on `/admin/settings`: the business profile
+(publishes/un-publishes `/terms`, `/privacy`, `/refunds`, `/policies`) and the **cancellation
+policy**, because `/refunds` publishes the live cutoff window and refund percentage — a published
+promise lagging behind what `OrdersService.cancel` enforces is the one thing that page must never
+do. Blog call sites moved to the new helper unchanged in behaviour.
+
+Verified: anon 401, seller 403, unknown/missing scope 400, admin 200 for both scopes, the old
+route now 404s, and the blog unpublish→purge→republish cycle still drops and restores the post
+immediately.
+
+**Known, not addressed:** the sitemap lists `/terms`, `/privacy` and `/refunds` unconditionally,
+even while they are `noindex` drafts. Harmless (a crawler that fetches them obeys the meta tag)
+but inconsistent — the sitemap could gate on the same `isBusinessProfileComplete` check.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
