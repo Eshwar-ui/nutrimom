@@ -5,9 +5,14 @@ import { request } from "@/lib/api";
 
 export const generateMetadata = () => legalMetadata("Refund & Cancellation Policy");
 
-// How long after delivery a condition dispute can be raised. Operator policy
-// rather than a system rule — change the constant to change the promise.
-const CONDITION_DISPUTE_HOURS = 48;
+// Fallback for the rare render where the API is unreachable — matches the
+// column default, so the page still states a window rather than a blank.
+const DEFAULT_CONDITION_DISPUTE_HOURS = 48;
+
+/** "48 hours" / "1 hour" / "72 hours" — the window as published prose. */
+function disputeWindow(hours: number): string {
+  return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+}
 
 /**
  * The stated cancellation window and refund share are read from the same
@@ -78,7 +83,9 @@ function buildSections(policy: CancellationPolicy | null): LegalSection[] {
         Because items are secondhand and described by individual sellers, we
         recommend reviewing photos and messaging the seller before buying. If an
         item arrives significantly different from its listing,{" "}
-        {`contact us within ${CONDITION_DISPUTE_HOURS} hours of delivery`}{" "}
+        {`contact us within ${disputeWindow(
+          policy?.conditionDisputeHours ?? DEFAULT_CONDITION_DISPUTE_HOURS,
+        )} of delivery`}{" "}
         with photos of the item as received — we&apos;ll review it against the
         listing on a case-by-case
         basis and, where the complaint is upheld, refund you and recover the

@@ -283,10 +283,13 @@ reads the **live** `CancellationPolicy` (window + refund %) so it can't drift fr
 `OrdersService.cancel` actually enforces; `GET /cancellation-policy` became public for this (it's
 published policy — nothing sensitive). `[X] business days` became a truthful description of the
 real flow: refunds are initiated automatically on cancellation, gateway settlement 5–7 working
-days. **One number is an assumption, not a system rule:** `CONDITION_DISPUTE_HOURS = 48` in
-[refunds/page.tsx](apps/web/src/app/refunds/page.tsx) — confirm or change it. Verified live in the
-browser both ways: incomplete profile → noindex + banner, complete → indexable, banner gone,
-operator block rendered, zero placeholders left.
+days. The condition-dispute window is admin-editable too — `CancellationPolicy.conditionDisputeHours`
+(default 48), edited alongside the cutoff and refund % at `/admin/settings`. **It is the only field
+on that model not enforced anywhere in code**, because there is no dispute-raising endpoint yet — it
+is the published promise only, and both the schema comment and the admin field say so. Wire it into
+that flow when it exists. Verified live in the browser both ways: incomplete profile → noindex +
+banner, complete → indexable, banner gone, operator block rendered, zero placeholders left; and
+editing the window to 72h changed the published page.
 
 **5. Shiprocket adapter. ✅ CODE-COMPLETE, UNVERIFIED.** `ShiprocketProvider` behind
 `SHIPPING_PROVIDER=shiprocket` (+ `SHIPROCKET_EMAIL` / `_PASSWORD` / `_PICKUP_LOCATION`, validated
@@ -312,8 +315,8 @@ tests). The two listing-grid `<img>` tags became `next/image`; the remaining two
 deliberate exceptions (a local SVG logo, and a cart-snapshot URL that may not match the remote
 allowlist — `next/image` throws on unknown hosts).
 
-**Still open, and why:** Razorpay **live** keys (deferred by choice — test keys work end to end);
-Shiprocket live verification (needs their account); and the `CONDITION_DISPUTE_HOURS` figure above.
+**Still open, and why:** Razorpay **live** keys (deferred by choice — test keys work end to end),
+and Shiprocket live verification (needs their account). Everything else in this pass is closed.
 
 ---
 

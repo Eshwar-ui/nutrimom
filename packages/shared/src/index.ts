@@ -636,6 +636,12 @@ export interface CancellationPolicy {
   cutoffHours: number;
   reasonCodes: string[];
   refundPercentage: number;
+  /**
+   * How long after delivery a buyer may raise a "not as described" dispute.
+   * Published on the refunds page; unlike the other fields it is not enforced
+   * server-side, because there is no dispute-raising endpoint yet.
+   */
+  conditionDisputeHours: number;
   updatedAt: string;
 }
 
@@ -643,6 +649,11 @@ export const cancellationPolicyInputSchema = z.object({
   cutoffHours: z.number().int().min(1).max(24 * 90),
   reasonCodes: z.array(z.string().min(1).max(80)).min(1).max(20),
   refundPercentage: z.number().int().min(0).max(100),
+  conditionDisputeHours: z
+    .number()
+    .int("Enter a whole number of hours")
+    .min(1, "The dispute window must be at least an hour")
+    .max(24 * 90, "That's over 90 days — enter a shorter window"),
 });
 export type CancellationPolicyInput = z.infer<
   typeof cancellationPolicyInputSchema
