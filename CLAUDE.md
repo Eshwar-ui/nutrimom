@@ -564,6 +564,53 @@ listing simply has the literal string `"0"` in that free-text column. Data, not 
 
 ---
 
+## Public pages + end-to-end lifecycle (2026-08-06)
+
+> Two passes. **Public surface:** 106 read-only checks over every unauthenticated page
+> (98 passed; 5 of the 8 "failures" were crude assertions in the harness, not defects).
+> **Lifecycle:** a 41-check end-to-end run across all three roles — **41/41**. All test
+> data removed afterwards; 93/93 API tests, typecheck + lint clean, both apps build.
+
+**Public surface is healthy.** Every page 200s with real content and a `<title>`; `robots.txt`
+blocks `/admin`, `/account`, `/checkout`; the sitemap carries blog and listing URLs and excludes
+the private ones; **every `<img>` on every public page has alt text** (57 on the home page alone);
+one `<h1>` per page; no horizontal overflow at 375px. Anon hitting `/account/*` is redirected and
+leaks nothing — the only match on a keyword sweep was the static nav label in the shell.
+
+**1. `/policies` promised a payment method that does not exist. ✅ FIXED.** It read *"Pay online
+through our secure gateway, or arrange cash on pickup where the seller offers it"* — but COD was
+removed and `OrdersService.create` hard-codes `ONLINE`. A public page told buyers they could pay
+cash. Rewritten to online-only.
+
+**2. The `PaymentMethod` enum comments were inverted. ✅ FIXED.** They labelled `COD` as *"the
+active method"* and `ONLINE` as *"kept for a future rollout"* — exactly backwards since the
+online-payment migration, and the first thing anyone reads in the shared schema.
+
+**Left alone deliberately:** `/orders/[id]` still branches on COD (a "pay when handed over" line
+and a 3-step progress bar). After the data cleanup no order uses COD, so it is unreachable, but
+the enum value must survive for schema compatibility and the branch renders correctly if a
+historical row ever reappears.
+
+**The legal pages are correctly unpublishable.** `/terms`, `/privacy`, `/refunds` all carry
+`noindex, nofollow` because the `BusinessProfile` has **all 7 required fields blank**. The gate
+works; it just means the site cannot legally publish until those are filled at `/admin/settings`.
+(`/policies` is deliberately outside the gate — a plain-English hub, not a statutory document.)
+
+**End-to-end lifecycle — 41/41, closing the two gaps flagged in the admin pass.** Completing a
+real order transition and marking a payout PAID had only ever been covered by mocked unit tests.
+Both now verified against the live stack: buyer orders (listing → RESERVED, no payout yet) →
+payment settles (listing → SOLD, leaves browse, payout row created on hold, seller notified) →
+seller labels then ships (ship-before-label refused; another seller refused 403; order → SHIPPED;
+payout still held) → buyer confirms delivery (stranger refused; double-confirm refused; payout →
+PAYABLE) → admin records the transfer (no-reference refused, seller-pays-self 403, paid with a
+UTR, double-pay refused) → cancelling a delivered order refused. **Money math exact at every
+step:** gross 100000 = fee 10000 + net 90000 at 1000 bps, and the seller's summary moved from
+owed to paid. Settlement used the admin PAID transition rather than the Razorpay modal, which
+needs a real card — the same settle path, so the only untested link remains the gateway callback
+itself.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.

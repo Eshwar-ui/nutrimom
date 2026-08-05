@@ -56,8 +56,12 @@ export const OrderStatus = {
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const PaymentMethod = {
-  COD: "COD", // Cash on Delivery — the active method
-  ONLINE: "ONLINE", // Razorpay — kept for a future rollout
+  // Retired. Kept only so the enum value stays valid for any historical row;
+  // nothing in the app can select it — OrdersService.create hard-codes ONLINE.
+  COD: "COD",
+  // The only method. Every purchase goes through the payment gateway and an
+  // order is processed only after payment is confirmed.
+  ONLINE: "ONLINE",
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 

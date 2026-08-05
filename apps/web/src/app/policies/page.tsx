@@ -29,7 +29,10 @@ const points = [
     icon: ShieldCheck,
     tint: "bg-lavender/60",
     title: "Safe, secure payments",
-    body: "Pay online through our secure gateway, or arrange cash on pickup where the seller offers it. Verified sellers carry a badge.",
+    // Online-only. This used to offer "cash on pickup", which the marketplace
+    // has never supported since COD was removed — a public promise checkout
+    // could not honour.
+    body: "Every purchase is paid online through our secure gateway, so your order is confirmed the moment payment clears. Verified sellers carry a badge.",
   },
 ];
 
