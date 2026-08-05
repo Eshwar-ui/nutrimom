@@ -486,6 +486,39 @@ while the billing gate resolves.
 
 ---
 
+## Dev-database cleanup (2026-08-06)
+
+> The operator asked for the dev data to be reduced to a test-only state. Scope was agreed
+> up front, applied with a one-off script, then verified. **Hard delete, no backup taken —
+> the removed rows are not recoverable.** Re-running `pnpm seed` restores the seeded personas
+> and their listings, but not the orders or the deleted accounts.
+
+**Removed:** 16 test-domain accounts (`@test.local` — the `flow-*`, `stack-*`, `vis-*`, `mem-*`
+leftovers from earlier automated runs — plus `test@gmail.com`) and the 10 listings they owned;
+**all 19 orders** with their 16 payouts, 1 review and order items; 29 notifications whose
+`listingId`/`orderId` pointed at deleted rows (those columns are plain fields, not foreign keys,
+so they would have survived as dead links).
+
+**Kept:** `admin@gmail.com`, the **Marketplace system seller** (mandatory — admin listing
+creation goes through it), the six seeded personas and their listings, and six real Gmail
+accounts. Final state: **14 users, 49 listings (47 APPROVED / 2 PENDING), 0 orders**.
+
+**Two deliberate side effects.** 7 listings were reset SOLD/RESERVED → APPROVED, because the
+orders that sold or held them no longer exist — this also cleared the 4 legacy stuck-SOLD
+listings noted in the seller QA pass, so those sellers can edit and relist again. And the two
+`https://example.com/test-image.jpg` listings went with the flow-test accounts, ending the
+`_next/image` 404s.
+
+**Delete order matters** if this is ever repeated: `SellerPayout` holds `Restrict` FKs on both
+order and seller, and `OrderItem` restricts listing deletion — so payouts first, then orders
+(which cascades order items), then listings, then users.
+
+Verified after: admin and seeded sellers still sign in, a deleted account 401s, public browse
+returns 47, admin orders/payouts read empty, and **admin listing creation still returns 201**
+(that path depends on the Marketplace account surviving).
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
