@@ -457,7 +457,23 @@ model BlogPost {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  previousSlugs BlogPostSlug[]
+
   @@index([published, publishedAt])
+}
+
+// Slugs a post used to live at. Renaming a published post would otherwise turn
+// every existing link to it — search results, shares, other sites — into a 404
+// with nothing recording where it went. The public lookup falls back to this
+// table and the post page 308s to the current slug.
+model BlogPostSlug {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  postId    String
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
 }
 
 enum ContactMessageStatus {

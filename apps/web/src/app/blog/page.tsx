@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Newspaper } from "lucide-react";
 import type { BlogPost, Paginated } from "@nutrimom/shared";
@@ -7,7 +8,21 @@ import { buttonVariants } from "@/components/ui/button";
 import { StatePanel } from "@/components/ui/states";
 import { ListingThumb } from "@/components/ui/listing-thumb";
 
-export const metadata = { title: "Blog" };
+const BLOG_DESCRIPTION =
+  "Guides on buying and selling preloved baby gear, care tips and stories from our community.";
+
+export const metadata: Metadata = {
+  title: "Blog",
+  description: BLOG_DESCRIPTION,
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    type: "website",
+    title: "Blog · The Nurture Moms",
+    description: BLOG_DESCRIPTION,
+    url: "/blog",
+  },
+  twitter: { card: "summary", title: "Blog · The Nurture Moms", description: BLOG_DESCRIPTION },
+};
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -31,9 +46,7 @@ export default async function BlogPage({
     <Container className="max-w-3xl py-12 sm:py-16">
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">The Nurture journal</p>
       <h1 className="mt-2 font-display text-4xl font-semibold text-foreground sm:text-5xl">Blog</h1>
-      <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
-        Guides on buying and selling preloved baby gear, care tips and stories from our community.
-      </p>
+      <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">{BLOG_DESCRIPTION}</p>
 
       {data.items.length === 0 ? (
         <div className="mt-8">

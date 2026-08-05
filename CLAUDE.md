@@ -320,6 +320,71 @@ and Shiprocket live verification (needs their account). Everything else in this 
 
 ---
 
+## Blog QA pass (2026-08-06)
+
+> Tested the blog end to end as admin. **The CRUD/API layer was already correct** — 24 live checks
+> passed first time (anon 401, seller 403, validation, duplicate slug 400, draft privacy, publish
+> cycle, republish preserving the original date, pagination bounds, delete idempotency). Everything
+> wrong was on the *published output* side. Six defects found and fixed; 77/77 API tests pass
+> (9 new), typecheck + lint clean, both apps build.
+
+**1. 16 `<h1>` tags per post, title printed twice. ✅ FIXED.** The page renders `post.title` as its
+`<h1>`, then `MarkdownContent` turned every `#` in the body into another one — the live post had
+1 page h1 + 1 duplicate + 14 section h1s, and exactly one h2. `MarkdownContent` now takes
+`headingOffset` (walks the lexed tokens and demotes headings; **not** marked's `walkTokens` option,
+which only runs for `marked.parse()`, not `marked.parser()`) and `dropTitle` (drops a leading
+heading matching the title, compared ignoring case/punctuation). Post page passes both; the admin
+Preview passes the same so it shows what a reader gets. Now 1 h1 / 14 h2. Added h4–h6 prose styles
+since everything shifted down a level.
+
+**2. Blog absent from the sitemap. ✅ FIXED.** `sitemap.xml` had `/listings`, categories and every
+listing but **zero** blog URLs — the one feature built for search traffic wasn't submitted.
+`getBlogPostsForSitemap()` paginates (the API caps pageSize at 60; one oversized page would 400 and
+silently produce no URLs — the same trap listings already documents).
+
+**3. No social tags. ✅ FIXED.** Posts now emit `og:*` (type=article, cover as `og:image`,
+`publishedTime`, author), a Twitter card, and a canonical pointing at the *current* slug. Required
+adding `metadataBase` to the root layout — without it a relative OG image can't resolve absolutely.
+
+**4. Renaming a slug killed the live URL. 🟡 FIXED, with a caveat.** A rename 404'd every existing
+link with nothing recording where the post went. New `BlogPostSlug` table (unique slug → postId,
+cascade delete); `update()` records the old slug in the same transaction, and the public lookup
+falls back to it. Live-beats-retired is enforced both ways: taking a slug deletes any history row
+for it, so a redirect can never shadow the post now sitting there. Verified live (13 checks incl.
+rename-back, another post claiming a retired slug, drafts not leaking through old slugs).
+**Caveat:** the old URL redirects via an instant client-side meta refresh, **not a 308** — the root
+`loading.tsx` makes every page stream, so the HTTP status is committed before the redirect decision.
+Moving the call into `generateMetadata` did not change it (metadata streams too in Next 16). Links
+work and the destination carries the canonical. A true 308 needs a `proxy.ts` doing a slug lookup on
+every blog request — deliberately not paid for.
+
+**5. Raw Zod text + mislabelled failures. ✅ FIXED.** The `.max()` limits still returned
+`"String must contain at most 160 character(s)"` (the friendly-message pass covered `.min()` only).
+Also `blog.service` reported *every* create/update failure as `"That slug is already in use"` —
+now only a real P2002 does; anything else propagates instead of sending the admin renaming a post to
+fix an unrelated fault.
+
+**6. Publish took up to 60s to go live. ✅ FIXED.** Public blog reads use `revalidate: 60`, so a
+publish lagged and — worse — an **unpublish or delete left the post readable** for that window.
+New `POST /api/revalidate-blog` route handler purges `/blog`, `/blog/[slug]` and `/sitemap.xml`,
+called from the admin client after every mutation. Gated on the caller's own admin token (verified
+against `GET /admin/blog`) rather than a shared secret, since the trigger runs in the browser where
+a secret would be readable. Verified: unpublishing dropped the post from list *and* detail page
+immediately; re-publishing restored both plus the sitemap entry.
+
+**Found, not fixed (pre-existing, not blog-specific):** `notFound()` returns **HTTP 200** app-wide —
+`/blog/never-existed` and `/listings/does-not-exist` both do it (same streaming cause as #4).
+Readers get the correct "We couldn't find that page" screen, but crawlers see soft 404s. Also two
+leftover **"Flow Test"** listings still carry `https://example.com/test-image.jpg`, which 404s
+through `next/image` on every page that renders them.
+
+**UX gaps noted, not fixed:** no auto-slug from the title (the admin must hand-type a
+regex-constrained slug — the first real post's slug is literally `test-1` and its author `test`);
+admin list has no view-live link, no dates and no pagination; toggling Preview collapses the page
+and strands the scroll position in blank space.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.

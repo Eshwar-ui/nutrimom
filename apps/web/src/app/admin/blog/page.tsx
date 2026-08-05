@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import type { BlogPost } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
+import { revalidateBlogPages } from "@/lib/revalidate-blog";
 import { toast } from "@/lib/toast-store";
 import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,13 @@ export default function AdminBlogPage() {
   const setPublished = useMutation({
     mutationFn: ({ id, published }: { id: string; published: boolean }) =>
       authedRequest<BlogPost>(`/admin/blog/${id}/publish`, { method: "PATCH", body: { published } }),
-    onSuccess: invalidate,
+    onSuccess: (post) => {
+      invalidate();
+      // Drops the cached public pages so the change is live immediately —
+      // especially unpublishing, which otherwise leaves the post readable.
+      void revalidateBlogPages();
+      toast.success(post.published ? "Post published" : "Post moved to draft");
+    },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Couldn't update this post."),
   });
 
@@ -31,6 +38,7 @@ export default function AdminBlogPage() {
     mutationFn: (id: string) => authedRequest(`/admin/blog/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       invalidate();
+      void revalidateBlogPages();
       toast.success("Post deleted");
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Couldn't delete this post."),

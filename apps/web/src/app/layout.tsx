@@ -17,7 +17,12 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
+// Without this, any relative image in an openGraph block (e.g. a blog cover)
+// can't be resolved to the absolute URL that social crawlers require.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "The Nurture Moms — Preloved baby & maternity marketplace",
     template: "%s · The Nurture Moms",

@@ -989,16 +989,30 @@ export interface BlogPost {
 }
 
 export const blogPostInputSchema = z.object({
-  title: z.string().min(3, "Title needs at least 3 characters").max(160),
+  title: z
+    .string()
+    .min(3, "Title needs at least 3 characters")
+    .max(160, "Keep the title to 160 characters or fewer"),
   slug: z
     .string()
     .min(2, "Enter a slug")
-    .max(160)
+    .max(160, "Keep the slug to 160 characters or fewer")
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only"),
-  excerpt: z.string().max(300).optional().or(z.literal("")),
+  excerpt: z
+    .string()
+    .max(300, "Keep the excerpt to 300 characters or fewer")
+    .optional()
+    .or(z.literal("")),
   bodyMarkdown: z.string().min(10, "Write at least 10 characters"),
-  coverImageUrl: z.string().url().optional().or(z.literal("")),
-  authorName: z.string().min(2, "Enter an author name").max(80),
+  coverImageUrl: z
+    .string()
+    .url("Enter a valid image URL")
+    .optional()
+    .or(z.literal("")),
+  authorName: z
+    .string()
+    .min(2, "Enter an author name")
+    .max(80, "Keep the author name to 80 characters or fewer"),
 });
 export type BlogPostInput = z.infer<typeof blogPostInputSchema>;
 

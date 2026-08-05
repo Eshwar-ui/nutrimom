@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getCategories, getListings } from "@/lib/listings";
+import { getBlogPostsForSitemap } from "@/lib/blog";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4000";
 
@@ -26,14 +27,16 @@ async function getListingsForSitemap() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [categories, listingItems] = await Promise.all([
+  const [categories, listingItems, blogPosts] = await Promise.all([
     getCategories().catch(() => []),
     getListingsForSitemap(),
+    getBlogPostsForSitemap(),
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/listings`, changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/blog`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${SITE_URL}/sell`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/contact`, changeFrequency: "yearly", priority: 0.3 },
@@ -56,5 +59,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...listingRoutes];
+  const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}`,
+    lastModified: post.updatedAt,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...listingRoutes];
 }

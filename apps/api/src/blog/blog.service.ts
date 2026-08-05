@@ -38,8 +38,18 @@ export class BlogService {
     };
   }
 
+  /**
+   * Resolves a post by its current slug, falling back to slugs it used to live
+   * at so old links keep working. The returned DTO always carries the *current*
+   * slug — the caller compares it to what was requested and redirects when they
+   * differ, which is what keeps the canonical URL in the address bar.
+   */
   async getPublishedBySlug(slug: string): Promise<BlogPost> {
-    const row = await this.prisma.blogPost.findUnique({ where: { slug } });
+    const row =
+      (await this.prisma.blogPost.findUnique({ where: { slug } })) ??
+      (await this.prisma.blogPostSlug
+        .findUnique({ where: { slug }, include: { post: true } })
+        .then((history) => history?.post ?? null));
     if (!row || !row.published) throw new NotFoundException('Post not found');
     return toDto(row);
   }
@@ -60,21 +70,45 @@ export class BlogService {
   }
 
   async create(input: BlogPostInput): Promise<BlogPost> {
-    const row = await this.prisma.blogPost
-      .create({ data: toCreateData(input) })
-      .catch(() => {
-        throw new BadRequestException('That slug is already in use');
+    const row = await this.prisma
+      .$transaction(async (tx) => {
+        // A live slug outranks a retired one: if some older post used to sit
+        // here, drop that redirect rather than let it shadow the new post.
+        await tx.blogPostSlug.deleteMany({ where: { slug: input.slug } });
+        return tx.blogPost.create({ data: toCreateData(input) });
+      })
+      .catch((err: unknown) => {
+        if (isUniqueViolation(err))
+          throw new BadRequestException('That slug is already in use');
+        throw err;
       });
     return toDto(row);
   }
 
   async update(id: string, input: BlogPostInput): Promise<BlogPost> {
-    const row = await this.prisma.blogPost
-      .update({ where: { id }, data: toCreateData(input) })
+    const existing = await this.prisma.blogPost.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Post not found');
+
+    const row = await this.prisma
+      .$transaction(async (tx) => {
+        if (existing.slug !== input.slug) {
+          await tx.blogPostSlug.deleteMany({ where: { slug: input.slug } });
+          // Keep the old address pointing here. upsert, not create: the post
+          // may have used this slug before and been renamed back.
+          await tx.blogPostSlug.upsert({
+            where: { slug: existing.slug },
+            create: { slug: existing.slug, postId: id },
+            update: { postId: id },
+          });
+        }
+        return tx.blogPost.update({ where: { id }, data: toCreateData(input) });
+      })
       .catch((err: unknown) => {
         if (isRecordNotFound(err))
           throw new NotFoundException('Post not found');
-        throw new BadRequestException('That slug is already in use');
+        if (isUniqueViolation(err))
+          throw new BadRequestException('That slug is already in use');
+        throw err;
       });
     return toDto(row);
   }
@@ -116,13 +150,23 @@ function toCreateData(input: BlogPostInput) {
   };
 }
 
+function prismaCode(err: unknown): string | undefined {
+  return typeof err === 'object' && err !== null && 'code' in err
+    ? (err as { code?: string }).code
+    : undefined;
+}
+
 function isRecordNotFound(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as { code?: string }).code === 'P2025'
-  );
+  return prismaCode(err) === 'P2025';
+}
+
+/**
+ * Only a real unique-constraint break is reported as a slug clash. Reporting
+ * every failure that way (as this used to) hands the admin a wrong explanation
+ * for an unrelated database error and hides the actual fault.
+ */
+function isUniqueViolation(err: unknown): boolean {
+  return prismaCode(err) === 'P2002';
 }
 
 function toDto(row: BlogPostRow): BlogPost {

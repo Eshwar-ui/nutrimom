@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, FileText, Image as ImageIcon } from "lucide-react";
 import { blogPostInputSchema, type BlogPost } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
+import { revalidateBlogPages } from "@/lib/revalidate-blog";
 import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/image-uploader";
@@ -49,6 +50,9 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
     try {
       if (postId) await authedRequest(`/admin/blog/${postId}`, { method: "PATCH", body: parsed.data });
       else await authedRequest("/admin/blog", { method: "POST", body: parsed.data });
+      // Edits to an already-published post should show on the live page now,
+      // not whenever the 60s cache window happens to lapse.
+      await revalidateBlogPages();
       router.push("/admin/blog");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Could not save this post");
@@ -90,7 +94,13 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
         </div>
         {preview ? (
           <div className="min-h-[16rem] rounded-xl border border-border p-4">
-            <MarkdownContent markdown={form.bodyMarkdown || "*Nothing to preview yet.*"} />
+            {/* Same offset/title handling as the live post page, so the
+                preview is what a reader actually gets. */}
+            <MarkdownContent
+              markdown={form.bodyMarkdown || "*Nothing to preview yet.*"}
+              headingOffset={1}
+              dropTitle={form.title}
+            />
           </div>
         ) : (
           <Textarea
