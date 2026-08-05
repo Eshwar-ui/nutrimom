@@ -296,12 +296,27 @@ export class ListingsService {
     return rows.map(toListingDto);
   }
 
-  // Moderation only ever applies to a listing awaiting review — approving or
-  // rejecting a RESERVED/SOLD listing would put an already-purchased item
-  // back in the browse pool out from under its buyer.
+  // Moderation covers reviewing a submission *and* acting on one already
+  // live: taking a policy-violating listing down, or reinstating one rejected
+  // by mistake. RESERVED and SOLD are excluded because the item is spoken for
+  // — moving it would pull an in-flight purchase out from under its buyer.
+  private static readonly MODERATABLE = [
+    'PENDING',
+    'APPROVED',
+    'REJECTED',
+  ] as const;
+
   async moderate(id: string, dto: ModerateListingInput): Promise<Listing> {
+    const before = await this.prisma.listing.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    if (!before) throw new NotFoundException('Listing not found');
+
+    // Still a guarded updateMany rather than a plain update: the status could
+    // change between the read above and this write (a buyer reserving it).
     const { count } = await this.prisma.listing.updateMany({
-      where: { id, status: 'PENDING' },
+      where: { id, status: { in: [...ListingsService.MODERATABLE] } },
       data: {
         status: dto.status,
         rejectionReason: dto.status === 'REJECTED' ? dto.reason : null,
@@ -310,22 +325,33 @@ export class ListingsService {
     if (count === 0) {
       const existing = await this.prisma.listing.findUnique({
         where: { id },
+        select: { status: true },
       });
       if (!existing) throw new NotFoundException('Listing not found');
       throw new BadRequestException(
-        'This listing is no longer awaiting review',
+        existing.status === 'SOLD'
+          ? 'This listing has sold and can no longer be moderated.'
+          : 'This listing is reserved for a buyer who is checking out. Wait for the hold to lapse, or cancel their order first.',
       );
     }
     const row = await this.prisma.listing.findUniqueOrThrow({
       where: { id },
       include: withRefs,
     });
+
+    // A listing pulled after going live is a takedown, not a review decision
+    // — telling that seller it "wasn't approved" would misdescribe it.
+    const takenDown = dto.status === 'REJECTED' && before.status === 'APPROVED';
+    const message =
+      dto.status === 'APPROVED'
+        ? `Your listing "${row.title}" is now live.`
+        : takenDown
+          ? `Your listing "${row.title}" has been removed from the marketplace: ${dto.reason}`
+          : `Your listing "${row.title}" wasn't approved: ${dto.reason}`;
     await this.notifications.create(
       row.sellerId,
       dto.status === 'APPROVED' ? 'LISTING_APPROVED' : 'LISTING_REJECTED',
-      dto.status === 'APPROVED'
-        ? `Your listing "${row.title}" is now live.`
-        : `Your listing "${row.title}" wasn't approved: ${dto.reason}`,
+      message,
       row.id,
     );
     return toListingDto(row);
@@ -404,8 +430,22 @@ export class ListingsService {
   private async assertCanList(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { registrationPaidAt: true, isSellerVerified: true },
+      select: {
+        registrationPaidAt: true,
+        isSellerVerified: true,
+        isSystemSeller: true,
+      },
     });
+
+    // The marketplace's own account is the platform, not a seller being
+    // vetted by it — there is no fee for it to pay and nobody to approve it.
+    // Admin listing creation runs through this same path (adminCreate), so
+    // without this exemption it depends on flags an admin can toggle from
+    // the Users screen: un-verifying that account silently 403s every
+    // admin-created listing with a message telling the admin to get admin
+    // approval. That is exactly how it broke.
+    if (user?.isSystemSeller) return;
+
     if (!user?.registrationPaidAt || !user.isSellerVerified) {
       throw new ForbiddenException(
         'Your seller account must be verified — registered and approved by an admin — before you can list items.',

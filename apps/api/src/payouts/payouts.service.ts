@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   splitPayout,
@@ -188,7 +193,7 @@ export class PayoutsService {
       const existing = await this.prisma.sellerPayout.findUnique({
         where: { id },
       });
-      if (!existing) throw new BadRequestException('Payout not found');
+      if (!existing) throw new NotFoundException('Payout not found');
       throw new BadRequestException(
         existing.status === 'PAID'
           ? 'This payout has already been paid'

@@ -84,6 +84,9 @@ export default function AdminUsersPage() {
                   {u.role === "ADMIN" && (
                     <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">Admin</span>
                   )}
+                  {u.isSystemSeller && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">System</span>
+                  )}
                   {!u.isSellerVerified && u.sellerVerificationRequestedAt && (
                     <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase text-gold">Requested</span>
                   )}
@@ -108,7 +111,10 @@ export default function AdminUsersPage() {
                   </p>
                 )}
               </Link>
-              {u.role !== "ADMIN" && tab === "Sellers" && (
+              {/* The Marketplace account is the platform's own seller — it
+                  bypasses the listing gate, so offering a verify toggle here
+                  only invites turning off admin listing creation. */}
+              {u.role !== "ADMIN" && !u.isSystemSeller && tab === "Sellers" && (
                 <Button
                   variant={u.isSellerVerified ? "ghost" : "outline"}
                   size="sm"

@@ -14,14 +14,40 @@ import { Label, Textarea } from "@/components/ui/primitives";
 export function RejectListingDialog({
   listingTitle,
   pending,
+  mode = "reject",
   onCancel,
   onConfirm,
 }: {
   listingTitle?: string;
   pending?: boolean;
+  /**
+   * "reject" turns down a submission still awaiting review; "takedown" pulls
+   * one that is already live. Same endpoint and same required reason, but the
+   * seller is losing a published listing rather than being asked to revise a
+   * draft, so the copy shouldn't pretend otherwise.
+   */
+  mode?: "reject" | "takedown";
   onCancel: () => void;
   onConfirm: (reason: string) => void;
 }) {
+  const copy =
+    mode === "takedown"
+      ? {
+          title: "Take this listing down?",
+          help: "It will be removed from the marketplace immediately. The seller will see this reason.",
+          confirm: "Take down",
+          busy: "Taking down…",
+          placeholder:
+            "This item is on our restricted list and can't be sold on the marketplace.",
+        }
+      : {
+          title: "Reject this listing?",
+          help: "The seller will see this reason, so be specific about what they need to change.",
+          confirm: "Reject listing",
+          busy: "Rejecting…",
+          placeholder:
+            "Photos are too blurry to judge condition — please re-upload in better light.",
+        };
   // Mounted only while open (the caller renders it conditionally), so the draft
   // starts empty every time and a previous one can't be sent by mistake.
   const [reason, setReason] = useState("");
@@ -30,13 +56,13 @@ export function RejectListingDialog({
   return (
     <Modal open onClose={onCancel} labelledBy="reject-title" describedBy="reject-help">
       <h2 id="reject-title" className="font-display text-2xl font-semibold text-foreground">
-        Reject this listing?
+        {copy.title}
       </h2>
       {listingTitle && (
         <p className="mt-1 truncate text-sm font-medium text-muted-foreground">{listingTitle}</p>
       )}
       <p id="reject-help" className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        The seller will see this reason, so be specific about what they need to change.
+        {copy.help}
       </p>
 
       <div className="mt-4">
@@ -48,7 +74,7 @@ export function RejectListingDialog({
           rows={4}
           maxLength={500}
           autoFocus
-          placeholder="Photos are too blurry to judge condition — please re-upload in better light."
+          placeholder={copy.placeholder}
           className="mt-1.5"
         />
         <p className="mt-1 text-right text-xs text-muted-foreground">{reason.length}/500</p>
@@ -63,7 +89,7 @@ export function RejectListingDialog({
           disabled={!trimmed || pending}
           onClick={() => onConfirm(trimmed)}
         >
-          {pending ? "Rejecting…" : "Reject listing"}
+          {pending ? copy.busy : copy.confirm}
         </Button>
       </div>
     </Modal>

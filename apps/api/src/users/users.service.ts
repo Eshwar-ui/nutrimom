@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   Role,
   AuthUser,
@@ -60,6 +64,7 @@ export class UsersService {
         role: u.role,
         city: u.city,
         isSellerVerified: u.isSellerVerified,
+        isSystemSeller: u.isSystemSeller,
         sellerVerificationRequestedAt:
           u.sellerVerificationRequestedAt?.toISOString() ?? null,
         registrationPaidAt: u.registrationPaidAt?.toISOString() ?? null,
@@ -145,6 +150,7 @@ export class UsersService {
       whatsappNumber: user.whatsappNumber,
       bio: user.bio,
       isSellerVerified: user.isSellerVerified,
+      isSystemSeller: user.isSystemSeller,
       sellerVerificationRequestedAt:
         user.sellerVerificationRequestedAt?.toISOString() ?? null,
       registrationPaidAt: user.registrationPaidAt?.toISOString() ?? null,
@@ -184,16 +190,25 @@ export class UsersService {
   }
 
   async verifySeller(id: string, isSellerVerified: boolean) {
-    try {
-      const u = await this.prisma.user.update({
-        where: { id },
-        // Approving (or rejecting) a request resolves it either way.
-        data: { isSellerVerified, sellerVerificationRequestedAt: null },
-      });
-      return this.toAuthUser(u);
-    } catch {
-      throw new NotFoundException('User not found');
+    const existing = await this.prisma.user.findUnique({
+      where: { id },
+      select: { isSystemSeller: true },
+    });
+    if (!existing) throw new NotFoundException('User not found');
+    // The marketplace's own account isn't a seller under review, and
+    // un-verifying it used to break admin listing creation outright.
+    if (existing.isSystemSeller) {
+      throw new BadRequestException(
+        "The Marketplace account is the platform's own seller and can't be verified or unverified.",
+      );
     }
+
+    const u = await this.prisma.user.update({
+      where: { id },
+      // Approving (or rejecting) a request resolves it either way.
+      data: { isSellerVerified, sellerVerificationRequestedAt: null },
+    });
+    return this.toAuthUser(u);
   }
 
   async requestSellerVerification(id: string): Promise<AuthUser> {

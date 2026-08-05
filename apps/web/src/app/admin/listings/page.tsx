@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, X, Star, Plus } from "lucide-react";
+import { Check, X, Star, Plus, Ban, RotateCcw } from "lucide-react";
 import { formatPaise, type Listing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
@@ -14,7 +14,9 @@ import { RejectListingDialog } from "@/components/reject-listing-dialog";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 
-const filters = ["PENDING", "APPROVED", "SOLD", "ALL"] as const;
+// Rejected is browsable so a listing taken down (or turned down) can be found
+// again and reinstated — otherwise it is only reachable under "All".
+const filters = ["PENDING", "APPROVED", "REJECTED", "SOLD", "ALL"] as const;
 
 export default function AdminListingsPage() {
   const qc = useQueryClient();
@@ -37,8 +39,11 @@ export default function AdminListingsPage() {
     onSuccess: invalidate,
   });
 
-  // Which listing is being rejected, if any — drives the reason dialog.
-  const [rejecting, setRejecting] = useState<{ id: string; title: string } | null>(null);
+  // Which listing is being rejected or taken down, if any — drives the reason
+  // dialog. `mode` only changes its copy; both send the same REJECTED update.
+  const [rejecting, setRejecting] = useState<
+    { id: string; title: string; mode: "reject" | "takedown" } | null
+  >(null);
   const feature = useMutation({
     mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
       authedRequest(`/admin/listings/${id}/feature`, { method: "PATCH", body: { isFeatured } }),
@@ -100,15 +105,30 @@ export default function AdminListingsPage() {
                       <Check className="h-4 w-4 text-primary" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Reject"
-                      onClick={() => setRejecting({ id: l.id, title: l.title })}>
+                      onClick={() => setRejecting({ id: l.id, title: l.title, mode: "reject" })}>
                       <X className="h-4 w-4 text-accent" />
                     </Button>
                   </>
                 )}
                 {l.status === "APPROVED" && (
-                  <Button variant="ghost" size="icon" aria-label="Toggle featured"
-                    onClick={() => feature.mutate({ id: l.id, isFeatured: !l.isFeatured })}>
-                    <Star className={l.isFeatured ? "h-4 w-4 fill-gold text-gold" : "h-4 w-4"} />
+                  <>
+                    <Button variant="ghost" size="icon" aria-label="Toggle featured"
+                      onClick={() => feature.mutate({ id: l.id, isFeatured: !l.isFeatured })}>
+                      <Star className={l.isFeatured ? "h-4 w-4 fill-gold text-gold" : "h-4 w-4"} />
+                    </Button>
+                    {/* Pulling a live listing that breaks policy — the one
+                        moderation action the marketplace promises but had no
+                        control for. */}
+                    <Button variant="ghost" size="icon" aria-label="Take down"
+                      onClick={() => setRejecting({ id: l.id, title: l.title, mode: "takedown" })}>
+                      <Ban className="h-4 w-4 text-danger" />
+                    </Button>
+                  </>
+                )}
+                {l.status === "REJECTED" && (
+                  <Button variant="ghost" size="icon" aria-label="Reinstate"
+                    onClick={() => moderate.mutate({ id: l.id, status: "APPROVED" })}>
+                    <RotateCcw className="h-4 w-4 text-primary" />
                   </Button>
                 )}
               </div>
@@ -120,6 +140,7 @@ export default function AdminListingsPage() {
       {rejecting && (
         <RejectListingDialog
           listingTitle={rejecting.title}
+          mode={rejecting.mode}
           pending={moderate.isPending}
           onCancel={() => setRejecting(null)}
           onConfirm={(reason) =>

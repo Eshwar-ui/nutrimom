@@ -392,7 +392,10 @@ export const listingInputSchema = z
       DeliveryOption.DELIVERY,
       DeliveryOption.BOTH,
     ]),
-    images: z.array(z.string().url()).min(1).max(10),
+    images: z
+      .array(z.string().url())
+      .min(1, "Add at least one photo")
+      .max(10, "You can add up to 10 photos"),
     // Optional: updates the seller's profile contact if provided.
     whatsappNumber: phoneNumberSchema.optional().or(z.literal("")),
   })
@@ -423,7 +426,11 @@ export const listingUpdateSchema = z.object({
   deliveryOption: z
     .enum([DeliveryOption.PICKUP, DeliveryOption.DELIVERY, DeliveryOption.BOTH])
     .optional(),
-  images: z.array(z.string().url()).min(1).max(10).optional(),
+  images: z
+    .array(z.string().url())
+    .min(1, "Add at least one photo")
+    .max(10, "You can add up to 10 photos")
+    .optional(),
 });
 export type ListingUpdateInput = z.infer<typeof listingUpdateSchema>;
 
@@ -923,6 +930,10 @@ export interface AdminUser {
   role: Role;
   city: string | null;
   isSellerVerified: boolean;
+  // The marketplace's own seller account, which owns admin-created listings.
+  // It is the platform rather than a seller under review: it bypasses the
+  // listing gate and its verification cannot be toggled.
+  isSystemSeller: boolean;
   sellerVerificationRequestedAt: string | null;
   // ISO, null until the ₹100 registration fee is paid. Approving
   // (isSellerVerified) a user before this is set has no gating effect —

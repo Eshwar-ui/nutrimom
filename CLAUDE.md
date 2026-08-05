@@ -385,6 +385,57 @@ and strands the scroll position in blank space.
 
 ---
 
+## Admin-surface QA pass (2026-08-06)
+
+> Swept all 10 admin areas — 96 live checks (authz boundary, CRUD, validation
+> bounds, state guards, data integrity) plus a browser pass over every page. **95/96
+> passed.** Three defects fixed; 87/87 API tests pass (10 new), typecheck + lint clean,
+> both apps build.
+
+**1. Admin listing creation was 403ing outright. ✅ FIXED.** `POST /admin/listings` →
+`adminCreate()` → `create(marketplaceId)` → `assertCanList()`, so admin-created listings were
+subject to the *seller* monetization gate applied to the platform's own **Marketplace** account.
+That account is listed as an ordinary seller in admin → Users → Sellers with a working **Unverify**
+button; someone had clicked it, so `isSellerVerified` was `false` and every admin listing failed
+with *"Your seller account must be verified — registered and approved by an admin"* — told to an
+admin. Now: `assertCanList` exempts `isSystemSeller` (the platform is not a seller it vets, and the
+path must not depend on a togglable flag); `verifySeller` 400s on a system seller; the admin Users
+row shows a **SYSTEM** badge with no toggle; the flag was repaired in the DB. Also gave
+`listingInputSchema.images` real messages — an empty photo list returned raw Zod text.
+
+**2. A live listing could never be taken down. ✅ FIXED.** `moderate()` matched
+`where: { id, status: 'PENDING' }`, so an APPROVED listing returned 400 *"no longer awaiting
+review"*, and there is no admin DELETE route — **once live, nothing could remove a listing.** That
+contradicts the marketplace policy in §7 (*reject policy-violating listings · remove fraudulent
+sellers*), and admin-created listings are auto-APPROVED so they could never be withdrawn at all.
+Moderation now spans PENDING/APPROVED/REJECTED — takedown and reinstate — while **RESERVED and SOLD
+stay excluded** (the original rationale still holds: the item is spoken for, and moving it would
+pull an in-flight purchase out from under its buyer). The seller notification distinguishes a
+takedown from a review verdict rather than telling someone their published listing "wasn't
+approved". Web: a **Take down** control on live rows, **Reinstate** on rejected ones, a new
+**Rejected** filter tab so they're reachable, and the reason dialog takes a `mode` for takedown copy.
+
+**3. Payout not-found returned 400. ✅ FIXED.** `markPaid` threw `BadRequestException('Payout not
+found')` — now `NotFoundException`, matching every other admin route.
+
+**Verified live:** admin create 201 → APPROVED → in public browse; takedown 200 → out of browse +
+404 on the detail page; reinstate → back in browse; takedown without a reason 400; seller 403;
+SOLD listing still refused (*"has sold and can no longer be moderated"*); payout bogus id 404.
+
+**⚠️ Data note:** an earlier crashed run of the battery left the live `CancellationPolicy` in a test
+state (36h / 55% / reason codes reading "QA reason") and the retry snapshotted those as "original".
+It was restored to the **schema defaults** (24h / 100% / 48h + the five standard reason codes), not
+to whatever preceded it — if the operator had customised that policy, it must be re-entered at
+`/admin/settings`. Payout policy and business profile round-tripped unchanged.
+
+**Coverage gaps, not closed:** the 96-check battery is ad-hoc and does not run in CI; no unit tests
+exist for categories, contact messages, or settings validation. The two most business-critical admin
+actions — completing a valid order transition and marking a payout PAID — are irreversible on live
+data, so they were exercised only through rejection paths and remain proven only by mocked unit
+tests. A seeded test database is the prerequisite for testing those for real.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
