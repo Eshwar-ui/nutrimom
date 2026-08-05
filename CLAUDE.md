@@ -548,9 +548,19 @@ missing listing.
 `/auth/forgot-password` return **200** by design (explicit `@HttpCode`), and duplicate
 registration returns **409**, which is more correct than the 400 the harness assumed.
 
-**Minor, not fixed:** the listing detail page shows *"Used for: 0"* when `usageDuration` is unset;
-checkout placeholders (`Bengaluru`, `Karnataka`, `560001`) read like prefilled values when only
-Full name is actually prefilled.
+**Checkout address polish. ✅ FIXED (2026-08-06).** Placeholders were bare examples
+(`Bengaluru`, `Karnataka`, `560001`) that read as an address already filled in — the worst form to
+be ambiguous on, since a buyer who skips it ships to the wrong place. All are now prefixed
+`e.g.`, and every field carries the right `autoComplete` token (`address-line1`, `postal-code`,
+`address-level1/2`, …) so browser autofill actually works, which is the real fix for an address
+form. **Found while verifying:** the Full name prefill was *silently flaky* — `defaultValues` is
+captured on the first render, which happens before the auth store hydrates, so arriving at
+`/checkout` by a fresh page load left it blank while clicking through from the cart filled it. Now
+set from a `useEffect` once the user resolves, guarded so it never overwrites what the buyer typed.
+
+**"Used for: 0" was not a code bug.** `listing-detail.tsx` already guards on
+`listing.usageDuration`, and the seller form already suggests `"8 months"` — one seeded test
+listing simply has the literal string `"0"` in that free-text column. Data, not code; left alone.
 
 ---
 

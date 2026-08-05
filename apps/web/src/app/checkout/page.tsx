@@ -58,6 +58,8 @@ export default function CheckoutPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<ShippingAddress>({
     resolver: zodResolver(shippingAddressSchema),
@@ -65,6 +67,16 @@ export default function CheckoutPage() {
     reValidateMode: "onChange",
     defaultValues: { country: "India", fullName: user?.name ?? "" },
   });
+
+  // defaultValues is captured on the first render, which happens before the
+  // auth store has hydrated — so arriving at /checkout by a fresh page load
+  // (rather than clicking through from the cart) left the name blank. Fill it
+  // once the user resolves, but never over something already typed.
+  useEffect(() => {
+    if (user?.name && !getValues("fullName")) {
+      setValue("fullName", user.name);
+    }
+  }, [user, getValues, setValue]);
 
   if (!authHydrated || !cartHydrated || !user) return <Container className="py-16"><PageSkeleton rows={3} /></Container>;
   if (items.length === 0) {
@@ -195,8 +207,12 @@ export default function CheckoutPage() {
         <Card className="p-6">
           <h2 className="font-display text-xl font-semibold text-foreground">Delivery address</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {/* Placeholders are prefixed "e.g." throughout. Bare examples
+                like "Bengaluru" or "560001" read as an address already filled
+                in — dangerous on the one form where getting it wrong sends
+                the parcel to the wrong place. Only Full name is prefilled. */}
             <Field label="Full name" error={errors.fullName?.message} className="sm:col-span-2">
-              <Input {...register("fullName")} placeholder="Jane Mother" />
+              <Input {...register("fullName")} autoComplete="name" placeholder="e.g. Jane Mother" />
             </Field>
             <Field label="Phone" error={errors.phone?.message}>
               <Input
@@ -205,23 +221,48 @@ export default function CheckoutPage() {
                 inputMode="numeric"
                 autoComplete="tel-national"
                 aria-invalid={!!errors.phone}
-                placeholder="+91 98765 43210"
+                placeholder="e.g. 98765 43210"
               />
             </Field>
             <Field label="Postal code" error={errors.postalCode?.message}>
-              <Input {...register("postalCode")} placeholder="560001" />
+              <Input
+                {...register("postalCode")}
+                inputMode="numeric"
+                autoComplete="postal-code"
+                aria-invalid={!!errors.postalCode}
+                placeholder="e.g. 560001"
+              />
             </Field>
             <Field label="Address line 1" error={errors.line1?.message} className="sm:col-span-2">
-              <Input {...register("line1")} placeholder="Flat / house, street" />
+              <Input
+                {...register("line1")}
+                autoComplete="address-line1"
+                aria-invalid={!!errors.line1}
+                placeholder="e.g. Flat 4B, 12 MG Road"
+              />
             </Field>
             <Field label="Address line 2 (optional)" error={errors.line2?.message} className="sm:col-span-2">
-              <Input {...register("line2")} placeholder="Area, landmark" />
+              <Input
+                {...register("line2")}
+                autoComplete="address-line2"
+                placeholder="e.g. Near Indiranagar Metro"
+              />
             </Field>
             <Field label="City" error={errors.city?.message}>
-              <Input {...register("city")} placeholder="Bengaluru" />
+              <Input
+                {...register("city")}
+                autoComplete="address-level2"
+                aria-invalid={!!errors.city}
+                placeholder="e.g. Bengaluru"
+              />
             </Field>
             <Field label="State" error={errors.state?.message}>
-              <Input {...register("state")} placeholder="Karnataka" />
+              <Input
+                {...register("state")}
+                autoComplete="address-level1"
+                aria-invalid={!!errors.state}
+                placeholder="e.g. Karnataka"
+              />
             </Field>
             <Field label="Country" error={errors.country?.message}>
               <Input {...register("country")} />
