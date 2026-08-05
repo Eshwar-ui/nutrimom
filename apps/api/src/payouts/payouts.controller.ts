@@ -49,7 +49,10 @@ export class AdminPayoutsController {
 
   @Get()
   list(@Query('status') status?: string) {
-    if (status !== undefined && !(status in PayoutStatus)) {
+    // Object.hasOwn, not `in` — PayoutStatus is a plain object, so `in` also
+    // matches inherited prototype keys. `?status=constructor` would sail past
+    // an `in` check, reach Prisma, and surface as a 500 instead of a 400.
+    if (status !== undefined && !Object.hasOwn(PayoutStatus, status)) {
       throw new BadRequestException('Unknown payout status');
     }
     return this.payouts.listForAdmin(status as PayoutStatus | undefined);

@@ -50,7 +50,16 @@ const envSchema = z.object({
   // Where unhandled server errors are POSTed as JSON. Optional — unset means
   // errors are logged only. Any JSON sink works (Slack/Discord incoming
   // webhook, Better Stack, Axiom); see ErrorReporter.
-  ERROR_WEBHOOK_URL: z.string().url().optional(),
+  //
+  // HTTPS enforced: the payload carries stack traces and the acting user's id,
+  // so a plain-http sink would put those on the wire in the clear.
+  ERROR_WEBHOOK_URL: z
+    .string()
+    .url()
+    .refine((v) => v.startsWith('https://'), {
+      message: 'ERROR_WEBHOOK_URL must be https — it carries stack traces',
+    })
+    .optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

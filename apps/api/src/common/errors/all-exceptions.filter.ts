@@ -29,20 +29,31 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request & { user?: RequestUser }>();
 
+    // 4xx is the API talking to a client — its body is written for them, so
+    // it passes through untouched.
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      // 5xx thrown deliberately (e.g. a failed gateway call) is still a fault
-      // worth alerting on, even though it carries a curated message.
-      if (status >= SERVER_ERROR) {
-        this.report(exception, req, status);
+      if (status < SERVER_ERROR) {
+        res.status(status).json(exception.getResponse());
+        return;
       }
-      res.status(status).json(exception.getResponse());
+      // A deliberate 5xx is still a fault: report it, and answer with the
+      // same generic body as any other server error. Its curated message may
+      // read as safe, but nothing guarantees that — an InternalServerError
+      // raised deep in a provider can carry vendor payloads or connection
+      // strings, and this is the one place that can guarantee it doesn't ship.
+      this.report(exception, req, status);
+      this.sendGeneric(res, status);
       return;
     }
 
     this.report(exception, req, HttpStatus.INTERNAL_SERVER_ERROR);
-    res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+    this.sendGeneric(res, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+
+  private sendGeneric(res: Response, statusCode: number) {
+    res.status(statusCode).json({
+      statusCode,
       error: 'Internal Server Error',
       message: 'Something went wrong on our end. Please try again.',
     });

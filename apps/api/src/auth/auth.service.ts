@@ -72,9 +72,15 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Invalid refresh token');
     // Revocation check. A token minted before the user's current
     // tokenVersion is dead — that's how password reset and "sign out
-    // everywhere" kill sessions they can't otherwise reach. `tv` is optional
-    // so tokens issued before this shipped keep working until they expire.
-    if (payload.tv !== undefined && payload.tv !== user.tokenVersion) {
+    // everywhere" kill sessions they can't otherwise reach.
+    //
+    // A *missing* `tv` is rejected too, not waved through. Treating it as
+    // "legacy, allow" would have meant any refresh token minted before this
+    // shipped could still mint fresh tokens after a password reset — a
+    // revocation feature with a hole in it is worse than none, because it
+    // reads as protection. The cost is that sessions predating this deploy
+    // have to sign in once more, which is the correct outcome anyway.
+    if (payload.tv !== user.tokenVersion) {
       throw new UnauthorizedException(
         'This session has been signed out. Please sign in again.',
       );

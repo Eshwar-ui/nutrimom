@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -83,21 +84,20 @@ export class MembershipExpiryService implements OnModuleInit, OnModuleDestroy {
         }
 
         if (membership.expiresAt <= now) {
-          await this.notifications.create(
+          const sent = await this.notifyOnce(
+            membership.id,
+            // Stamp both: a window that lapsed before the warning sweep could
+            // reach it must not then emit a pointless "expiring soon" notice.
+            { expiredNoticeSentAt: null },
+            {
+              expiredNoticeSentAt: now,
+              expiryWarningSentAt: membership.expiryWarningSentAt ?? now,
+            },
             membership.userId,
             'MEMBERSHIP_EXPIRED',
             'Your seller membership has expired, so you can no longer create new listings. Renew any time to start listing again.',
           );
-          await this.prisma.sellerMembership.update({
-            where: { id: membership.id },
-            // Stamp both: a window that lapsed before the warning sweep could
-            // reach it must not then emit a pointless "expiring soon" notice.
-            data: {
-              expiredNoticeSentAt: now,
-              expiryWarningSentAt: membership.expiryWarningSentAt ?? now,
-            },
-          });
-          expired++;
+          if (sent) expired++;
         } else {
           const days = Math.max(
             1,
@@ -105,16 +105,15 @@ export class MembershipExpiryService implements OnModuleInit, OnModuleDestroy {
               (membership.expiresAt.getTime() - now.getTime()) / DAY_MS,
             ),
           );
-          await this.notifications.create(
+          const sent = await this.notifyOnce(
+            membership.id,
+            { expiryWarningSentAt: null },
+            { expiryWarningSentAt: now },
             membership.userId,
             'MEMBERSHIP_EXPIRING',
             `Your seller membership expires in ${days} day${days === 1 ? '' : 's'}. Renew to keep listing without a break.`,
           );
-          await this.prisma.sellerMembership.update({
-            where: { id: membership.id },
-            data: { expiryWarningSentAt: now },
-          });
-          warned++;
+          if (sent) warned++;
         }
       }
 
@@ -128,5 +127,33 @@ export class MembershipExpiryService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(`Membership expiry sweep failed: ${String(err)}`);
       return { warned: 0, expired: 0 };
     }
+  }
+
+  /**
+   * Send one notice and stamp the membership as notified, atomically.
+   *
+   * The stamp is *claimed* first, conditional on it still being unset, so two
+   * overlapping sweeps can't both send. The notification is then created in
+   * the same transaction — if it fails, the stamp rolls back with it and the
+   * next sweep retries, rather than leaving a membership marked as notified
+   * for a notice that never arrived. Returns whether this call sent it.
+   */
+  private async notifyOnce(
+    membershipId: string,
+    unsentWhere: Prisma.SellerMembershipWhereInput,
+    stamp: Prisma.SellerMembershipUpdateManyMutationInput,
+    userId: string,
+    type: 'MEMBERSHIP_EXPIRING' | 'MEMBERSHIP_EXPIRED',
+    message: string,
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.sellerMembership.updateMany({
+        where: { id: membershipId, ...unsentWhere },
+        data: stamp,
+      });
+      if (claimed.count === 0) return false; // another sweep got there first
+      await this.notifications.create(userId, type, message, null, null, tx);
+      return true;
+    });
   }
 }

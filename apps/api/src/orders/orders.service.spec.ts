@@ -4,7 +4,14 @@ import type { PaymentProvider } from '../payments/payment-provider.interface';
 
 function makeService() {
   const tx = {
-    order: { findUnique: jest.fn(), update: jest.fn() },
+    order: {
+      findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      update: jest.fn(),
+      // Defaults to a successful claim; a test that wants to simulate losing
+      // the race overrides it with { count: 0 }.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     listing: { updateMany: jest.fn() },
     shipment: { count: jest.fn().mockResolvedValue(0), updateMany: jest.fn() },
   };
@@ -303,7 +310,10 @@ describe('OrdersService — buyer confirms delivery', () => {
   it('releases the seller payout from hold and notifies them', async () => {
     const { svc, tx, payouts, notifications } = makeService();
     tx.order.findUnique.mockResolvedValue(shippedOrder);
-    tx.order.update.mockResolvedValue({ ...shippedOrder, status: 'DELIVERED' });
+    tx.order.findUniqueOrThrow.mockResolvedValue({
+      ...shippedOrder,
+      status: 'DELIVERED',
+    });
 
     const result = await svc.confirmDelivery('b1', 'o1');
 
@@ -339,6 +349,20 @@ describe('OrdersService — buyer confirms delivery', () => {
     await expect(svc.confirmDelivery('b1', 'o1')).rejects.toBeInstanceOf(
       BadRequestException,
     );
+    expect(payouts.markPayableForOrder).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing when a concurrent confirmation won the transition', async () => {
+    const { svc, tx, payouts, notifications } = makeService();
+    tx.order.findUnique.mockResolvedValue(shippedOrder);
+    // Both callers read SHIPPED; this one loses the conditional update. Without
+    // the claim, each seller would get a duplicate "delivery confirmed" notice.
+    tx.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(svc.confirmDelivery('b1', 'o1')).rejects.toThrow(
+      'already marked delivered',
+    );
+    expect(notifications.create).not.toHaveBeenCalled();
     expect(payouts.markPayableForOrder).not.toHaveBeenCalled();
   });
 

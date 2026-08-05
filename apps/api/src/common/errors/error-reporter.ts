@@ -67,6 +67,11 @@ export class ErrorReporter {
         environment: this.environment,
         ...error,
       }),
+      // Don't follow redirects. The env schema pins the configured URL to
+      // https, but a redirect would move the payload — stack trace and user
+      // id included — to a host nobody vetted, possibly over plain http.
+      // Failing the delivery is the safer outcome; the caller logs it.
+      redirect: 'error',
       signal: AbortSignal.timeout(5000),
     });
   }

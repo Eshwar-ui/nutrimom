@@ -16,6 +16,10 @@ const API = 'https://apiv2.shiprocket.in/v1/external';
 // Shiprocket tokens are valid for 10 days; refresh well before that rather
 // than discovering expiry on a seller's label request.
 const TOKEN_TTL_MS = 8 * 24 * 60 * 60 * 1000;
+// Bounded deadline on every call. Without one a stalled connection holds the
+// seller's label request open indefinitely — three chained calls per label
+// means three chances to hang.
+const REQUEST_TIMEOUT_MS = 15_000;
 
 interface LoginResponse {
   token: string;
@@ -110,7 +114,9 @@ export class ShiprocketProvider implements ShippingProvider {
       0,
     );
     return {
-      order_id: order.orderNumber,
+      // Per (order, seller), not the bare order number — Shiprocket rejects a
+      // duplicate active reference, so two sellers on one order would clash.
+      order_id: order.reference,
       order_date: order.createdAt.toISOString().slice(0, 10),
       pickup_location: this.config.get('SHIPROCKET_PICKUP_LOCATION', {
         infer: true,
@@ -128,7 +134,7 @@ export class ShiprocketProvider implements ShippingProvider {
       shipping_is_billing: true,
       order_items: order.items.map((i) => ({
         name: i.title,
-        sku: `${order.orderNumber}-${i.title.slice(0, 12)}`,
+        sku: `${order.reference}-${i.title.slice(0, 12)}`,
         units: 1,
         selling_price: i.unitPriceInPaise / 100,
       })),
@@ -178,6 +184,7 @@ export class ShiprocketProvider implements ShippingProvider {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   }
 
@@ -192,6 +199,7 @@ export class ShiprocketProvider implements ShippingProvider {
         email: this.config.get('SHIPROCKET_EMAIL', { infer: true }),
         password: this.config.get('SHIPROCKET_PASSWORD', { infer: true }),
       }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) {
       this.logger.error(`Shiprocket auth failed: ${res.status}`);

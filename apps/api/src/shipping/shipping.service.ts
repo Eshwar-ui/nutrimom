@@ -100,10 +100,42 @@ export class ShippingService {
       select: { name: true, city: true, whatsappNumber: true },
     });
 
+    const existing = await this.prisma.shipment.findUnique({
+      where: { orderId_sellerId: { orderId, sellerId } },
+      select: {
+        id: true,
+        status: true,
+        courier: true,
+        trackingId: true,
+        labelUrl: true,
+      },
+    });
+
+    // A courier-booked shipment is already real: an AWB exists and the label
+    // is hosted at a URL. Re-printing must hand back that same label rather
+    // than book a second consignment — the seller would otherwise end up with
+    // two AWBs for one parcel, and the aggregator rejects a duplicate
+    // reference anyway. The manual provider stores no labelUrl, so it falls
+    // through and simply re-renders its HTML, which is free and correct.
+    if (existing?.labelUrl && existing.trackingId) {
+      return {
+        shipmentId: existing.id,
+        status: existing.status,
+        courier: existing.courier ?? this.provider.name,
+        trackingId: existing.trackingId,
+        labelUrl: existing.labelUrl,
+        labelHtml: null,
+      };
+    }
+
     const label = await this.provider.createLabel(
       {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        // Unique per (order, seller) — an order can span sellers, and each
+        // seller's parcel is its own consignment. Sending the bare order
+        // number would make two sellers collide on one courier reference.
+        reference: `${order.orderNumber}-${sellerId.slice(-6)}`,
         createdAt: order.createdAt,
         buyerName: order.buyer.name,
         shippingAddress: order.shippingAddress as unknown as ShippingAddress,
@@ -120,10 +152,6 @@ export class ShippingService {
     );
 
     // Don't downgrade an already-shipped shipment back to LABEL_GENERATED.
-    const existing = await this.prisma.shipment.findUnique({
-      where: { orderId_sellerId: { orderId, sellerId } },
-      select: { status: true },
-    });
     const status =
       existing?.status === 'SHIPPED' || existing?.status === 'DELIVERED'
         ? existing.status
