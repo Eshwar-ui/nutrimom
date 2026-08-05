@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { WishlistService } from './wishlist.service';
 
 function makeService() {
@@ -5,8 +6,10 @@ function makeService() {
     wishlistItem: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
-      create: jest.fn(),
-      delete: jest.fn(),
+      // Resolves by default — toggle() chains .catch() onto the create to
+      // turn a stale listing id into a 404, so the mock has to be thenable.
+      create: jest.fn().mockResolvedValue({ id: 'w1' }),
+      delete: jest.fn().mockResolvedValue({ id: 'w1' }),
     },
   };
   const svc = new WishlistService(prisma as any);
@@ -36,6 +39,32 @@ describe('WishlistService — toggle', () => {
       where: { id: 'w1' },
     });
     expect(prisma.wishlistItem.create).not.toHaveBeenCalled();
+  });
+
+  it('404s a listing that no longer exists instead of throwing a 500', async () => {
+    const { svc, prisma } = makeService();
+    prisma.wishlistItem.findUnique.mockResolvedValue(null);
+    // Foreign-key violation: the shop page was open when the item was
+    // deleted or taken down, and the client sent a stale id.
+    prisma.wishlistItem.create.mockRejectedValue(
+      Object.assign(new Error('fk'), { code: 'P2003' }),
+    );
+
+    await expect(svc.toggle('u1', 'gone')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('does not disguise an unrelated database failure as a missing listing', async () => {
+    const { svc, prisma } = makeService();
+    prisma.wishlistItem.findUnique.mockResolvedValue(null);
+    prisma.wishlistItem.create.mockRejectedValue(
+      Object.assign(new Error('connection lost'), { code: 'P1001' }),
+    );
+
+    await expect(svc.toggle('u1', 'l1')).rejects.not.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('scopes the lookup to the acting user, not just the listing', async () => {

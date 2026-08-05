@@ -519,6 +519,41 @@ returns 47, admin orders/payouts read empty, and **admin listing creation still 
 
 ---
 
+## Buyer-surface QA pass (2026-08-06)
+
+> 64 live checks across discovery, wishlist, checkout, order isolation, payment,
+> reviews, cancellation and account, plus a full browser journey (shop → detail →
+> bag → cart → checkout → Razorpay test modal). **60/64 passed**; three of the four
+> "failures" were wrong expectations in the harness, not defects. One real bug found
+> and fixed; 93/93 API tests pass (2 new), typecheck + lint clean, both apps build.
+
+**The money path holds.** Creating an order flips the listing APPROVED → RESERVED and out of
+public browse, and **a second buyer racing for the same item gets 400** rather than both reaching
+payment. Cancelling releases the hold back to APPROVED and into browse. `POST /payments/order`
+returns a real `order_*` id and **reuses it on retry** (no duplicate gateway orders); a forged
+signature is rejected and leaves the order PENDING; the webhook rejects a bad HMAC. Buyer
+isolation is clean — B cannot read, cancel, confirm delivery on, or pay for A's order, and
+notifications and wishlists never overlap.
+
+**Wishlisting a stale listing id returned 500. ✅ FIXED.** `WishlistService.toggle()` called
+`create()` with no guard, so a listing id that no longer exists hit the foreign key unhandled —
+the buyer got a server error and it reported to the error webhook as a genuine fault. Reachable
+in ordinary use, and more so now that admins can take a live listing down: a buyer with the shop
+page open clicks the heart on a removed item. Now catches **P2003** and returns 404 *"That item is
+no longer available"*. Caught rather than pre-checked so the same answer holds when the listing
+disappears mid-request; an unrelated DB error still propagates rather than being disguised as a
+missing listing.
+
+**Not defects — harness expectations that were wrong:** `POST /contact` and
+`/auth/forgot-password` return **200** by design (explicit `@HttpCode`), and duplicate
+registration returns **409**, which is more correct than the 400 the harness assumed.
+
+**Minor, not fixed:** the listing detail page shows *"Used for: 0"* when `usageDuration` is unset;
+checkout placeholders (`Bengaluru`, `Karnataka`, `560001`) read like prefilled values when only
+Full name is actually prefilled.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.
