@@ -255,6 +255,11 @@ model CancellationPolicy {
   cutoffHours      Int      @default(24)
   reasonCodes      String[] @default(["Changed my mind", "Ordered by mistake", "Found a better price elsewhere", "Seller delay", "Other"])
   refundPercentage Int      @default(100)
+  // How long after delivery a buyer may raise a condition dispute ("not as
+  // described"). Unlike the fields above this one is NOT enforced anywhere in
+  // code — there is no dispute-raising endpoint yet, so it is the published
+  // promise on the refunds page only. Wire it into that flow when it exists.
+  conditionDisputeHours Int @default(48)
   updatedAt        DateTime @updatedAt
 }
 

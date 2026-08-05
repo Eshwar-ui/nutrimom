@@ -258,6 +258,7 @@ function CancellationPolicyForm({ policy }: { policy: CancellationPolicy }) {
   const qc = useQueryClient();
   const [cutoffHours, setCutoffHours] = useState(policy.cutoffHours);
   const [refundPercentage, setRefundPercentage] = useState(policy.refundPercentage);
+  const [conditionDisputeHours, setConditionDisputeHours] = useState(policy.conditionDisputeHours);
   const [reasonCodes, setReasonCodes] = useState<string[]>(policy.reasonCodes);
   const [newReason, setNewReason] = useState("");
 
@@ -281,6 +282,7 @@ function CancellationPolicyForm({ policy }: { policy: CancellationPolicy }) {
   const dirty =
     cutoffHours !== policy.cutoffHours ||
     refundPercentage !== policy.refundPercentage ||
+    conditionDisputeHours !== policy.conditionDisputeHours ||
     JSON.stringify(reasonCodes) !== JSON.stringify(policy.reasonCodes);
 
   return (
@@ -314,6 +316,24 @@ function CancellationPolicyForm({ policy }: { policy: CancellationPolicy }) {
         />
         <p className="mt-1.5 text-xs text-muted-foreground">
           Portion of the payment refunded when a paid order is cancelled. 100 = full refund.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="condition-dispute-hours">Condition dispute window (hours after delivery)</Label>
+        <Input
+          id="condition-dispute-hours"
+          type="number"
+          min={1}
+          max={24 * 90}
+          value={conditionDisputeHours}
+          onChange={(e) => setConditionDisputeHours(Number(e.target.value))}
+          className="mt-1.5 max-w-[10rem]"
+        />
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          How long a buyer has to report that an item arrived &quot;not as described&quot;. This is
+          published on the <a href="/refunds" className="font-medium text-accent-text hover:underline">refund policy page</a> —
+          it is a promise to buyers, not yet enforced in code, since there is no dispute-raising flow.
         </p>
       </div>
 
@@ -363,7 +383,9 @@ function CancellationPolicyForm({ policy }: { policy: CancellationPolicy }) {
       <div className="flex items-center gap-3 border-t border-border pt-5">
         <Button
           disabled={!dirty || reasonCodes.length === 0 || save.isPending}
-          onClick={() => save.mutate({ cutoffHours, refundPercentage, reasonCodes })}
+          onClick={() =>
+            save.mutate({ cutoffHours, refundPercentage, conditionDisputeHours, reasonCodes })
+          }
         >
           {save.isPending ? "Saving…" : "Save changes"}
         </Button>

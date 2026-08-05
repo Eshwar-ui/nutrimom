@@ -27,6 +27,7 @@ function makeService() {
       cutoffHours: 24,
       reasonCodes: ['Changed my mind'],
       refundPercentage: 100,
+      conditionDisputeHours: 48,
       updatedAt: new Date().toISOString(),
     }),
   };
@@ -250,6 +251,7 @@ describe('OrdersService — buyer cancel', () => {
       cutoffHours: 24,
       reasonCodes: ['Changed my mind'],
       refundPercentage: 50,
+      conditionDisputeHours: 48,
       updatedAt: new Date().toISOString(),
     });
     tx.order.findUnique.mockResolvedValue({

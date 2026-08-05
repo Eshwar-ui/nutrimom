@@ -112,6 +112,7 @@ function toDto(row: CancellationPolicyRow): CancellationPolicy {
     cutoffHours: row.cutoffHours,
     reasonCodes: row.reasonCodes,
     refundPercentage: row.refundPercentage,
+    conditionDisputeHours: row.conditionDisputeHours,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
