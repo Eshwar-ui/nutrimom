@@ -14,6 +14,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PayoutsService } from '../payouts/payouts.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -27,6 +28,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly orders: OrdersService,
     private readonly notifications: NotificationsService,
+    private readonly payouts: PayoutsService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
 
@@ -215,6 +217,11 @@ export class PaymentsService {
             'one or more items in your order became unavailable before payment completed',
         };
       }
+
+      // Record what we now owe each seller, in the same transaction that
+      // took the buyer's money — a settled sale must never exist without its
+      // corresponding debt.
+      await this.payouts.createForOrder(tx, order.id, order.items);
 
       for (const { item } of claims) {
         await this.notifications.create(

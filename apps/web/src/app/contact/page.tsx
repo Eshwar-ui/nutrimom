@@ -15,10 +15,12 @@ import { Playful } from "@/components/ui/playful";
 import { DecorativeElement } from "@/components/decorative-element";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 import { ContactForm } from "@/components/contact-form";
+import { getBusinessProfile, legalMetadata } from "@/lib/business-profile";
+import { isBusinessProfileComplete } from "@nutrimom/shared";
 
-export const metadata = { title: "Contact us", robots: { index: false, follow: false } };
+export const generateMetadata = () => legalMetadata("Contact us");
 
-const details = [
+const baseDetails = [
   {
     icon: PackageSearch,
     label: "Order support",
@@ -51,19 +53,31 @@ const details = [
     tape: "left-10 -rotate-3",
     lift: "sm:mt-6",
   },
-  {
-    icon: Store,
-    label: "Business information",
-    body: "Operator and registered contact details will be published here before public launch.",
-    paper: "bg-lavender/50",
-    sticker: "bg-lavender text-[#4a3170]",
-    rotate: "-rotate-1",
-    tape: "right-8 rotate-6",
-    lift: "",
-  },
 ];
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const profile = await getBusinessProfile();
+  const published = isBusinessProfileComplete(profile);
+
+  // The business card carries the operator's real details once they exist,
+  // and otherwise says plainly that they don't yet — never a stand-in address.
+  const details = [
+    ...baseDetails,
+    {
+      icon: Store,
+      label: "Business information",
+      body:
+        published && profile
+          ? `${profile.legalEntityName}. ${profile.registeredAddress}. ${profile.supportEmail} · ${profile.supportPhone}`
+          : "Operator and registered contact details will be published here before public launch.",
+      paper: "bg-lavender/50",
+      sticker: "bg-lavender text-[#4a3170]",
+      rotate: "-rotate-1",
+      tape: "right-8 rotate-6",
+      lift: "",
+    },
+  ];
+
   return (
     <>
       {/* Hero */}
@@ -114,9 +128,11 @@ export default function ContactPage() {
         <DecorativeElement src="/images/bg-element-dotted-trail.png" className="-right-24 top-8 hidden w-[26rem] opacity-30 xl:block" />
         <DecorativeElement src="/images/bg-element-peach-onesie.png" className="-left-8 bottom-8 hidden w-28 -rotate-6 opacity-35 lg:block" />
         <Container className="relative max-w-4xl pb-16">
-          <Reveal>
-            <LegalPlaceholderBanner />
-          </Reveal>
+          {!published && (
+            <Reveal>
+              <LegalPlaceholderBanner />
+            </Reveal>
+          )}
           <div className="grid gap-6 sm:grid-cols-2">
             {details.map((d, i) => (
               <Reveal key={d.label} delay={i * 0.08} className={d.lift}>

@@ -18,6 +18,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
+import { PayoutsService } from '../payouts/payouts.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -53,6 +54,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly settings: SettingsService,
+    private readonly payouts: PayoutsService,
     @Inject(PAYMENT_PROVIDER) private readonly paymentProvider: PaymentProvider,
   ) {}
 
@@ -238,6 +240,59 @@ export class OrdersService {
   }
 
   /**
+   * Buyer confirms the parcel arrived. Previously DELIVERED was reachable
+   * only by an admin editing each order by hand, which doesn't survive any
+   * real volume — and it gates the seller's payout, so leaving it to an admin
+   * meant sellers waited on admin data entry to get paid.
+   *
+   * Only the buyer's own SHIPPED order can move, and the same side effects
+   * run as the admin path: shipments cascade to DELIVERED and the seller's
+   * payout leaves hold.
+   */
+  async confirmDelivery(buyerId: string, id: string): Promise<Order> {
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: withItems,
+      });
+      if (!order) throw new NotFoundException('Order not found');
+      if (order.buyerId !== buyerId) throw new ForbiddenException();
+      if (order.status !== 'SHIPPED') {
+        throw new BadRequestException(
+          order.status === 'DELIVERED'
+            ? 'This order is already marked delivered'
+            : 'This order has not shipped yet',
+        );
+      }
+
+      await tx.shipment.updateMany({
+        where: { orderId: id },
+        data: { status: 'DELIVERED' },
+      });
+      await this.payouts.markPayableForOrder(tx, id);
+
+      for (const item of order.items) {
+        await this.notifications.create(
+          item.sellerId,
+          'ITEM_SOLD',
+          `The buyer confirmed delivery of "${item.listingTitle}". Your payout is now due.`,
+          item.listingId,
+          order.id,
+          tx,
+        );
+      }
+
+      return tx.order.update({
+        where: { id },
+        data: { status: 'DELIVERED' },
+        include: withItems,
+      });
+    });
+
+    return toOrderDto(updated);
+  }
+
+  /**
    * Shared cancel body for both buyer- and admin-initiated cancellation:
    * flip the order to CANCELLED and release only the listings this order is
    * still the recorded `holdOrderId` for (never another order's claim, even
@@ -257,6 +312,9 @@ export class OrdersService {
       data: { status: 'CANCELLED', cancellationReason: reason },
       include: withItems,
     });
+
+    // The items go back to their sellers unsold, so nothing is owed on them.
+    await this.payouts.cancelForOrder(tx, order.id);
 
     for (const item of order.items) {
       const released = await tx.listing.updateMany({
@@ -474,6 +532,7 @@ export class OrdersService {
             tx,
           );
         }
+        await this.payouts.createForOrder(tx, order.id, order.items);
         const updated = await tx.order.update({
           where: { id },
           data: { status: 'PAID' },
@@ -487,6 +546,8 @@ export class OrdersService {
           where: { orderId: id },
           data: { status: 'DELIVERED' },
         });
+        // The buyer has the goods — the hold ends and the seller is now owed.
+        await this.payouts.markPayableForOrder(tx, id);
       }
 
       const updated = await tx.order.update({

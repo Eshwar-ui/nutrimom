@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
@@ -18,8 +18,11 @@ import { ShippingModule } from './shipping/shipping.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SettingsModule } from './settings/settings.module';
+import { PayoutsModule } from './payouts/payouts.module';
 import { BlogModule } from './blog/blog.module';
 import { ContactModule } from './contact/contact.module';
+import { ErrorReporter } from './common/errors/error-reporter';
+import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -44,10 +47,18 @@ import { AppService } from './app.service';
     NotificationsModule,
     ReviewsModule,
     SettingsModule,
+    PayoutsModule,
     BlogModule,
     ContactModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    ErrorReporter,
+    // Global: every unhandled fault is reported once, from one place, and
+    // internal error text never reaches a client.
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+  ],
 })
 export class AppModule {}

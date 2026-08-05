@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, MessageCircleQuestion } from "lucide-react";
+import { ArrowRight, Building2, MessageCircleQuestion } from "lucide-react";
+import { isBusinessProfileComplete } from "@nutrimom/shared";
 import { Container } from "@/components/ui/primitives";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
+import { getBusinessProfile } from "@/lib/business-profile";
 
 export interface LegalSection {
   id: string;
@@ -19,10 +21,16 @@ export const legalPages = [
 
 /**
  * Shared shell for long-form legal pages (terms, privacy, refunds): eyebrow +
- * title, cross-page rail, the placeholder banner, a sticky table of contents,
- * and numbered sections with anchor targets. Pure anchor nav — no client JS.
+ * title, cross-page rail, a sticky table of contents, numbered sections with
+ * anchor targets, and the operator's statutory contact block. Pure anchor nav
+ * — no client JS.
+ *
+ * Async because the operator's business identity lives in the DB rather than
+ * in this file: a policy page has to name a real entity, address and
+ * grievance officer, and until it can, the draft banner stays up and
+ * `legalMetadata` keeps the page out of the index.
  */
-export function LegalDoc({
+export async function LegalDoc({
   title,
   lastUpdated,
   currentHref,
@@ -36,6 +44,8 @@ export function LegalDoc({
   sections: LegalSection[];
 }) {
   const related = legalPages.filter((p) => p.href !== currentHref);
+  const profile = await getBusinessProfile();
+  const published = isBusinessProfileComplete(profile);
 
   return (
     <Container className="py-12 sm:py-14">
@@ -48,9 +58,11 @@ export function LegalDoc({
         <p className="mt-3 text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
       </header>
 
-      <div className="mt-8">
-        <LegalPlaceholderBanner />
-      </div>
+      {!published && (
+        <div className="mt-8">
+          <LegalPlaceholderBanner />
+        </div>
+      )}
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_14rem]">
         {/* Document */}
@@ -68,6 +80,55 @@ export function LegalDoc({
               </div>
             </section>
           ))}
+
+          {/* Statutory operator details. Indian e-commerce rules require the
+              legal entity, registered address and a named grievance officer
+              to appear on the policy pages themselves. */}
+          {published && profile && (
+            <section id="operator-details" className="scroll-mt-28">
+              <h2 className="flex items-center gap-3 font-display text-xl font-semibold text-foreground">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <Building2 className="h-4 w-4" strokeWidth={2} />
+                </span>
+                Operator &amp; grievance contact
+              </h2>
+              <div className="mt-2.5 space-y-3 pl-10 text-sm leading-relaxed text-muted-foreground">
+                <p>
+                  This marketplace is operated by{" "}
+                  <span className="font-medium text-foreground">{profile.legalEntityName}</span>
+                  {profile.tradeName && profile.tradeName !== profile.legalEntityName && (
+                    <> trading as <span className="font-medium text-foreground">{profile.tradeName}</span></>
+                  )}
+                  .
+                </p>
+                <div>
+                  <p className="font-medium text-foreground">Registered address</p>
+                  <address className="whitespace-pre-line not-italic">{profile.registeredAddress}</address>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Grievance officer</p>
+                  <p>
+                    {profile.grievanceOfficerName} ·{" "}
+                    <a href={`mailto:${profile.grievanceOfficerEmail}`}>{profile.grievanceOfficerEmail}</a>
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Customer support</p>
+                  <p>
+                    <a href={`mailto:${profile.supportEmail}`}>{profile.supportEmail}</a> ·{" "}
+                    <a href={`tel:${profile.supportPhone.replace(/\s/g, "")}`}>{profile.supportPhone}</a>
+                  </p>
+                </div>
+                {(profile.gstin || profile.cin) && (
+                  <p className="text-xs">
+                    {profile.gstin && <>GSTIN: {profile.gstin}</>}
+                    {profile.gstin && profile.cin && " · "}
+                    {profile.cin && <>CIN: {profile.cin}</>}
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Questions callout */}
           <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-2/60 p-5 sm:flex-row sm:items-center sm:justify-between">

@@ -75,6 +75,13 @@ enum ShipmentStatus {
   DELIVERED
 }
 
+enum PayoutStatus {
+  PENDING // order paid but still cancellable — not yet owed
+  PAYABLE // order delivered — the marketplace owes this seller
+  PAID // transferred out, reference recorded
+  CANCELLED // order cancelled; the item went back to the seller unsold
+}
+
 enum NotificationType {
   LISTING_APPROVED
   LISTING_REJECTED
@@ -83,6 +90,8 @@ enum NotificationType {
   ORDER_CANCELLED // to the seller
   PAYMENT_REFUNDED // to the buyer
   SELLER_REGISTERED // to the admin, on the ₹100 registration payment
+  MEMBERSHIP_EXPIRING // to the seller, before their listing window lapses
+  MEMBERSHIP_EXPIRED // to the seller, once it has lapsed
 }
 
 model User {
@@ -103,6 +112,12 @@ model User {
   // Monetization: ₹100 one-time registration fee gate (paid online). Must be
   // set before a seller can buy a membership plan or create listings.
   registrationPaidAt            DateTime?
+  // Bumped to invalidate every refresh token already issued to this user —
+  // on password reset, and on an explicit "sign out everywhere". Refresh
+  // tokens carry the value they were minted with and are rejected on
+  // mismatch. Access tokens are not checked against it (that would mean a DB
+  // read per request); their 15-minute TTL is what bounds the window.
+  tokenVersion                  Int            @default(0)
   listings                      Listing[]
   orders                        Order[]
   wishlist                      WishlistItem[]
@@ -111,6 +126,7 @@ model User {
   reviewsReceived               Review[]       @relation("ReviewsReceived")
   sellerPayments                SellerPayment[]
   memberships                   SellerMembership[]
+  payouts                       SellerPayout[]
   passwordResetTokens           PasswordResetToken[]
   createdAt                     DateTime       @default(now())
 }
@@ -214,6 +230,7 @@ model Order {
   items             OrderItem[]
   reviews           Review[]
   shipments         Shipment[]
+  payouts           SellerPayout[]
   heldListings      Listing[]   @relation("ListingHold")
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -239,6 +256,37 @@ model CancellationPolicy {
   reasonCodes      String[] @default(["Changed my mind", "Ordered by mistake", "Found a better price elsewhere", "Seller delay", "Other"])
   refundPercentage Int      @default(100)
   updatedAt        DateTime @updatedAt
+}
+
+// Single global row (id is always "global") — the operator's real business
+// identity, required on the legal pages by Indian e-commerce rules and by
+// Razorpay's own KYC. The legal pages stay `noindex` with a draft banner
+// until every required field here is filled in, so half-finished policies
+// can never be published or indexed. Fields start empty on purpose: seeding
+// a plausible-looking company name would be worse than an obvious blank.
+model BusinessProfile {
+  id                    String   @id @default("global")
+  legalEntityName       String   @default("")
+  tradeName             String   @default("")
+  registeredAddress     String   @default("")
+  supportEmail          String   @default("")
+  supportPhone          String   @default("")
+  grievanceOfficerName  String   @default("")
+  grievanceOfficerEmail String   @default("")
+  // Optional — not every operator is GST-registered or incorporated.
+  gstin                 String?
+  cin                   String?
+  updatedAt             DateTime @updatedAt
+}
+
+// Single global row (id is always "global") — the marketplace's commission,
+// in basis points so rates like 5.5% (550) need no floats. Read once per sale
+// and snapshotted onto each SellerPayout, so changing it never moves money
+// that has already been earned.
+model PayoutPolicy {
+  id            String   @id @default("global")
+  commissionBps Int      @default(1000) // 10%
+  updatedAt     DateTime @updatedAt
 }
 
 model OrderItem {
@@ -323,9 +371,41 @@ model SellerMembership {
   startsAt  DateTime       @default(now())
   expiresAt DateTime
   createdAt DateTime       @default(now())
+  // Set once by MembershipExpiryService so a seller is warned once, not on
+  // every sweep. Only ever stamped on the user's latest-expiring row, since
+  // stacked purchases mean earlier rows are already superseded.
+  expiryWarningSentAt DateTime?
+  expiredNoticeSentAt DateTime?
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// What the marketplace owes one seller for one order — the ledger behind
+// "buyer pays us, we pay the seller". One row per (order, seller), created in
+// the same transaction that marks the order PAID, so a settled sale can never
+// exist without its corresponding debt. Amounts are snapshots: commissionBps
+// is the rate at sale time, and gross = commission + net exactly.
+model SellerPayout {
+  id                 String       @id @default(cuid())
+  order              Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId            String
+  seller             User         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId           String
+  status             PayoutStatus @default(PENDING)
+  grossInPaise       Int
+  commissionBps      Int
+  commissionInPaise  Int
+  netInPaise         Int
+  // Transfer reference (UTR / bank ref) recorded by the admin on payout.
+  reference          String?
+  paidAt             DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([orderId, sellerId])
+  @@index([sellerId])
+  @@index([status])
 }
 
 // One seller's shippable portion of an order (an order may span sellers). The

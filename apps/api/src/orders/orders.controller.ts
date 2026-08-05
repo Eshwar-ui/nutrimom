@@ -57,6 +57,11 @@ export class OrdersController {
   ) {
     return this.orders.cancel(user.id, id, dto);
   }
+
+  @Patch(':id/confirm-delivery')
+  confirmDelivery(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.orders.confirmDelivery(user.id, id);
+  }
 }
 
 @Controller('admin/orders')

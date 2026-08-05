@@ -6,7 +6,7 @@ function makeService() {
   const tx = {
     order: { findUnique: jest.fn(), update: jest.fn() },
     listing: { updateMany: jest.fn() },
-    shipment: { count: jest.fn().mockResolvedValue(0) },
+    shipment: { count: jest.fn().mockResolvedValue(0), updateMany: jest.fn() },
   };
   const prisma = {
     order: { findUnique: jest.fn(), update: jest.fn() },
@@ -30,13 +30,28 @@ function makeService() {
       updatedAt: new Date().toISOString(),
     }),
   };
+  const payouts = {
+    createForOrder: jest.fn(),
+    cancelForOrder: jest.fn(),
+    markPayableForOrder: jest.fn(),
+  };
   const svc = new OrdersService(
     prisma as any,
     notifications as any,
     settings as any,
+    payouts as any,
     provider,
   );
-  return { svc, prisma, tx, notifications, provider, refund, settings };
+  return {
+    svc,
+    prisma,
+    tx,
+    notifications,
+    provider,
+    refund,
+    settings,
+    payouts,
+  };
 }
 
 describe('OrdersService — admin updateStatus transitions', () => {
@@ -268,5 +283,73 @@ describe('OrdersService — buyer cancel', () => {
     await svc.cancel('b1', 'o1', validReason);
 
     expect(refund).toHaveBeenCalledWith('pay_1', 20000);
+  });
+});
+
+describe('OrdersService — buyer confirms delivery', () => {
+  const shippedOrder = {
+    id: 'o1',
+    buyerId: 'b1',
+    orderNumber: 'NM-20260805-001',
+    status: 'SHIPPED',
+    totalInPaise: 40000,
+    shippingAddress: {},
+    createdAt: new Date(),
+    items: [{ listingId: 'l1', listingTitle: 'Pram', sellerId: 's1' }],
+  };
+
+  it('releases the seller payout from hold and notifies them', async () => {
+    const { svc, tx, payouts, notifications } = makeService();
+    tx.order.findUnique.mockResolvedValue(shippedOrder);
+    tx.order.update.mockResolvedValue({ ...shippedOrder, status: 'DELIVERED' });
+
+    const result = await svc.confirmDelivery('b1', 'o1');
+
+    expect(result.status).toBe('DELIVERED');
+    expect(tx.shipment.updateMany).toHaveBeenCalledWith({
+      where: { orderId: 'o1' },
+      data: { status: 'DELIVERED' },
+    });
+    expect(payouts.markPayableForOrder).toHaveBeenCalledWith(tx, 'o1');
+    expect(notifications.create).toHaveBeenCalledWith(
+      's1',
+      'ITEM_SOLD',
+      expect.stringContaining('payout is now due'),
+      'l1',
+      'o1',
+      tx,
+    );
+  });
+
+  it("rejects confirming someone else's order", async () => {
+    const { svc, tx } = makeService();
+    tx.order.findUnique.mockResolvedValue(shippedOrder);
+
+    await expect(
+      svc.confirmDelivery('someone-else', 'o1'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('refuses to confirm an order that has not shipped', async () => {
+    const { svc, tx, payouts } = makeService();
+    tx.order.findUnique.mockResolvedValue({ ...shippedOrder, status: 'PAID' });
+
+    await expect(svc.confirmDelivery('b1', 'o1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(payouts.markPayableForOrder).not.toHaveBeenCalled();
+  });
+
+  it('is not a way to re-trigger a payout on an already-delivered order', async () => {
+    const { svc, tx, payouts } = makeService();
+    tx.order.findUnique.mockResolvedValue({
+      ...shippedOrder,
+      status: 'DELIVERED',
+    });
+
+    await expect(svc.confirmDelivery('b1', 'o1')).rejects.toThrow(
+      'already marked delivered',
+    );
+    expect(payouts.markPayableForOrder).not.toHaveBeenCalled();
   });
 });

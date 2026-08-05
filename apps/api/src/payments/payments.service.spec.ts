@@ -40,13 +40,15 @@ function makeService() {
   const refund = jest
     .spyOn(provider, 'refund')
     .mockResolvedValue({ refundId: 'rfnd_1' });
+  const payouts = { createForOrder: jest.fn() };
   const svc = new PaymentsService(
     prisma as any,
     orders as any,
     notifications as any,
+    payouts as any,
     provider,
   );
-  return { svc, prisma, tx, orders, notifications, provider, refund };
+  return { svc, prisma, tx, orders, notifications, provider, refund, payouts };
 }
 
 describe('PaymentsService — money path', () => {

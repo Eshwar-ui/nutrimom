@@ -1,8 +1,14 @@
+import type { BusinessProfile } from "@nutrimom/shared";
 import { LegalDoc, type LegalSection } from "@/components/legal-doc";
+import { getBusinessProfile, legalMetadata } from "@/lib/business-profile";
 
-export const metadata = { title: "Privacy Policy", robots: { index: false, follow: false } };
+export const generateMetadata = () => legalMetadata("Privacy Policy");
 
-const sections: LegalSection[] = [
+// The grievance officer is named from the business profile — the same source
+// the publish gate checks — so this page can't go live still promising to
+// name one later.
+function buildSections(profile: BusinessProfile | null): LegalSection[] {
+  return [
   {
     id: "what-we-collect",
     title: "What we collect",
@@ -64,23 +70,40 @@ const sections: LegalSection[] = [
   {
     id: "grievance-officer",
     title: "Grievance Officer",
-    body: (
+    body: profile?.grievanceOfficerName ? (
+      <p>
+        Complaints about how your personal data is handled can be raised with{" "}
+        <strong className="font-medium text-foreground">
+          {profile.grievanceOfficerName}
+        </strong>
+        {", "}
+        our appointed Grievance Officer, at{" "}
+        <a href={`mailto:${profile.grievanceOfficerEmail}`}>
+          {profile.grievanceOfficerEmail}
+        </a>
+        . We acknowledge complaints within 48 hours and aim to resolve them
+        within 30 days, as required under Indian law. Full contact details are
+        set out at the end of this document.
+      </p>
+    ) : (
       <p>
         The marketplace operator must publish the appointed Grievance Officer,
         registered address and verified grievance email before public launch.
       </p>
     ),
   },
-];
+  ];
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const profile = await getBusinessProfile();
   return (
     <LegalDoc
       title="Privacy Policy"
-      lastUpdated="11 July 2026"
+      lastUpdated="5 August 2026"
       currentHref="/privacy"
       intro="What we collect, how we use it, and the choices you have over your personal data."
-      sections={sections}
+      sections={buildSections(profile)}
     />
   );
 }

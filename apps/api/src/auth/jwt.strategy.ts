@@ -10,6 +10,13 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: Role;
+  /**
+   * User.tokenVersion at mint time. Checked on refresh only — verifying it on
+   * every access-token request would add a DB read to every authenticated
+   * call. Optional so tokens issued before this shipped still validate; they
+   * simply can't be revoked (and expire within the refresh TTL anyway).
+   */
+  tv?: number;
 }
 
 @Injectable()

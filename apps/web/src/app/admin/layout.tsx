@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardCheck, Users, ClipboardList, Tags, Settings, Newspaper, MessageSquare } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Users, ClipboardList, Tags, Settings, Newspaper, MessageSquare, Banknote } from "lucide-react";
 import { useRequireAuth } from "@/lib/use-auth";
 import { AdminHeader } from "@/components/admin-header";
 import { Container } from "@/components/ui/primitives";
@@ -15,6 +15,7 @@ const tabs = [
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/orders", label: "Orders", icon: ClipboardList },
+  { href: "/admin/payouts", label: "Payouts", icon: Banknote },
   { href: "/admin/blog", label: "Blog", icon: Newspaper },
   { href: "/admin/messages", label: "Messages", icon: MessageSquare },
   { href: "/admin/settings", label: "Settings", icon: Settings },

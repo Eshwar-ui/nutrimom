@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
   forgotPasswordSchema,
@@ -13,6 +13,11 @@ import {
   type ResetPasswordInput,
 } from '@nutrimom/shared';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import {
+  CurrentUser,
+  type RequestUser,
+} from '../common/decorators/current-user.decorator';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -38,6 +43,14 @@ export class AuthController {
   @HttpCode(200)
   refresh(@Body(new ZodValidationPipe(refreshSchema)) dto: RefreshInput) {
     return this.auth.refresh(dto.refreshToken);
+  }
+
+  /** Sign out everywhere — kills every refresh token this user holds. */
+  @Post('logout-all')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  logoutAll(@CurrentUser() user: RequestUser) {
+    return this.auth.revokeSessions(user.id);
   }
 
   @Post('forgot-password')
