@@ -436,6 +436,56 @@ tests. A seeded test database is the prerequisite for testing those for real.
 
 ---
 
+## Seller-surface QA pass (2026-08-06)
+
+> 57 live checks across the seller API (auth boundary, listing lifecycle, ownership
+> isolation, billing gate, fulfilment guards, payouts) plus a browser pass over every
+> `/account/*` page. **57/57 passed** — no security or isolation defect. Two behavioural
+> bugs found and fixed; 91/91 API tests pass (5 new), typecheck + lint clean, both apps build.
+
+**Ownership isolation is sound.** Seller B gets 403 editing or deleting seller A's listing
+(price verifiably unchanged after the attempt); listing sets, payout ledgers and sales lists have
+zero cross-seller overlap; sellers get 403 on admin moderation and the admin payout queue. The
+listing gate holds end to end: a fresh account is refused listing creation, reports `canList:false`,
+and is refused a membership before registration. Editing a *live* listing correctly returns it to
+PENDING and pulls it from public browse until re-approved.
+
+**1. An admin status override stranded the seller's fulfilment state. ✅ FIXED.** The seller flow
+(generate label → mark shipped) and `PATCH /admin/orders/:id/status` are two paths to the same
+outcome and diverged: `updateMany` only touches rows that already exist, so an order advanced by an
+admin before its seller ever opened fulfilment ended up **SHIPPED with no Shipment row at all**
+(found live: `NM-20260713-002`). The seller's Sales page then read "Awaiting label" and offered to
+label a parcel the marketplace already considered gone. New `OrdersService.cascadeShipments()`
+brings every seller in the order up to the order's status, **creating the row when missing**
+(`labelUrl` stays null — no label was ever made, and the row should record what actually happened)
+and **never downgrading** a seller who is further along. Wired into the admin SHIPPED and DELIVERED
+transitions and the buyer's confirm-delivery path. Verified live: admin PAID→SHIPPED on a throwaway
+order now produces a `SHIPPED` shipment row where nothing existed before.
+
+**2. `markShipped` reported a missing order as a missing label. ✅ FIXED.** It looked up the
+`Shipment` and never the `Order`, so a non-existent order, an order the seller has no part in, and a
+genuinely label-less one all returned **400 "Generate the shipping label first"**. Now mirrors
+`generateLabel`'s order of checks — 404 *Order not found*, 403 *You have no items in this order*,
+then the 400. Verified live both ways.
+
+**Not fixed — two orders still carry the old inconsistency:** `NM-20260713-002` (SHIPPED) and
+`NM-20260728-008` (DELIVERED) each miss a Shipment row for one seller. The code fix prevents new
+occurrences but does not backfill; those sellers still see "Awaiting label". A one-shot backfill
+(create the missing rows at the order's status) is safe but was left as the operator's call.
+
+**Not fixed — 4 listings stuck SOLD.** `Stretchy Wrap Carrier`, `Cloth Books`, `Bedtime Story
+Collection`, `Peek-a-Boo Flap Books` are SOLD while their only orders are PENDING with
+`razorpayOrderId: null` — pre-payment-era COD orders, all stamped `updatedAt 2026-07-30T14:39:20`
+(the backfill migration). **Legacy data, not a live bug**: the current cancel path was verified to
+restore listings to APPROVED. But the consequence is live — those sellers cannot edit or relist
+them (`"Sold listings cannot be edited"`), and the dashboard reads "Sold 1 / Revenue ₹0".
+
+**Minor, not fixed:** `/account/membership` tells an already-verified seller "An admin will verify
+your account before you can start listing" (unconditional copy); `/sell` shows skeletons for ~6s
+while the billing gate resolves.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.

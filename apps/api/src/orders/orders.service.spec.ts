@@ -13,7 +13,15 @@ function makeService() {
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     listing: { updateMany: jest.fn() },
-    shipment: { count: jest.fn().mockResolvedValue(0), updateMany: jest.fn() },
+    shipment: {
+      count: jest.fn().mockResolvedValue(0),
+      updateMany: jest.fn(),
+      // Defaults to "this order has no shipment rows yet" — the state an
+      // admin-advanced order is in before any seller opens fulfilment.
+      findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
   };
   const prisma = {
     order: { findUnique: jest.fn(), update: jest.fn() },
@@ -61,6 +69,103 @@ function makeService() {
     payouts,
   };
 }
+
+type ShipmentWrite = { data: { sellerId?: string; status: string } };
+
+/** Typed view of what cascadeShipments wrote, so assertions stay type-safe. */
+const shipmentWrites = (fn: jest.Mock): ShipmentWrite['data'][] =>
+  (fn.mock.calls as unknown as [ShipmentWrite][]).map(([arg]) => arg.data);
+
+describe('OrdersService — an admin advance carries shipments with it', () => {
+  const paidOrder = (items: { sellerId: string }[]) => ({
+    id: 'o1',
+    buyerId: 'b1',
+    orderNumber: 'NM-20260805-002',
+    status: 'PAID',
+    totalInPaise: 40000,
+    shippingAddress: {},
+    createdAt: new Date(),
+    items: items.map((i, n) => ({
+      ...i,
+      listingId: `l${n}`,
+      listingTitle: `Item ${n}`,
+    })),
+  });
+
+  it('creates a shipment row for a seller who never opened fulfilment', async () => {
+    const { svc, tx } = makeService();
+    tx.order.findUnique.mockResolvedValue(paidOrder([{ sellerId: 's1' }]));
+    tx.order.update.mockResolvedValue({ ...paidOrder([]), status: 'SHIPPED' });
+    tx.order.findUniqueOrThrow.mockResolvedValue({
+      ...paidOrder([]),
+      status: 'SHIPPED',
+    });
+
+    await svc.updateStatus('o1', { status: 'SHIPPED' });
+
+    // Previously nothing was created — the order went SHIPPED while the
+    // seller's Sales page still read "Awaiting label".
+    expect(shipmentWrites(tx.shipment.create)).toContainEqual(
+      expect.objectContaining({ sellerId: 's1', status: 'SHIPPED' }),
+    );
+  });
+
+  it('covers every seller on a multi-seller order', async () => {
+    const { svc, tx } = makeService();
+    tx.order.findUnique.mockResolvedValue(
+      paidOrder([{ sellerId: 's1' }, { sellerId: 's2' }]),
+    );
+    tx.order.update.mockResolvedValue({ ...paidOrder([]), status: 'SHIPPED' });
+    tx.order.findUniqueOrThrow.mockResolvedValue({
+      ...paidOrder([]),
+      status: 'SHIPPED',
+    });
+
+    await svc.updateStatus('o1', { status: 'SHIPPED' });
+
+    expect(tx.shipment.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('advances a shipment that is behind the order', async () => {
+    const { svc, tx } = makeService();
+    tx.order.findUnique.mockResolvedValue(paidOrder([{ sellerId: 's1' }]));
+    tx.order.update.mockResolvedValue({ ...paidOrder([]), status: 'SHIPPED' });
+    tx.order.findUniqueOrThrow.mockResolvedValue({
+      ...paidOrder([]),
+      status: 'SHIPPED',
+    });
+    tx.shipment.findMany.mockResolvedValue([
+      { id: 'sh1', sellerId: 's1', status: 'LABEL_GENERATED', shippedAt: null },
+    ]);
+
+    await svc.updateStatus('o1', { status: 'SHIPPED' });
+
+    expect(tx.shipment.create).not.toHaveBeenCalled();
+    expect(shipmentWrites(tx.shipment.update)).toContainEqual(
+      expect.objectContaining({ status: 'SHIPPED' }),
+    );
+  });
+
+  it('never drags a seller backwards', async () => {
+    const { svc, tx } = makeService();
+    tx.order.findUnique.mockResolvedValue(paidOrder([{ sellerId: 's1' }]));
+    tx.order.update.mockResolvedValue({ ...paidOrder([]), status: 'SHIPPED' });
+    tx.order.findUniqueOrThrow.mockResolvedValue({
+      ...paidOrder([]),
+      status: 'SHIPPED',
+    });
+    // This seller has already delivered; the order-level move to SHIPPED
+    // must not undo that.
+    tx.shipment.findMany.mockResolvedValue([
+      { id: 'sh1', sellerId: 's1', status: 'DELIVERED', shippedAt: new Date() },
+    ]);
+
+    await svc.updateStatus('o1', { status: 'SHIPPED' });
+
+    expect(tx.shipment.update).not.toHaveBeenCalled();
+    expect(tx.shipment.create).not.toHaveBeenCalled();
+  });
+});
 
 describe('OrdersService — admin updateStatus transitions', () => {
   it('rejects an illegal transition', async () => {
@@ -318,10 +423,11 @@ describe('OrdersService — buyer confirms delivery', () => {
     const result = await svc.confirmDelivery('b1', 'o1');
 
     expect(result.status).toBe('DELIVERED');
-    expect(tx.shipment.updateMany).toHaveBeenCalledWith({
-      where: { orderId: 'o1' },
-      data: { status: 'DELIVERED' },
-    });
+    // Goes through cascadeShipments now, which also creates the row when a
+    // seller never opened the fulfilment screen.
+    expect(shipmentWrites(tx.shipment.create)).toContainEqual(
+      expect.objectContaining({ sellerId: 's1', status: 'DELIVERED' }),
+    );
     expect(payouts.markPayableForOrder).toHaveBeenCalledWith(tx, 'o1');
     expect(notifications.create).toHaveBeenCalledWith(
       's1',

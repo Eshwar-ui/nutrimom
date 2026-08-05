@@ -281,10 +281,7 @@ export class OrdersService {
         throw new BadRequestException('This order is already marked delivered');
       }
 
-      await tx.shipment.updateMany({
-        where: { orderId: id },
-        data: { status: 'DELIVERED' },
-      });
+      await this.cascadeShipments(tx, id, order.items, 'DELIVERED');
       await this.payouts.markPayableForOrder(tx, id);
 
       for (const item of order.items) {
@@ -316,6 +313,47 @@ export class OrdersService {
    * ITEM_SOLD notice in the first place. Refunding is the caller's job —
    * this runs inside the DB transaction and the gateway call can't.
    */
+  /**
+   * Brings every seller's shipment in this order up to `status`.
+   *
+   * The seller fulfilment flow (generate label → mark shipped) and the admin's
+   * status override are two paths to the same outcome, and they used to
+   * diverge: `updateMany` only touches rows that already exist, so an order
+   * advanced by an admin before its seller ever opened the fulfilment screen
+   * ended up SHIPPED with no Shipment row at all. Creating the missing row
+   * records what actually happened — no label was ever generated, so
+   * `labelUrl` stays null, but the seller sees the true state instead of
+   * being invited to label a parcel that has already gone.
+   *
+   * Never downgrades: a seller who is further along than the order-level
+   * status keeps their position.
+   */
+  private async cascadeShipments(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    items: { sellerId: string }[],
+    status: 'SHIPPED' | 'DELIVERED',
+  ) {
+    const rank = { PENDING: 0, LABEL_GENERATED: 1, SHIPPED: 2, DELIVERED: 3 };
+    const existing = await tx.shipment.findMany({ where: { orderId } });
+    const bySeller = new Map(existing.map((s) => [s.sellerId, s]));
+
+    for (const sellerId of new Set(items.map((i) => i.sellerId))) {
+      const current = bySeller.get(sellerId);
+      const shippedAt = status === 'SHIPPED' ? new Date() : undefined;
+      if (!current) {
+        await tx.shipment.create({
+          data: { orderId, sellerId, status, shippedAt },
+        });
+      } else if (rank[current.status] < rank[status]) {
+        await tx.shipment.update({
+          where: { id: current.id },
+          data: { status, shippedAt: current.shippedAt ?? shippedAt },
+        });
+      }
+    }
+  }
+
   private async cancelWithinTx(
     tx: Prisma.TransactionClient,
     order: OrderRow,
@@ -556,11 +594,15 @@ export class OrdersService {
         return { updated, wasPaid: false };
       }
 
+      // An admin can advance an order without any seller touching the
+      // fulfilment screen, so bring their shipments along with it. Without
+      // this, a SHIPPED order could sit against a seller whose Sales page
+      // still reads "Awaiting label" and offers to generate one for a parcel
+      // the marketplace already considers gone.
+      if (dto.status === 'SHIPPED' || dto.status === 'DELIVERED') {
+        await this.cascadeShipments(tx, id, order.items, dto.status);
+      }
       if (dto.status === 'DELIVERED') {
-        await tx.shipment.updateMany({
-          where: { orderId: id },
-          data: { status: 'DELIVERED' },
-        });
         // The buyer has the goods — the hold ends and the seller is now owed.
         await this.payouts.markPayableForOrder(tx, id);
       }

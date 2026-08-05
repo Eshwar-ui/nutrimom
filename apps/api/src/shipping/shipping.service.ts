@@ -199,6 +199,21 @@ export class ShippingService {
    */
   async markShipped(sellerId: string, orderId: string): Promise<SellerSale> {
     await this.prisma.$transaction(async (tx) => {
+      // Same order of checks as generateLabel. Reading only the Shipment (as
+      // this used to) collapsed three different situations into one wrong
+      // answer: a missing order, an order the seller has no part in, and a
+      // genuinely label-less one all returned 400 "Generate the shipping
+      // label first" — telling a seller to make a label for an order that
+      // isn't theirs or doesn't exist.
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { items: { select: { sellerId: true } } },
+      });
+      if (!order) throw new NotFoundException('Order not found');
+      if (!order.items.some((i) => i.sellerId === sellerId)) {
+        throw new ForbiddenException('You have no items in this order');
+      }
+
       const shipment = await tx.shipment.findUnique({
         where: { orderId_sellerId: { orderId, sellerId } },
       });
