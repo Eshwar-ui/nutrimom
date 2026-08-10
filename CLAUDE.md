@@ -645,6 +645,88 @@ request), which is invisible to a crawler.
 
 ---
 
+## Baseline SEO pass (2026-08-10)
+
+> The site had the *shape* of SEO — a sitemap, a robots.txt, per-page titles — built on a
+> constant that was wrong in production. Fixed that, then made every public page carry a
+> canonical, a real description, a social card and structured data. Verified against a
+> production build served locally (72 sitemap URLs, per-page head inspected); typecheck +
+> lint clean, build passes.
+
+**1. Every canonical and sitemap URL on the live site said `localhost:4000`. ✅ FIXED — the
+big one.** `NEXT_PUBLIC_SITE_URL` was read in three files with a `?? "http://localhost:4000"`
+fallback and **was never set on Vercel**, so `https://www.thenurturemoms.com/sitemap.xml`
+was submitting localhost URLs, `metadataBase` resolved OG images to localhost, and the blog's
+canonical tags pointed at a machine no crawler can reach. The canonical origin now lives in
+[lib/seo.ts](apps/web/src/lib/seo.ts) as `PRODUCTION_URL`, used as the fallback when
+`NODE_ENV === "production"` (dev still gets localhost), and `layout.tsx`, `robots.ts` and
+`sitemap.ts` all import it instead of re-declaring it. Setting the env var still overrides —
+but production is correct without it.
+
+**2. One metadata builder, because Next replaces `openGraph` rather than merging it.**
+`pageMetadata()` in `lib/seo.ts` emits canonical + full OG + Twitter card together. The trap
+it removes is documented in the Next docs and was already live in the codebase: the blog set
+`openGraph: { title, description, url }`, which **silently dropped** the site name, locale and
+image inherited from the root layout. Also there: `metaDescription()` (collapse + cut at a word
+boundary) and `privateMetadata()` for noindex pages. Deliberately **no `alternates.canonical`
+on the root layout** — metadata is inherited, so that would canonicalise every page to home.
+
+**3. Structured data. ✅ NEW.** [lib/structured-data.ts](apps/web/src/lib/structured-data.ts)
++ a `JsonLd` component that escapes `<` (listing titles and seller names are user-supplied).
+Home renders `OnlineStore` (contact block filled from `BusinessProfile`, omitted entirely while
+it's incomplete) + `WebSite` with a sitelinks `SearchAction` pointing at the real
+`/listings?search=`. Listing pages render `Product` + `Offer` — price converted from paise to
+decimal rupees, `availability` mapping **RESERVED → OutOfStock** (a live hold is genuinely not
+purchasable), `itemCondition` mapping the three used grades to `UsedCondition`. No brand or GTIN:
+these are one-of-a-kind secondhand goods and inventing identifiers to silence a rich-result
+warning would be a lie about the item. Breadcrumbs on listing, category, seller and blog pages;
+`BlogPosting` on posts.
+
+**4. Facet URLs no longer compete with the pages they duplicate.** `/listings` takes eight
+filter/sort/page params — every combination was indexable and canonical-less. Faceted variants
+are now `noindex, follow` (crawled, so the listings are still discovered; not indexed, so they
+don't compete with `/listings` and the category pages). Bare `/listings` stays canonical.
+
+**5. Private surfaces are noindex, not just disallowed.** robots.txt gained `/orders`,
+`/wishlist`, `/login`, `/register`, `/forgot-password`, `/reset-password`, `/brand`, `/api/`
+and a `Host` line. Each also carries the meta tag now, which needed small server `layout.tsx`
+wrappers for the client-component pages — and `admin/layout.tsx` (a client component) was split
+into [components/admin-shell.tsx](apps/web/src/components/admin-shell.tsx) + a server layout so
+it could export metadata. `not-found.tsx` is noindex too, which is what stops the known
+HTTP-200-on-404 behaviour from producing indexed soft 404s.
+
+**6. `/contact` was in the sitemap *and* noindexed.** It used `legalMetadata()`, so it inherited
+the statutory pages' publish gate — the exact contradiction that gate was fixed for on `/terms`.
+It has a working form regardless of the business profile, so it's now an ordinary indexable page.
+`legalMetadata()` itself now takes a path + description and routes through `pageMetadata`, so the
+gated pages get canonicals and cards while keeping the noindex.
+
+**7. Social card + icons.** `public/og-default.png` (1200×630, composed from the marketplace
+banner) is the default OG/Twitter image; listing pages override it with the item's own photos,
+blog posts with their cover. Added `manifest.ts`, `themeColor` via `viewport`, `lang="en-IN"`,
+and `max-image-preview:large` for Googlebot (this is a photo-led catalog).
+
+**8. Blog posts with no excerpt got the site-wide description.** They now derive one from the
+body — `markdownExcerpt()` in [lib/blog.ts](apps/web/src/lib/blog.ts) strips markdown and drops
+a repeated title — and the same string feeds the `BlogPosting` node so the two can't disagree.
+
+**Found and fixed in passing (unrelated to SEO, but blocking the build):** `packages/shared/dist`
+and the generated Prisma client were both **stale build artifacts carrying a `PAYOUT_PAID`
+notification type that neither `shared/src` nor `schema.prisma` defines**. The web app failed
+`tsc` and the API failed to compile. Rebuilt both (`tsc -p` in shared, `prisma generate`); no
+source change was needed. Worth knowing that `pnpm install`'s postinstall does exactly this.
+
+**Not done, and why:** no `ItemList` on category/listing pages (Google only uses it for
+carousel-eligible pages and it needs per-item markup that duplicates the Product nodes);
+no `hasMerchantReturnPolicy`/`shippingDetails` on offers (they encode a marketplace-wide
+promise the operator hasn't set); the soft-404 status code is still 200 app-wide (a real 404
+needs the `loading.tsx` streaming change noted in the blog QA pass). **Still needs the
+operator:** fill the `BusinessProfile` at `/admin/settings` — until then `/terms`, `/privacy`
+and `/refunds` stay noindex and out of the sitemap, and the `OnlineStore` node has no contact
+details. Then submit `https://www.thenurturemoms.com/sitemap.xml` in Google Search Console.
+
+---
+
 ## Build order recommendation (to sequence roadmap + issues)
 
 1. ~~**Image upload** (#3)~~ ✅ **DONE** — Supabase Storage, camera + compression.

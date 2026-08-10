@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ApiError } from "@/lib/api";
-import { getBlogPost } from "@/lib/blog";
+import { getBlogPost, markdownExcerpt } from "@/lib/blog";
 import { metaDescription, pageMetadata } from "@/lib/seo";
 import { blogPostJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
 import { JsonLd } from "@/components/json-ld";
@@ -30,7 +30,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // still linked from elsewhere consolidates onto one URL.
   return pageMetadata({
     title: post.title,
-    description: post.excerpt ? metaDescription(post.excerpt) : undefined,
+    description: metaDescription(
+      post.excerpt || markdownExcerpt(post.bodyMarkdown, post.title),
+    ),
     path: `/blog/${post.slug}`,
     type: "article",
     images: post.coverImageUrl
@@ -59,7 +61,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     <Container className="max-w-2xl py-12 sm:py-16">
       <JsonLd
         data={[
-          blogPostJsonLd(post),
+          blogPostJsonLd(
+            post,
+            metaDescription(post.excerpt || markdownExcerpt(post.bodyMarkdown, post.title)),
+          ),
           breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Blog", path: "/blog" },

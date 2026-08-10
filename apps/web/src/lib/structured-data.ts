@@ -150,14 +150,17 @@ export function listingJsonLd(listing: Listing): JsonLdNode {
   };
 }
 
-export function blogPostJsonLd(post: BlogPost): JsonLdNode {
+/** `description` is passed in so it matches the page's meta description
+ *  exactly, including the derived-from-body fallback for posts with no
+ *  excerpt. */
+export function blogPostJsonLd(post: BlogPost, description?: string): JsonLdNode {
   const url = absoluteUrl(`/blog/${post.slug}`);
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     "@id": `${url}#post`,
     headline: post.title,
-    ...(post.excerpt ? { description: post.excerpt } : {}),
+    ...(description ? { description } : {}),
     ...(post.coverImageUrl ? { image: [absoluteUrl(post.coverImageUrl)] } : {}),
     author: { "@type": "Person", name: post.authorName },
     publisher: { "@id": `${absoluteUrl("/")}#organization` },
