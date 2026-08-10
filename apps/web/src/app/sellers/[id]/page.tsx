@@ -1,19 +1,34 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BadgeCheck, MapPin, Star } from "lucide-react";
 import { getSellerProfile, getSellerReviews } from "@/lib/listings";
 import { ApiError } from "@/lib/api";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 import { Container, Card } from "@/components/ui/primitives";
 import { ListingCard } from "@/components/listing-card";
 import { cn } from "@/lib/utils";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const { id } = await params;
-  try {
-    const s = await getSellerProfile(id);
-    return { title: `${s.name}'s shop` };
-  } catch {
-    return { title: "Seller" };
-  }
+  const seller = await getSellerProfile(id).catch(() => null);
+  if (!seller) return { title: "Seller not found", robots: { index: false, follow: false } };
+
+  const where = seller.city ? ` in ${seller.city}` : "";
+  const count = seller.listings.length;
+  return pageMetadata({
+    title: `${seller.name}'s shop`,
+    description: metaDescription(
+      seller.bio ??
+        `${count} preloved baby and maternity item${count === 1 ? "" : "s"} listed by ${seller.name}${where} on The Nurture Moms.`,
+    ),
+    path: `/sellers/${seller.id}`,
+  });
 }
 
 export default async function SellerPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +41,13 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
 
   return (
     <Container className="py-12">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Shop preloved", path: "/listings" },
+          { name: `${seller.name}'s shop`, path: `/sellers/${seller.id}` },
+        ])}
+      />
       <div className="flex flex-col items-center rounded-[2rem] border-2 border-border bg-surface p-8 text-center card-shadow">
         <span className="grid h-20 w-20 place-items-center rounded-full bg-primary/12 font-display text-3xl font-bold text-primary">
           {seller.name[0]}

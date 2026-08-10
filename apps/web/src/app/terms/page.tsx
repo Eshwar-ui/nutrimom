@@ -2,7 +2,12 @@ import type { BusinessProfile } from "@nutrimom/shared";
 import { LegalDoc, type LegalSection } from "@/components/legal-doc";
 import { getBusinessProfile, legalMetadata } from "@/lib/business-profile";
 
-export const generateMetadata = () => legalMetadata("Terms & Conditions");
+export const generateMetadata = () =>
+  legalMetadata(
+    "Terms & Conditions",
+    "/terms",
+    "The terms governing use of The Nurture Moms marketplace — buyer and seller obligations, listing rules, payments and dispute handling.",
+  );
 
 /**
  * The operator is named from the business profile rather than hardcoded — the

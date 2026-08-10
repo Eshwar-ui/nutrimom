@@ -8,8 +8,12 @@ import {
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
-import { MEMBERSHIP_PLANS, formatPaise, type Category, type Listing } from "@nutrimom/shared";
+import { MEMBERSHIP_PLANS, formatPaise, type BusinessProfile, type Category, type Listing } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
+import { getBusinessProfile } from "@/lib/business-profile";
+import { pageMetadata } from "@/lib/seo";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 import { Container } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { Playful } from "@/components/ui/playful";
@@ -70,10 +74,21 @@ const steps = [
   },
 ];
 
+export const metadata = pageMetadata({
+  path: "/",
+  absoluteTitle:
+    "The Nurture Moms — Buy & Sell Preloved Baby, Kids and Maternity Items",
+  description:
+    "India's marketplace for preloved baby, kids and maternity essentials. Shop gently used strollers, car seats, clothes and toys from verified moms — or sell what your family has outgrown.",
+});
+
 export default async function HomePage() {
   let featured: Listing[] = [];
   let latest: Listing[] = [];
   let categories: Category[] = [];
+  // Read separately from the block below: the marketplace's own identity is
+  // structured data that should still render if the listings API is down.
+  const businessProfile: BusinessProfile | null = await getBusinessProfile();
   try {
     const [f, latestRes, cats] = await Promise.all([
       getListings({ featured: true, pageSize: 8 }),
@@ -97,6 +112,8 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={[organizationJsonLd(businessProfile), websiteJsonLd()]} />
+
       {/* Hero — full image; pulled up so the transparent nav floats over it. */}
       <section className="relative -mt-16">
         <picture>

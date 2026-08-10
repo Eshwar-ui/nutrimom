@@ -4,6 +4,7 @@ import {
   type BusinessProfile,
 } from "@nutrimom/shared";
 import { request } from "./api";
+import { pageMetadata } from "./seo";
 
 /**
  * The operator's business identity, read server-side by the legal pages.
@@ -31,13 +32,19 @@ export async function getBusinessProfile(): Promise<BusinessProfile | null> {
 /**
  * Metadata for a legal page. A policy page that doesn't yet name a real
  * entity, address and grievance officer isn't compliant, so it stays out of
- * the index until the profile is complete.
+ * the index until the profile is complete — the same condition that decides
+ * whether `sitemap.ts` lists it.
  */
-export async function legalMetadata(title: string): Promise<Metadata> {
+export async function legalMetadata(
+  title: string,
+  path: string,
+  description: string,
+): Promise<Metadata> {
   const profile = await getBusinessProfile();
-  const publishable = isBusinessProfileComplete(profile);
-  return {
+  return pageMetadata({
     title,
-    robots: publishable ? undefined : { index: false, follow: false },
-  };
+    description,
+    path,
+    noIndex: !isBusinessProfileComplete(profile),
+  });
 }

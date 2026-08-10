@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Newspaper } from "lucide-react";
 import type { BlogPost, Paginated } from "@nutrimom/shared";
 import { getBlogPosts } from "@/lib/blog";
+import { pageMetadata } from "@/lib/seo";
 import { Container, Card } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { StatePanel } from "@/components/ui/states";
@@ -11,18 +12,11 @@ import { ListingThumb } from "@/components/ui/listing-thumb";
 const BLOG_DESCRIPTION =
   "Guides on buying and selling preloved baby gear, care tips and stories from our community.";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Blog",
   description: BLOG_DESCRIPTION,
-  alternates: { canonical: "/blog" },
-  openGraph: {
-    type: "website",
-    title: "Blog · The Nurture Moms",
-    description: BLOG_DESCRIPTION,
-    url: "/blog",
-  },
-  twitter: { card: "summary", title: "Blog · The Nurture Moms", description: BLOG_DESCRIPTION },
-};
+  path: "/blog",
+});
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });

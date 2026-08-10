@@ -15,11 +15,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/reveal";
 import { Playful } from "@/components/ui/playful";
 import { DecorativeElement } from "@/components/decorative-element";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "About us",
-  description: "Why The Nurture Moms exists, and how the marketplace works.",
-};
+  description:
+    "Why The Nurture Moms exists: a community marketplace where Indian families pass on outgrown baby, kids and maternity gear instead of throwing it away.",
+  path: "/about",
+});
 
 const values = [
   {

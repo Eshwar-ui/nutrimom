@@ -1,7 +1,10 @@
 import { Container, Card } from "@/components/ui/primitives";
+import { privateMetadata } from "@/lib/seo";
 import { FullLogo, LogoEmblem } from "@/components/logo";
 
-export const metadata = { title: "Brand / Logo" };
+// Internal design scratchpad, not a page for visitors — kept out of the index
+// and out of robots.txt's crawl allowance.
+export const metadata = privateMetadata("Brand / Logo");
 
 // Framings of the real /logo.svg — pick a crop + badge and I'll set it live.
 const crops = [

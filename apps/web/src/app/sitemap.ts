@@ -3,8 +3,7 @@ import { isBusinessProfileComplete } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { getBlogPostsForSitemap } from "@/lib/blog";
 import { getBusinessProfile } from "@/lib/business-profile";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4000";
+import { SITE_URL } from "@/lib/seo";
 
 // The listings API caps pageSize at 60 (packages/shared listingQuerySchema),
 // so covering the newest ~500 approved listings means paginating rather than

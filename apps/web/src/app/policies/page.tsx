@@ -2,9 +2,15 @@ import Link from "next/link";
 import { ShieldCheck, Camera, Search, HandHeart, ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/ui/primitives";
 import { legalPages } from "@/components/legal-doc";
+import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Marketplace policies" };
+export const metadata = pageMetadata({
+  title: "Marketplace policies",
+  description:
+    "How The Nurture Moms marketplace works in plain English — what we check before a listing goes live, what buyers and sellers each owe, and how payments and shipping are handled.",
+  path: "/policies",
+});
 
 const points = [
   {

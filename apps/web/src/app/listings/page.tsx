@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Search, SearchX, SlidersHorizontal, Store, LayoutGrid, ChevronDown,
@@ -12,6 +13,7 @@ import {
   type Paginated,
 } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
+import { pageMetadata } from "@/lib/seo";
 import { Container, Input } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing-card";
@@ -19,7 +21,8 @@ import { ListingsSort } from "@/components/listings-sort";
 import { StatePanel } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Shop preloved" };
+const BROWSE_DESCRIPTION =
+  "Browse every preloved listing on The Nurture Moms — strollers, car seats, baby clothes, toys, feeding gear and maternity wear, all gently used, condition-graded and listed by verified moms across India.";
 
 /** Per-category sidebar icons, keyed by slug. Unmapped categories fall back
  *  to Store, so new categories still render without a code change. */
@@ -53,6 +56,45 @@ type SP = {
   sort?: string;
   page?: string;
 };
+
+/**
+ * Filter, sort and pagination params multiply this one page into thousands of
+ * near-identical URLs. Each facet combination is kept out of the index but
+ * still crawled (`follow`), so the listings it links to are discovered without
+ * the facets themselves competing with `/listings` and the category pages.
+ * Only the bare page is canonical and indexable.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SP>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const isFaceted = Boolean(
+    sp.category ||
+      sp.condition ||
+      sp.city ||
+      sp.search ||
+      sp.min ||
+      sp.max ||
+      sp.sort ||
+      (Number(sp.page) || 1) > 1,
+  );
+
+  if (isFaceted) {
+    return {
+      title: "Shop preloved",
+      description: BROWSE_DESCRIPTION,
+      robots: { index: false, follow: true },
+    };
+  }
+
+  return pageMetadata({
+    title: "Shop preloved baby, kids & maternity items",
+    description: BROWSE_DESCRIPTION,
+    path: "/listings",
+  });
+}
 
 export default async function ListingsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;

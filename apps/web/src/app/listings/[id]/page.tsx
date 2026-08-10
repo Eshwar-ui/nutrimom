@@ -1,17 +1,43 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { Listing } from "@nutrimom/shared";
+import { conditionLabels, formatPaise, type Listing } from "@nutrimom/shared";
 import { getListing, getListings } from "@/lib/listings";
 import { ApiError } from "@/lib/api";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, listingJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 import { ListingDetail } from "@/components/listing-detail";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+/** Leads with the facts a shopper scans for in a result — condition, price,
+ *  city — then as much of the seller's own copy as fits. */
+function describe(listing: Listing): string {
+  const lead = `${conditionLabels[listing.condition]} · ${formatPaise(
+    listing.sellingPriceInPaise,
+  )} · ${listing.city}.`;
+  return metaDescription(`${lead} ${listing.description}`);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const { id } = await params;
-  try {
-    const l = await getListing(id);
-    return { title: l.title, description: l.description.slice(0, 150) };
-  } catch {
-    return { title: "Listing" };
-  }
+  const listing = await getListing(id).catch(() => null);
+  // A listing that no longer resolves renders the 404 below — keep it out of
+  // the index rather than letting it inherit the site defaults.
+  if (!listing) return { title: "Listing not found", robots: { index: false, follow: false } };
+
+  return pageMetadata({
+    title: `${listing.title} — ${listing.category.name}`,
+    description: describe(listing),
+    path: `/listings/${listing.id}`,
+    // The listing's own photos are what a shopper should see when the link is
+    // shared, not the generic marketplace card.
+    images: listing.images.length
+      ? listing.images.slice(0, 4).map((url) => ({ url, alt: listing.title }))
+      : undefined,
+  });
 }
 
 export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,5 +55,20 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
     .then((r) => r.items.filter((l) => l.id !== listing.id).slice(0, 4))
     .catch(() => []);
 
-  return <ListingDetail listing={listing} related={related} />;
+  return (
+    <>
+      <JsonLd
+        data={[
+          listingJsonLd(listing),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Shop preloved", path: "/listings" },
+            { name: listing.category.name, path: `/categories/${listing.category.slug}` },
+            { name: listing.title, path: `/listings/${listing.id}` },
+          ]),
+        ]}
+      />
+      <ListingDetail listing={listing} related={related} />
+    </>
+  );
 }

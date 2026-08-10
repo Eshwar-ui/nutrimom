@@ -15,10 +15,20 @@ import { Playful } from "@/components/ui/playful";
 import { DecorativeElement } from "@/components/decorative-element";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 import { ContactForm } from "@/components/contact-form";
-import { getBusinessProfile, legalMetadata } from "@/lib/business-profile";
+import { getBusinessProfile } from "@/lib/business-profile";
+import { pageMetadata } from "@/lib/seo";
 import { isBusinessProfileComplete } from "@nutrimom/shared";
 
-export const generateMetadata = () => legalMetadata("Contact us");
+// Not gated on the business profile the way /terms and /privacy are: this page
+// carries a working contact form regardless, and `sitemap.ts` has always
+// listed it unconditionally — noindexing a URL we submit is the exact
+// contradiction the legal pages were fixed for.
+export const metadata = pageMetadata({
+  title: "Contact us",
+  description:
+    "Questions about an order, a listing or selling on The Nurture Moms? Message our support team and we'll get back to you.",
+  path: "/contact",
+});
 
 const baseDetails = [
   {

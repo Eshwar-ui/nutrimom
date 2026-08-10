@@ -1,18 +1,33 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 import { getCategories, getListings } from "@/lib/listings";
+import { pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 import { Container } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing-card";
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+const describe = (name: string) =>
+  `Shop preloved ${name.toLowerCase()} in India — gently used, honestly graded and listed by verified moms. Buy secondhand ${name.toLowerCase()} at a fraction of retail on The Nurture Moms.`;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
   const categories = await getCategories().catch(() => []);
   const category = categories.find((c) => c.slug === slug);
-  return category
-    ? { title: category.name, description: `Shop preloved ${category.name.toLowerCase()} from community sellers.` }
-    : { title: "Category" };
+  if (!category) return { title: "Category not found", robots: { index: false, follow: false } };
+
+  return pageMetadata({
+    title: `Preloved ${category.name}`,
+    description: describe(category.name),
+    path: `/categories/${category.slug}`,
+  });
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -26,6 +41,13 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   return (
     <Container className="py-12">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Shop preloved", path: "/listings" },
+          { name: category.name, path: `/categories/${category.slug}` },
+        ])}
+      />
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl font-semibold text-foreground">{category.name}</h1>

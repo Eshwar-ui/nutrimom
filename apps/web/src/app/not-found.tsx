@@ -2,8 +2,12 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Container } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
+import { privateMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Page not found" };
+// `notFound()` still answers HTTP 200 app-wide (the root loading.tsx makes
+// every route stream, so the status is committed before the 404 decision), so
+// the noindex tag is what stops these from being indexed as soft 404s.
+export const metadata = privateMetadata("Page not found");
 
 export default function NotFound() {
   return (

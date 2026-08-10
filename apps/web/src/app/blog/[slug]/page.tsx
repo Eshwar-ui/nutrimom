@@ -4,6 +4,9 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { getBlogPost } from "@/lib/blog";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { blogPostJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 import { Container } from "@/components/ui/primitives";
 import { MarkdownContent } from "@/components/markdown-content";
 import { ListingThumb } from "@/components/ui/listing-thumb";
@@ -23,31 +26,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // try/catch — permanentRedirect works by throwing.
   if (post.slug !== slug) permanentRedirect(`/blog/${post.slug}`);
 
-  const description = post.excerpt ?? undefined;
   // Canonical points at the post's current slug, so a retired slug that's
   // still linked from elsewhere consolidates onto one URL.
-  const url = `/blog/${post.slug}`;
-  const images = post.coverImageUrl ? [post.coverImageUrl] : undefined;
-  return {
+  return pageMetadata({
     title: post.title,
-    description,
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title: post.title,
-      description,
-      url,
-      images,
-      publishedTime: post.publishedAt ?? undefined,
-      authors: [post.authorName],
-    },
-    twitter: {
-      card: images ? "summary_large_image" : "summary",
-      title: post.title,
-      description,
-      images,
-    },
-  };
+    description: post.excerpt ? metaDescription(post.excerpt) : undefined,
+    path: `/blog/${post.slug}`,
+    type: "article",
+    images: post.coverImageUrl
+      ? [{ url: post.coverImageUrl, alt: post.title }]
+      : undefined,
+    publishedTime: post.publishedAt ?? undefined,
+    authors: [post.authorName],
+  });
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -66,6 +57,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <Container className="max-w-2xl py-12 sm:py-16">
+      <JsonLd
+        data={[
+          blogPostJsonLd(post),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Blog", path: "/blog" },
+            { name: post.title, path: `/blog/${post.slug}` },
+          ]),
+        ]}
+      />
       <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Back to blog
       </Link>

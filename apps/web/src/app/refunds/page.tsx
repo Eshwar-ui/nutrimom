@@ -3,7 +3,12 @@ import { LegalDoc, type LegalSection } from "@/components/legal-doc";
 import { legalMetadata } from "@/lib/business-profile";
 import { request } from "@/lib/api";
 
-export const generateMetadata = () => legalMetadata("Refund & Cancellation Policy");
+export const generateMetadata = () =>
+  legalMetadata(
+    "Refund & Cancellation Policy",
+    "/refunds",
+    "When an order can be cancelled on The Nurture Moms, how much is refunded, and how long the refund takes to reach you.",
+  );
 
 // Fallback for the rare render where the API is unreachable — matches the
 // column default, so the page still states a window rather than a blank.

@@ -2,7 +2,12 @@ import type { BusinessProfile } from "@nutrimom/shared";
 import { LegalDoc, type LegalSection } from "@/components/legal-doc";
 import { getBusinessProfile, legalMetadata } from "@/lib/business-profile";
 
-export const generateMetadata = () => legalMetadata("Privacy Policy");
+export const generateMetadata = () =>
+  legalMetadata(
+    "Privacy Policy",
+    "/privacy",
+    "What personal data The Nurture Moms collects, how it is used and stored, and how to reach our grievance officer.",
+  );
 
 // The grievance officer is named from the business profile — the same source
 // the publish gate checks — so this page can't go live still promising to
