@@ -6,12 +6,19 @@ import type { Env } from '../config/env.validation';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly resend: Resend;
+  private readonly resend: Resend | null;
   private readonly from: string;
 
   constructor(config: ConfigService<Env, true>) {
-    this.resend = new Resend(config.get('RESEND_API_KEY', { infer: true }));
+    const apiKey = config.get('RESEND_API_KEY', { infer: true });
+    this.resend = apiKey ? new Resend(apiKey) : null;
     this.from = config.get('MAIL_FROM_EMAIL', { infer: true });
+
+    if (!this.resend) {
+      this.logger.warn(
+        'Transactional email is disabled because RESEND_API_KEY is unset',
+      );
+    }
   }
 
   /**
@@ -20,6 +27,7 @@ export class MailService {
    * confirms (via timing/error) whether an email address has an account.
    */
   async sendPasswordReset(to: string, resetUrl: string): Promise<void> {
+    if (!this.resend) return;
     try {
       await this.resend.emails.send({
         from: `Preloved by The Nurture Moms <${this.from}>`,

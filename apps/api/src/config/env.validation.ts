@@ -44,7 +44,10 @@ const envSchema = z.object({
 
   // Transactional email (password reset). Get a key at resend.com; FROM_EMAIL
   // must be on a domain verified in that Resend account.
-  RESEND_API_KEY: z.string().min(1),
+  // Optional while transactional email is paused. MailService becomes a
+  // no-op when this is unset, so the API can still boot and password-reset
+  // requests keep their non-enumerating response.
+  RESEND_API_KEY: z.string().min(1).optional(),
   MAIL_FROM_EMAIL: z.string().email().default('onboarding@resend.dev'),
 
   // Where unhandled server errors are POSTed as JSON. Optional — unset means
