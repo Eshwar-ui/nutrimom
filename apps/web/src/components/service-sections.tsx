@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrackedLink, TrackedExternalLink } from "./tracked-link";
 import { MessageCircle, ArrowRight, BadgeCheck, Tag, Check, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Container } from "./ui/primitives";
@@ -396,7 +397,7 @@ export function PricingTable({
       </div>
 
       {note && (
-        <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
           {note}
         </p>
       )}
@@ -429,26 +430,43 @@ export function BookingCta({
   label,
   whatsappUrl,
   secondary,
+  /** The funnel keyword this CTA belongs to, recorded against the click so
+   *  §16's "WhatsApp keyword conversions" can be read per service. */
+  intent,
 }: {
   label: string;
   whatsappUrl: string | null;
   secondary?: { href: string; label: string };
+  intent?: string;
 }) {
+  // Both branches are measured, not just the WhatsApp one: while the operator
+  // has no support phone every booking falls back to the contact form, and a
+  // funnel that only counts the branch that isn't running yet reads as zero
+  // demand rather than as an unconfigured number.
+  const props = { intent: intent ?? "unknown", via: whatsappUrl ? "whatsapp" : "contact_form" };
+
   return (
     <>
       {whatsappUrl ? (
-        <a
+        <TrackedExternalLink
+          event="booking_cta_click"
+          eventProps={props}
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(buttonVariants({ size: "lg" }), "gap-2")}
         >
           <MessageCircle className="h-4 w-4" /> {label}
-        </a>
+        </TrackedExternalLink>
       ) : (
-        <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
+        <TrackedLink
+          event="booking_cta_click"
+          eventProps={props}
+          href="/contact"
+          className={cn(buttonVariants({ size: "lg" }), "gap-2")}
+        >
           {label}
-        </Link>
+        </TrackedLink>
       )}
       {secondary && (
         <Link

@@ -1,9 +1,9 @@
-import Link from "next/link";
+import { TrackedLink } from "./tracked-link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { Container } from "./ui/primitives";
 import { Reveal } from "./reveal";
 import { PILLARS, STAGES, type PillarKey } from "@/lib/site-nav";
-import { PILLAR_ART } from "./pillar-art";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,6 +32,13 @@ const PILLAR_STYLE: Record<PillarKey, { wash: string; hover: string }> = {
   "pass-it-on": { wash: "bg-lavender/45", hover: "hover:border-lavender" },
 };
 
+const PILLAR_IMAGE: Record<PillarKey, string> = {
+  move: "/images/pillars/pillar-move.png",
+  nourish: "/images/pillars/pillar-nourish.png",
+  connect: "/images/pillars/pillar-connect.png",
+  "pass-it-on": "/images/pillars/pillar-pass-it-on.png",
+};
+
 export function StageSelector() {
   return (
     <section className="relative">
@@ -50,7 +57,9 @@ export function StageSelector() {
           {STAGES.map((stage, i) => (
             <Reveal key={stage.label} delay={(i % 3) * 0.06}>
               <li className="h-full list-none">
-                <Link
+                <TrackedLink
+                  event="stage_click"
+                  eventProps={{ stage: stage.label, to: stage.href }}
                   href={stage.href}
                   className="group flex h-full flex-col rounded-[1.75rem] border-2 border-border bg-surface p-6 card-shadow transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-primary/45"
                 >
@@ -64,7 +73,7 @@ export function StageSelector() {
                     Take me there
                     <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </span>
-                </Link>
+                </TrackedLink>
               </li>
             </Reveal>
           ))}
@@ -95,13 +104,14 @@ export function PillarGrid() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {PILLARS.map((pillar, i) => {
             const style = PILLAR_STYLE[pillar.key];
-            const Art = PILLAR_ART[pillar.key];
             return (
               <Reveal key={pillar.key} delay={(i % 4) * 0.07}>
-                <Link
+                <TrackedLink
+                  event="pillar_click"
+                  eventProps={{ pillar: pillar.key, to: pillar.href }}
                   href={pillar.href}
                   className={cn(
-                    "group relative flex h-full min-h-[20rem] flex-col overflow-hidden rounded-[1.75rem] border-2 border-border bg-surface p-7 card-shadow",
+                    "group relative flex h-full min-h-[24rem] flex-col overflow-hidden rounded-[1.75rem] border-2 border-border bg-surface p-7 card-shadow",
                     "transition-[transform,border-color] duration-300 hover:-translate-y-1",
                     style.hover,
                   )}
@@ -115,7 +125,14 @@ export function PillarGrid() {
                       style.wash,
                     )}
                   />
-                  <Art className="pointer-events-none absolute -bottom-5 -right-4 w-36 text-primary/75 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5 group-hover:scale-105" />
+                  <Image
+                    src={PILLAR_IMAGE[pillar.key]}
+                    alt=""
+                    width={320}
+                    height={320}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -bottom-5 -right-4 w-48 object-contain transition-transform duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5 group-hover:scale-105"
+                  />
 
                   {/* The pillar word is the heading, not a label above one. */}
                   <h3 className="relative">
@@ -136,7 +153,7 @@ export function PillarGrid() {
                     {pillar.cta}
                     <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </span>
-                </Link>
+                </TrackedLink>
               </Reveal>
             );
           })}

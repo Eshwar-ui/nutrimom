@@ -44,6 +44,7 @@ export default async function StartingSolidsPage() {
         subtitle="Practical guidance on readiness, first foods, textures, meal ideas and all the questions that come with the first spoon."
       >
         <BookingCta
+          intent="solids"
           label="Book a Starting Solids session"
           whatsappUrl={whatsappUrl}
           secondary={{ href: "/nutrition", label: "All nutrition support" }}
@@ -70,6 +71,7 @@ export default async function StartingSolidsPage() {
         body="One session, your baby's stage, and a plan you can actually cook from this week."
       >
         <BookingCta
+          intent="solids"
           label="Book a Starting Solids session"
           whatsappUrl={whatsappUrl}
         />

@@ -90,6 +90,7 @@ export default async function NutritionPage() {
               subtitleClassName="max-w-md"
             >
               <BookingCta
+          intent="nutrition"
                 label="Book a nutrition consultation"
                 whatsappUrl={whatsappUrl}
                 secondary={{
@@ -124,6 +125,7 @@ export default async function NutritionPage() {
         body="Pregnancy, the fourth trimester, first spoons or a fussy toddler — we'll start from wherever you actually are."
       >
         <BookingCta
+          intent="nutrition"
           label="Book a consultation"
           whatsappUrl={whatsappUrl}
           secondary={{ href: "/journal", label: "Read the Journal" }}

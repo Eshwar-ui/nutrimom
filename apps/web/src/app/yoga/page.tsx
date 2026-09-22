@@ -104,6 +104,7 @@ export default async function YogaPage() {
               subtitle="Move, breathe and reconnect with yourself through pregnancy, postpartum recovery and beyond."
             >
               <BookingCta
+          intent="yoga"
                 label="View classes & book a session"
                 whatsappUrl={whatsappUrl}
                 secondary={{ href: "/nutrition", label: "Explore Nutrition" }}
@@ -136,6 +137,7 @@ export default async function YogaPage() {
           body="Tell us your stage and what you're hoping for, and we'll point you to the right class."
         >
           <BookingCta
+          intent="yoga"
             label="Talk to us"
             whatsappUrl={whatsappUrl}
             secondary={{ href: "/community", label: "Join the community" }}

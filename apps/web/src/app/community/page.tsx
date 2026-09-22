@@ -62,6 +62,7 @@ export default async function CommunityPage() {
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <BookingCta
+          intent="community"
                 label="Join the community"
                 whatsappUrl={whatsappUrl}
                 secondary={{ href: "/journal", label: "Read the Journal" }}
@@ -103,6 +104,7 @@ export default async function CommunityPage() {
         body="Come in, say hello, and ask the question you've been searching the internet for."
       >
         <BookingCta
+          intent="community"
           label="Join the community"
           whatsappUrl={whatsappUrl}
           secondary={{ href: "/about", label: "Meet the founders" }}
