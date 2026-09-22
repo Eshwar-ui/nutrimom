@@ -19,7 +19,12 @@ export class BlogService {
   // ---- Public ----
 
   async browsePublished(query: BlogQuery): Promise<Paginated<BlogPost>> {
-    const where = { published: true };
+    // An absent category means "everything", not "uncategorised" — filtering
+    // on `category: undefined` would be the former by accident, so it is spelt
+    // out rather than left to Prisma's handling of undefined.
+    const where = query.category
+      ? { published: true, category: query.category }
+      : { published: true };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.blogPost.findMany({
         where,
@@ -147,6 +152,9 @@ function toCreateData(input: BlogPostInput) {
     bodyMarkdown: input.bodyMarkdown,
     coverImageUrl: input.coverImageUrl || null,
     authorName: input.authorName,
+    // `?? null` rather than `|| null`: the field is nullish-optional, and an
+    // omitted category and an explicitly cleared one both mean uncategorised.
+    category: input.category ?? null,
   };
 }
 
@@ -180,6 +188,7 @@ function toDto(row: BlogPostRow): BlogPost {
     published: row.published,
     publishedAt: row.publishedAt?.toISOString() ?? null,
     authorName: row.authorName,
+    category: row.category,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

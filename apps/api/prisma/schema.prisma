@@ -444,6 +444,23 @@ model Shipment {
 // Admin-authored marketplace journal content (roadmap 4.2). authorName is a
 // free-text label, not a User relation — the admin who wrote it doesn't need
 // to stay resolvable if their account is later removed.
+// The Nurture Journal's taxonomy, fixed by the founders' brief (section 11).
+// An enum rather than free text: these are the categories the journal is
+// organised around and each one is a page a reader can land on, so a typo in
+// the admin form would silently create a category nobody can reach.
+enum BlogCategory {
+  PREGNANCY
+  YOGA
+  POSTPARTUM
+  NUTRITION
+  STARTING_SOLIDS
+  BABY
+  TODDLER
+  MOTHERHOOD
+  MOMPRENEUR
+  PRELOVED
+}
+
 model BlogPost {
   id            String    @id @default(cuid())
   title         String
@@ -454,12 +471,16 @@ model BlogPost {
   published     Boolean   @default(false)
   publishedAt   DateTime?
   authorName    String
+  // Nullable: every post written before the taxonomy existed has no category,
+  // and guessing one for them would be inventing editorial intent.
+  category      BlogCategory?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   previousSlugs BlogPostSlug[]
 
   @@index([published, publishedAt])
+  @@index([category, published, publishedAt])
 }
 
 // Slugs a post used to live at. Renaming a published post would otherwise turn

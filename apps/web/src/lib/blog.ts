@@ -1,10 +1,15 @@
 import { request } from "./api";
-import type { BlogPost, Paginated } from "@nutrimom/shared";
+import type { BlogCategory, BlogPost, Paginated } from "@nutrimom/shared";
 
 // Server-side reads (public endpoints, cached + revalidated) — mirrors lib/listings.ts.
 
-export function getBlogPosts(page = 1): Promise<Paginated<BlogPost>> {
-  return request<Paginated<BlogPost>>(`/blog?page=${page}`, { revalidate: 60 });
+export function getBlogPosts(
+  page = 1,
+  category?: BlogCategory,
+): Promise<Paginated<BlogPost>> {
+  const qs = new URLSearchParams({ page: String(page) });
+  if (category) qs.set("category", category);
+  return request<Paginated<BlogPost>>(`/blog?${qs}`, { revalidate: 60 });
 }
 
 export function getBlogPost(slug: string): Promise<BlogPost> {
