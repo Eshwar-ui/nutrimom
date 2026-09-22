@@ -136,6 +136,14 @@ correct metadata so the sitemap, nav and redirects can be verified independently
 
 ---
 
+## Decided: brief §13 (palette & type) is not adopted — 2026-09-23
+
+The brief specifies Deep Teal `#006B6B`, Sage `#A8BFA0`, Playfair Display and DM Sans. The
+site runs forest green `#456f50`, coral `#ef8377`, Fraunces and Outfit. **The operator chose
+to keep the existing brand**, so this is a deliberate divergence, not an outstanding gap —
+do not re-flag it in future audits. Everything else in §13 (mobile-first, alt text, contrast,
+reusing the marketplace card language) is followed.
+
 ## Open questions for the founders
 
 1. **WhatsApp business number** — is `BusinessProfile.supportPhone` the number that should

@@ -24,7 +24,12 @@ import {
   TrustSafety,
   Testimonials,
 } from "@/components/home-sections";
-import { StageSelector, PillarGrid } from "@/components/home-pillars";
+import {
+  StageSelector,
+  PillarGrid,
+  AffordableSupport,
+  FindYourVillage,
+} from "@/components/home-pillars";
 import { Newsletter } from "@/components/newsletter";
 import { JourneyLine } from "@/components/journey-line";
 import { DecorativeElement } from "@/components/decorative-element";
@@ -155,6 +160,7 @@ export default async function HomePage() {
       <div id="explore" className="scroll-mt-24">
         <StageSelector />
         <PillarGrid />
+        <AffordableSupport />
       </div>
 
       {/* --- Preloved pillar: the marketplace, unchanged below this line --- */}
@@ -389,6 +395,10 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
+
+      {/* Closing band — the page ends on the whole ecosystem, not on the
+          marketplace's seller pitch above it. */}
+      <FindYourVillage />
 
       {/* Newsletter — first-order offer */}
       <Newsletter />
