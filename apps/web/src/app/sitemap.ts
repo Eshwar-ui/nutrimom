@@ -4,6 +4,7 @@ import { getCategories, getListings } from "@/lib/listings";
 import { getBlogPostsForSitemap } from "@/lib/blog";
 import { getBusinessProfile } from "@/lib/business-profile";
 import { SITE_URL } from "@/lib/seo";
+import { STATIC_SITEMAP_ROUTES } from "@/lib/site-nav";
 
 // The listings API caps pageSize at 60 (packages/shared listingQuerySchema),
 // so covering the newest ~500 approved listings means paginating rather than
@@ -36,17 +37,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       getBusinessProfile(),
     ]);
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    { url: SITE_URL, changeFrequency: "daily", priority: 1 },
-    { url: `${SITE_URL}/listings`, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/blog`, changeFrequency: "weekly", priority: 0.6 },
-    { url: `${SITE_URL}/sell`, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${SITE_URL}/contact`, changeFrequency: "yearly", priority: 0.3 },
-    // Not gated: a plain-English guidelines hub, not a statutory document, so
-    // it publishes regardless of the operator's business details.
-    { url: `${SITE_URL}/policies`, changeFrequency: "yearly", priority: 0.3 },
-  ];
+  // Sourced from lib/site-nav so the sitemap and the navigation cannot drift:
+  // a pillar added to the menu is submitted, and one pulled from the menu stops
+  // being advertised, without anyone remembering to edit two files.
+  const staticRoutes: MetadataRoute.Sitemap = STATIC_SITEMAP_ROUTES.map(
+    (route) => ({
+      url: route.path === "/" ? SITE_URL : `${SITE_URL}${route.path}`,
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    }),
+  );
 
   // The three statutory pages carry `noindex` until the BusinessProfile names
   // a real entity, address and grievance officer (see lib/business-profile).
@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
-    url: `${SITE_URL}/blog/${post.slug}`,
+    url: `${SITE_URL}/journal/${post.slug}`,
     lastModified: post.updatedAt,
     changeFrequency: "monthly",
     priority: 0.6,

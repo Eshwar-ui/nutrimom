@@ -24,10 +24,10 @@ export const SITE_URL = (
 ).replace(/\/+$/, "");
 
 export const SITE_NAME = "The Nurture Moms";
-export const SITE_TAGLINE = "Preloved baby & maternity marketplace";
+export const SITE_TAGLINE = "For every stage of motherhood";
 
 export const SITE_DESCRIPTION =
-  "Buy and sell gently used baby, kids and maternity essentials — strollers, clothes, toys, car seats and more — from verified moms across India.";
+  "Yoga, nutrition, mom support and preloved essentials for Indian moms — from pregnancy and Garbhasanskar to starting solids, toddlerhood and passing it on.";
 
 /** Absolute URL for a site-relative path (crawlers and social cards need one). */
 export function absoluteUrl(path: string): string {

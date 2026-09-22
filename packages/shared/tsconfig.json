@@ -12,5 +12,8 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  // Specs live beside the source but must never reach dist — the built package
+  // is what apps/api and apps/web import, and it would otherwise carry test
+  // files (and need jest's types) at build time.
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

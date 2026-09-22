@@ -17,14 +17,14 @@ const fmtDate = (iso: string) =>
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getBlogPost(slug).catch(() => null);
-  if (!post) return { title: "Blog" };
+  if (!post) return { title: "The Nurture Journal" };
 
   // Redirect from here rather than from the component below: metadata resolves
   // before the response starts streaming, so this emits a real HTTP 308. Once
   // the render has begun Next can only fall back to a client-side meta refresh,
   // which is a much weaker signal to a crawler. Deliberately not inside a
   // try/catch — permanentRedirect works by throwing.
-  if (post.slug !== slug) permanentRedirect(`/blog/${post.slug}`);
+  if (post.slug !== slug) permanentRedirect(`/journal/${post.slug}`);
 
   // Canonical points at the post's current slug, so a retired slug that's
   // still linked from elsewhere consolidates onto one URL.
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description: metaDescription(
       post.excerpt || markdownExcerpt(post.bodyMarkdown, post.title),
     ),
-    path: `/blog/${post.slug}`,
+    path: `/journal/${post.slug}`,
     type: "article",
     images: post.coverImageUrl
       ? [{ url: post.coverImageUrl, alt: post.title }]
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   });
 }
 
-export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function JournalPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   const post = await getBlogPost(slug).catch((err) => {
@@ -55,7 +55,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   // any crawler) on to the current address instead of serving the post at two
   // URLs. Outside the catch above: permanentRedirect signals via a thrown
   // NEXT_REDIRECT that must not be swallowed.
-  if (post.slug !== slug) permanentRedirect(`/blog/${post.slug}`);
+  if (post.slug !== slug) permanentRedirect(`/journal/${post.slug}`);
 
   return (
     <Container className="max-w-2xl py-12 sm:py-16">
@@ -67,13 +67,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           ),
           breadcrumbJsonLd([
             { name: "Home", path: "/" },
-            { name: "Blog", path: "/blog" },
-            { name: post.title, path: `/blog/${post.slug}` },
+            { name: "The Nurture Journal", path: "/journal" },
+            { name: post.title, path: `/journal/${post.slug}` },
           ]),
         ]}
       />
-      <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Back to blog
+      <Link href="/journal" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Back to the Journal
       </Link>
 
       <header className="mt-4">

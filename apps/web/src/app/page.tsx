@@ -1,17 +1,16 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  ShieldCheck,
-  Truck,
   Tag,
   Gift,
   ShoppingBag,
-  Sparkles,
+  Users,
 } from "lucide-react";
 import { MEMBERSHIP_PLANS, formatPaise, type BusinessProfile, type Category, type Listing } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { getBusinessProfile } from "@/lib/business-profile";
 import { pageMetadata } from "@/lib/seo";
+import { TRUST_LINE } from "@/lib/site-nav";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import { JsonLd } from "@/components/json-ld";
 import { Container } from "@/components/ui/primitives";
@@ -25,6 +24,7 @@ import {
   TrustSafety,
   Testimonials,
 } from "@/components/home-sections";
+import { StageSelector, PillarGrid } from "@/components/home-pillars";
 import { Newsletter } from "@/components/newsletter";
 import { JourneyLine } from "@/components/journey-line";
 import { DecorativeElement } from "@/components/decorative-element";
@@ -77,9 +77,9 @@ const steps = [
 export const metadata = pageMetadata({
   path: "/",
   absoluteTitle:
-    "The Nurture Moms — Buy & Sell Preloved Baby, Kids and Maternity Items",
+    "The Nurture Moms — Yoga, Nutrition, Community & Preloved for Indian Moms",
   description:
-    "India's marketplace for preloved baby, kids and maternity essentials. Shop gently used strollers, car seats, clothes and toys from verified moms — or sell what your family has outgrown.",
+    "Support for every stage of motherhood: prenatal and postnatal yoga, Garbhasanskar, pregnancy and baby nutrition, starting solids, a free mom community, and a preloved baby and maternity marketplace.",
 });
 
 export default async function HomePage() {
@@ -148,10 +148,21 @@ export default async function HomePage() {
         <HeroWave />
       </section>
 
+      {/* Stage selector + four pillars — the ecosystem entrance. These sit
+          above every marketplace block because the brief asks for the four
+          pillars to be obvious within the first screen; a visitor who came for
+          prenatal yoga should not scroll past a product grid to find it. */}
+      <div id="explore" className="scroll-mt-24">
+        <StageSelector />
+        <PillarGrid />
+      </div>
+
+      {/* --- Preloved pillar: the marketplace, unchanged below this line --- */}
+
       {/* Category tiles — plain shared cream, tucked up under the banner so the
           seam is cream-on-cream and disappears. */}
       {categories.length > 0 && (
-        <section className="relative isolate -mt-8 overflow-hidden bg-background pt-8">
+        <section className="relative isolate overflow-hidden bg-background pt-8">
           <PlayfulBackground variant="market" />
           <DecorativeElement
             src="/images/bg-element-leaf-sprig.png"
@@ -453,40 +464,31 @@ function HeroCopy() {
           reset at md/lg because the tablet/desktop crops swap to a
           differently-shaped empty column, not a smooth continuation. */}
       <h1 className="mt-3 font-display text-[clamp(1.75rem,1.2rem_+_3.5vw,2.75rem)] font-semibold leading-[1.05] tracking-tight text-foreground sm:mt-6 md:text-[clamp(1.5rem,1rem_+_2vw,2rem)] lg:text-[clamp(2.25rem,1rem_+_2.5vw,3.75rem)]">
-        Loved before,
+        Motherhood is a journey.
         <br />
-        <span className="ink-underline whitespace-nowrap">loved again</span>.
+        You don&apos;t have to{" "}
+        <span className="ink-underline whitespace-nowrap">do it alone</span>.
       </h1>
       <p className="mt-3 text-[clamp(0.875rem,0.75rem_+_0.6vw,1.125rem)] leading-relaxed text-muted-foreground sm:mt-6 sm:max-w-md md:text-sm lg:text-lg">
-        Give baby gear a joyful second life. Browse preloved strollers,
-        clothes, toys and more from families nearby.
+        Yoga, nutrition, mom support and preloved essentials — thoughtfully
+        brought together for moms from pregnancy to toddlerhood.
       </p>
       <div className="mt-5 flex items-center gap-2 sm:mt-8 sm:gap-3">
         <Playful>
-          <Link href="/listings" className={cn(buttonVariants({ size: "md" }), "lg:h-14 lg:px-8 lg:text-base")}>
-            Start shopping <ArrowRight className="h-4 w-4" />
+          <Link href="#explore" className={cn(buttonVariants({ size: "md" }), "lg:h-14 lg:px-8 lg:text-base")}>
+            Explore our services <ArrowRight className="h-4 w-4" />
           </Link>
         </Playful>
         <Playful>
-          <Link href="/sell" className={cn(buttonVariants({ size: "md", variant: "outline" }), "lg:h-14 lg:px-8 lg:text-base")}>
-            <Tag className="h-4 w-4" /> Sell an item
+          <Link href="/community" className={cn(buttonVariants({ size: "md", variant: "outline" }), "lg:h-14 lg:px-8 lg:text-base")}>
+            <Users className="h-4 w-4" /> Join our community
           </Link>
         </Playful>
       </div>
-      <dl className="mt-6 hidden flex-wrap gap-x-8 gap-y-3 text-sm text-muted-foreground sm:mt-10 sm:flex">
-        <Trust icon={<Truck className="h-4 w-4 text-accent-text" />} label="Pickup and delivery options" />
-        <Trust icon={<ShieldCheck className="h-4 w-4 text-accent-text" />} label="Seller profiles and reviews" />
-        <Trust icon={<Sparkles className="h-4 w-4 text-accent-text" />} label="Condition graded listings" />
-      </dl>
+      {/* The brief's trust line, verbatim — the one claim every page repeats. */}
+      <p className="mt-6 hidden text-sm font-semibold text-muted-foreground sm:mt-10 sm:block">
+        {TRUST_LINE}
+      </p>
     </div>
-  );
-}
-
-function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      {icon}
-      {label}
-    </span>
   );
 }

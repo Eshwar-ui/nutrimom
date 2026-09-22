@@ -10,7 +10,7 @@ import {
   User,
   LayoutDashboard,
   LogOut,
-  Tag,
+  CalendarHeart,
   Search,
   X,
   Bell,
@@ -27,27 +27,18 @@ import { useWishlistStore } from "@/lib/wishlist-store";
 import { authedRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
+import { PRIMARY_NAV } from "@/lib/site-nav";
+import { NavDropdown } from "./nav-dropdown";
 
-// Shop dropdown — "Shop all" plus a curated set of category shortcuts.
-const shopLinks = [
-  { href: "/listings", label: "Shop all" },
-  { href: "/categories/strollers", label: "Strollers" },
-  { href: "/categories/baby-clothes", label: "Baby Clothes" },
-  { href: "/categories/maternity-wear", label: "Maternity Wear" },
-  { href: "/categories/toys", label: "Toys" },
-];
-
-const pageLinks = [
-  { href: "/about", label: "About" },
-  { href: "/blog", label: "Blog" },
-  { href: "/contact", label: "Contact" },
-];
+// The nav tree lives in lib/site-nav so the header, the footer and the sitemap
+// cannot drift apart. Items with `children` render as a dropdown; the parent
+// stays a real link, so "Preloved" is reachable without opening the menu.
 
 const ticker = [
-  "Preloved gear from local families",
-  "Condition and seller details up front",
-  "Secure checkout, every time",
-  "Buy, sell or pass it on",
+  "Yoga, nutrition, community and preloved — in one place",
+  "Move. Nourish. Connect. Pass it on.",
+  "Mom-led, practical and affordable",
+  "For every stage of motherhood",
 ];
 
 export function SiteHeader() {
@@ -158,39 +149,24 @@ export function SiteHeader() {
           <Logo className="hidden shrink-0 sm:inline-flex" />
 
           <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
-            {/* Shop — links to the catalog, reveals category shortcuts on
-                hover or keyboard focus (focus-within keeps it accessible). */}
-            <div className="group relative">
-              <Link
-                href="/listings"
-                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                Shop
-                <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
-              </Link>
-              <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
-                  {shopLinks.map((l) => (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-                    >
-                      {l.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {pageLinks.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                {l.label}
-              </Link>
-            ))}
+            {PRIMARY_NAV.map((item) =>
+              item.children ? (
+                <NavDropdown
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  items={item.children}
+                />
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -225,9 +201,9 @@ export function SiteHeader() {
                   )}
                 </Link>
 
-                {/* Primary sell CTA */}
-                <Link href="/sell" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-1 hidden gap-1.5 sm:inline-flex")}>
-                  <Tag className="h-4 w-4" /> Sell an item
+                {/* Primary platform CTA — books a session or joins the community */}
+                <Link href="/contact" className={cn(buttonVariants({ size: "sm" }), "ml-1 hidden gap-1.5 sm:inline-flex")}>
+                  <CalendarHeart className="h-4 w-4" /> Book / Join
                 </Link>
 
                 {/* Profile — avatar chip that reveals wishlist, notifications & sign out on hover/click */}
@@ -314,12 +290,12 @@ export function SiteHeader() {
               </>
             ) : (
               <>
-                {/* Secondary CTA */}
-                <Link href="/sell" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden gap-1.5 sm:inline-flex")}>
-                  <Tag className="h-4 w-4" /> Sell an item
+                {/* Primary platform CTA */}
+                <Link href="/contact" className={cn(buttonVariants({ size: "sm" }), "hidden gap-1.5 sm:inline-flex")}>
+                  <CalendarHeart className="h-4 w-4" /> Book / Join
                 </Link>
                 {/* Primary CTA */}
-                <Link href="/login" className={cn(buttonVariants({ size: "sm" }), "ml-1 gap-1.5")}>
+                <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-1 gap-1.5")}>
                   <User className="h-4 w-4" /> Sign in
                 </Link>
               </>
@@ -339,28 +315,34 @@ export function SiteHeader() {
             className="absolute inset-x-0 top-full overflow-hidden border-b border-border bg-background/95 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] lg:hidden"
           >
             <nav className="mx-auto flex w-full max-w-7xl flex-col gap-1 px-5 py-4 sm:px-8">
-              <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Shop</p>
-              {shopLinks.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-                >
-                  {l.label}
-                </Link>
+              {PRIMARY_NAV.map((item) => (
+                <div key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                  >
+                    {item.label}
+                  </Link>
+                  {item.children && (
+                    <div className="mb-1 ml-3 border-l border-border pl-3">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => setMenuOpen(false)}
+                          className="block rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
               <div className="my-2 border-t border-border" />
-              {pageLinks.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-                >
-                  {l.label}
-                </Link>
-              ))}
+              <Link href="/journal" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">The Nurture Journal</Link>
+              <Link href="/contact" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">Contact</Link>
               {hydrated && user && (
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
                   {user.role === "ADMIN" && <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Visit admin panel</Link>}
@@ -369,8 +351,8 @@ export function SiteHeader() {
                   <button type="button" onClick={() => { logout(); setMenuOpen(false); }} className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger/10">Log out</button>
                 </div>
               )}
-              <Link href="/sell" onClick={() => setMenuOpen(false)} className={cn(buttonVariants(), "mt-2 w-full gap-1.5")}>
-                <Tag className="h-4 w-4" /> Sell an item
+              <Link href="/contact" onClick={() => setMenuOpen(false)} className={cn(buttonVariants(), "mt-2 w-full gap-1.5")}>
+                <CalendarHeart className="h-4 w-4" /> Book / Join
               </Link>
             </nav>
           </motion.div>
