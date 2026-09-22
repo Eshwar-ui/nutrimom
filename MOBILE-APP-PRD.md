@@ -61,7 +61,8 @@ Enforced **server-side**; the app only ever reflects them.
   only after `POST /payments/verify` or a webhook settle.
 - **Seller gate** (`ListingsService.assertCanList`): ₹100 registration **and** admin approval
   **and** an active membership window — three distinct states, already in `SellerBillingStatus`.
-- **Reservation hold:** creating an order flips the listing `APPROVED → RESERVED` for 2 days; a
+- **Reservation hold:** creating an order flips the listing `APPROVED → RESERVED` for **30 minutes**
+  (`HOLD_MINUTES` in `OrdersService`; an earlier design said 2 days, and so did this document); a
   sweeper releases expired holds every 10 min. A second buyer racing the item gets a 400.
 - **Cancellation policy is admin-configurable** (cutoff hours, reason codes, refund %) and
   published at `GET /cancellation-policy`. Read it; never hardcode it.
@@ -432,6 +433,27 @@ built against the web's newest design language:
 - **Still open from the brief:** real testimonials (none exist), the six
   lead-magnet PDFs (Q4), Instagram/YouTube links (B7), analytics (Firebase,
   D7, needs the project), and a native FAQ (the app opens the web page).
+
+### P1 progress: bag, checkout and payment (2026-09-23)
+
+M4 and the buyer half of M5 are built: an on-device bag, checkout (address
+prefilled, validation worded as the server's schema), the Razorpay Flutter SDK,
+the order screen, and the orders list. The web's payment-outcome module is
+ported case for case, above all `captured-unconfirmed`: once Razorpay has taken
+the money, no failure after it may read as "payment failed".
+
+One deliberate departure from the web: checkout only *creates* the order and
+then hands off to the order screen, which owns payment and every retry. The web
+creates the order and the gateway order in one go, so a gateway failure followed
+by a retry creates a second order, which then fails with "no longer available"
+against the buyer's own hold. Here that cannot happen.
+
+**Verified live:** bag persists across restarts; the order was created and held
+the item (RESERVED); the gateway failure was classified and shown correctly;
+cancelling released the item back to browse. **Not verified:** the capture ->
+verify -> PAID path, because **Razorpay rejects the dev API's test keys (HTTP
+401)**. They need regenerating before any payment can complete (**B6**).
+Cancel with reason, confirm delivery and reviews remain in M5.
 
 ## 10. Launch checklist (from brief §17, mapped to the app)
 
