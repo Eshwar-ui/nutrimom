@@ -185,7 +185,14 @@ export function IncludesList({
 
 export interface PriceRow {
   label: string;
+  /** The figure alone — "₹799". The "from" qualifier is `from`, not prose. */
   price: string;
+  /** Marks a starting price, so the qualifier is set in type rather than
+   *  buried at the same size as the number it changes the meaning of. */
+  from?: boolean;
+  /** What the figure buys — "per class", "per month". Without it a ₹199 class
+   *  rate sits beside a ₹799 monthly batch as though they were comparable. */
+  unit?: string;
 }
 
 /**
@@ -203,31 +210,83 @@ export function PricingTable({
   rows: readonly PriceRow[];
   note?: string;
 }) {
+  // One price is a statement, several are a comparison. A lone row in a
+  // three-column grid reads as two missing cards, so it gets the wider
+  // treatment instead of a third of a row.
+  const single = rows.length === 1;
+
   return (
     <section className="mt-14">
       <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
         {heading}
       </h2>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-surface">
-        <table className="w-full text-sm">
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.label} className={cn(i > 0 && "border-t border-border")}>
-                <th
-                  scope="row"
-                  className="px-5 py-3.5 text-left font-semibold text-foreground"
-                >
-                  {row.label}
-                </th>
-                <td className="px-5 py-3.5 text-right text-muted-foreground">
-                  {row.price}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      <div
+        className={cn(
+          "mt-6 grid gap-4",
+          !single && "sm:grid-cols-2 lg:grid-cols-3",
+        )}
+      >
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className={cn(
+              // The home page's card language — same radius, border weight and
+              // shadow. No hover lift: unlike the pillar and stage cards these
+              // are not links, and a card that rises under the cursor promises
+              // a click that never happens.
+              "relative overflow-hidden rounded-[1.75rem] border-2 border-border bg-surface card-shadow",
+              single ? "p-8 sm:flex sm:items-end sm:justify-between sm:gap-8" : "flex flex-col p-6",
+            )}
+          >
+            {single && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-sage/40 blur-2xl"
+              />
+            )}
+            <h3
+              className={cn(
+                "relative text-xs font-bold uppercase tracking-[0.08em] text-accent-text",
+                single && "sm:text-sm",
+              )}
+            >
+              {row.label}
+            </h3>
+            <p
+              className={cn(
+                "relative flex items-baseline gap-1.5",
+                single ? "mt-3 sm:mt-0" : "mt-auto pt-5",
+              )}
+            >
+              {row.from && (
+                <span className="text-sm font-semibold text-muted-foreground">
+                  from
+                </span>
+              )}
+              <span
+                className={cn(
+                  "font-display font-semibold leading-none tracking-[-0.02em] text-foreground",
+                  single ? "text-4xl sm:text-5xl" : "text-3xl",
+                )}
+              >
+                {row.price}
+              </span>
+              {row.unit && (
+                <span className="text-sm font-semibold text-muted-foreground">
+                  {row.unit}
+                </span>
+              )}
+            </p>
+          </div>
+        ))}
       </div>
-      {note && <p className="mt-3 text-xs text-muted-foreground">{note}</p>}
+
+      {note && (
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          {note}
+        </p>
+      )}
     </section>
   );
 }

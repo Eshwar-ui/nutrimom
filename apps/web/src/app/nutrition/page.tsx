@@ -55,11 +55,11 @@ const services: Offering[] = [
 ];
 
 const pricing = [
-  { label: "Quick guidance", price: "from ₹299" },
-  { label: "1:1 consultation", price: "from ₹699" },
+  { label: "Quick guidance", price: "₹299", from: true },
+  { label: "1:1 consultation", price: "₹699", from: true },
   { label: "Starting Solids session", price: "₹799" },
-  { label: "Mom + Baby bundle", price: "from ₹1,299" },
-  { label: "Monthly support", price: "from ₹1,499" },
+  { label: "Mom + Baby bundle", price: "₹1,299", from: true },
+  { label: "Monthly support", price: "₹1,499", from: true, unit: "per month" },
 ];
 
 export default async function NutritionPage() {

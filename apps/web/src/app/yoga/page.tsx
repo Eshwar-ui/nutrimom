@@ -70,11 +70,11 @@ const offerings: Offering[] = [
 ];
 
 const pricing = [
-  { label: "Trial / intro session", price: "from ₹299" },
-  { label: "Group class", price: "from ₹199 per class" },
-  { label: "Monthly batch", price: "from ₹799" },
-  { label: "Garbhasanskar", price: "from ₹499" },
-  { label: "1:1 session", price: "from ₹699" },
+  { label: "Trial / intro session", price: "₹299", from: true },
+  { label: "Group class", price: "₹199", from: true, unit: "per class" },
+  { label: "Monthly batch", price: "₹799", from: true, unit: "per month" },
+  { label: "Garbhasanskar", price: "₹499", from: true },
+  { label: "1:1 session", price: "₹699", from: true },
 ];
 
 export default async function YogaPage() {
