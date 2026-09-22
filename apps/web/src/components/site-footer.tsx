@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FullLogo } from "./logo";
+import { MakerHeart } from "./maker-heart";
 import { Container } from "./ui/primitives";
 import { cn } from "@/lib/utils";
 import { FOOTER_COLUMNS, LEGAL_LINKS, type NavLink } from "@/lib/site-nav";
@@ -36,6 +37,13 @@ export function SiteFooter() {
       <div className="border-t border-border bg-surface-2">
         <Container className="flex flex-col items-center justify-between gap-3 py-3 text-center text-xs text-muted-foreground sm:flex-row">
           <p>(c) {new Date().getFullYear()} The Nurture Moms. All rights reserved.</p>
+          <div className="flex items-center">
+            <span>Made with</span>
+            <MakerHeart />
+            <a href="https://asaninnovators.com" className="hover:text-foreground">
+              Asan Innovators
+            </a>
+          </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             {LEGAL_LINKS.map((l) => (
               <Link key={l.href} href={l.href} className="hover:text-foreground">

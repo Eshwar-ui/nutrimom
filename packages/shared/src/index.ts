@@ -989,6 +989,43 @@ export interface AdminUserDetail extends AdminUser {
 /* Blog                                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The Nurture Journal's taxonomy, fixed by the founders' brief (section 11).
+ *
+ * The slug is what appears in `/journal?category=`, so it is part of the URL
+ * contract and must not be derived from the label — renaming "Starting Solids"
+ * for readability would otherwise silently break every link to it.
+ */
+export const BLOG_CATEGORIES = [
+  { value: "PREGNANCY", slug: "pregnancy", label: "Pregnancy" },
+  { value: "YOGA", slug: "yoga", label: "Yoga" },
+  { value: "POSTPARTUM", slug: "postpartum", label: "Postpartum" },
+  { value: "NUTRITION", slug: "nutrition", label: "Nutrition" },
+  { value: "STARTING_SOLIDS", slug: "starting-solids", label: "Starting Solids" },
+  { value: "BABY", slug: "baby", label: "Baby" },
+  { value: "TODDLER", slug: "toddler", label: "Toddler" },
+  { value: "MOTHERHOOD", slug: "motherhood", label: "Motherhood" },
+  { value: "MOMPRENEUR", slug: "mompreneur", label: "Mompreneur" },
+  { value: "PRELOVED", slug: "preloved", label: "Preloved" },
+] as const;
+
+export type BlogCategory = (typeof BLOG_CATEGORIES)[number]["value"];
+export type BlogCategorySlug = (typeof BLOG_CATEGORIES)[number]["slug"];
+
+const BLOG_CATEGORY_VALUES = BLOG_CATEGORIES.map((c) => c.value) as [
+  BlogCategory,
+  ...BlogCategory[],
+];
+
+export function blogCategoryBySlug(slug: string) {
+  return BLOG_CATEGORIES.find((c) => c.slug === slug) ?? null;
+}
+
+export function blogCategoryByValue(value: string | null | undefined) {
+  if (!value) return null;
+  return BLOG_CATEGORIES.find((c) => c.value === value) ?? null;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -999,6 +1036,7 @@ export interface BlogPost {
   published: boolean;
   publishedAt: string | null;
   authorName: string;
+  category: BlogCategory | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1028,6 +1066,7 @@ export const blogPostInputSchema = z.object({
     .string()
     .min(2, "Enter an author name")
     .max(80, "Keep the author name to 80 characters or fewer"),
+  category: z.enum(BLOG_CATEGORY_VALUES).nullish(),
 });
 export type BlogPostInput = z.infer<typeof blogPostInputSchema>;
 
@@ -1039,6 +1078,7 @@ export type SetBlogPostPublishedInput = z.infer<
 export const blogQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(60).default(12),
+  category: z.enum(BLOG_CATEGORY_VALUES).optional(),
 });
 export type BlogQuery = z.infer<typeof blogQuerySchema>;
 

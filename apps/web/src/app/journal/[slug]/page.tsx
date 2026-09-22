@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ApiError } from "@/lib/api";
+import { blogCategoryByValue } from "@nutrimom/shared";
 import { getBlogPost, markdownExcerpt } from "@/lib/blog";
 import { metaDescription, pageMetadata } from "@/lib/seo";
 import { blogPostJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
@@ -79,6 +80,17 @@ export default async function JournalPostPage({ params }: { params: Promise<{ sl
       <header className="mt-4">
         <h1 className="font-display text-3xl font-semibold text-foreground sm:text-4xl">{post.title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
+          {blogCategoryByValue(post.category) && (
+            <>
+              <Link
+                href={`/journal?category=${blogCategoryByValue(post.category)!.slug}`}
+                className="rounded-full bg-muted px-2.5 py-1 font-bold text-accent-text transition-colors hover:bg-muted/70"
+              >
+                {blogCategoryByValue(post.category)!.label}
+              </Link>
+              {" · "}
+            </>
+          )}
           {post.publishedAt && fmtDate(post.publishedAt)} · {post.authorName}
         </p>
       </header>

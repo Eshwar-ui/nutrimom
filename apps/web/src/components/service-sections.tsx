@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { MessageCircle, ArrowRight, BadgeCheck } from "lucide-react";
+import { TrackedLink, TrackedExternalLink } from "./tracked-link";
+import { MessageCircle, ArrowRight, BadgeCheck, Tag, Check, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Container } from "./ui/primitives";
 import { buttonVariants } from "./ui/button";
@@ -155,7 +156,33 @@ export function OfferingGrid({
   );
 }
 
-/** A plain checklist — "what a session includes", "what the community covers". */
+/**
+ * The pastel-and-ink pairs the paper world is built from.
+ *
+ * The ink is a fixed dark tone rather than a token because the pastel under it
+ * is defined identically in light and dark mode, so dark ink stays correct in
+ * both — the same reason the home page's testimonial stickers do it.
+ */
+const PASTEL_INK = [
+  { tint: "bg-blush", ink: "text-[#7a2447]" },
+  { tint: "bg-sky", ink: "text-[#215172]" },
+  { tint: "bg-sage", ink: "text-[#2f5236]" },
+  { tint: "bg-lavender", ink: "text-[#4a3170]" },
+  { tint: "bg-gold", ink: "text-[#5c4410]" },
+] as const;
+
+/**
+ * A checklist — "what a session includes", "what the community covers".
+ *
+ * One sheet rather than a card each: this is a single list, and both callers
+ * pass seven items, which in a two-column grid of cards left the last one
+ * stranded in its own row. CSS columns flow and balance it instead, so an odd
+ * count reads as a list rather than a layout that ran out.
+ *
+ * Deliberately not the tinted, tilted stock the prices use — seven rotated
+ * notes would fight for the same attention the figures need, and a list is a
+ * different kind of thing from a set of options.
+ */
 export function IncludesList({
   heading,
   items,
@@ -168,24 +195,58 @@ export function IncludesList({
       <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
         {heading}
       </h2>
-      <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-        {items.map((item) => (
-          <li
-            key={item}
-            className="flex gap-3 rounded-2xl border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground"
-          >
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            {item}
-          </li>
-        ))}
-      </ul>
+
+      <div className="relative mt-8 rounded-[1.75rem] border-2 border-border bg-surface p-7 card-shadow sm:p-9">
+        {/* washi tape pinning the sheet */}
+        <span
+          aria-hidden
+          className="absolute -top-3 left-10 h-6 w-24 -rotate-6 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm"
+        />
+        {/* corner sticker */}
+        <span
+          aria-hidden
+          className="absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface bg-sage text-[#2f5236]"
+        >
+          <ClipboardCheck className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+
+        <ul className="gap-x-10 sm:columns-2">
+          {items.map((item, i) => {
+            const swatch = PASTEL_INK[i % PASTEL_INK.length];
+            return (
+              <li
+                key={item}
+                className="flex break-inside-avoid gap-3.5 py-3 text-sm leading-relaxed text-foreground"
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full",
+                    swatch.tint,
+                    swatch.ink,
+                  )}
+                >
+                  <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
+                </span>
+                {item}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
 
 export interface PriceRow {
   label: string;
+  /** The figure alone — "₹799". The "from" qualifier is `from`, not prose. */
   price: string;
+  /** Marks a starting price, so the qualifier is set in type rather than
+   *  buried at the same size as the number it changes the meaning of. */
+  from?: boolean;
+  /** What the figure buys — "per class", "per month". Without it a ₹199 class
+   *  rate sits beside a ₹799 monthly batch as though they were comparable. */
+  unit?: string;
 }
 
 /**
@@ -194,6 +255,24 @@ export interface PriceRow {
  * fee. The note under the table says so in the visitor's words rather than
  * leaving them to discover it at checkout.
  */
+/**
+ * Paper stock for the price notes — the same vocabulary as the home page's
+ * testimonial cards: a tinted sheet, a slight rotation that straightens under
+ * the cursor, washi tape and a corner sticker. Cycled by index so the
+ * component takes any number of prices without a per-page palette.
+ *
+ * The sticker's ink is a fixed dark tone rather than a token because the
+ * pastel it sits on is defined identically in light and dark mode, so a dark
+ * ink stays correct in both — the same reason the testimonial cards do it.
+ */
+const PRICE_PAPERS = [
+  { paper: "bg-blush/45", rotate: "-rotate-2" },
+  { paper: "bg-sky/50", rotate: "rotate-1" },
+  { paper: "bg-sage/45", rotate: "-rotate-1" },
+  { paper: "bg-lavender/45", rotate: "rotate-2" },
+  { paper: "bg-beige", rotate: "-rotate-1" },
+] as const;
+
 export function PricingTable({
   heading = "Pricing",
   rows,
@@ -203,31 +282,125 @@ export function PricingTable({
   rows: readonly PriceRow[];
   note?: string;
 }) {
+  // One price is a statement, several are a comparison. A lone row in a
+  // three-column row reads as two missing cards, so it gets the wider
+  // treatment instead of a third of a row.
+  const single = rows.length === 1;
+
   return (
     <section className="mt-14">
       <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
         {heading}
       </h2>
-      <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-surface">
-        <table className="w-full text-sm">
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.label} className={cn(i > 0 && "border-t border-border")}>
-                <th
-                  scope="row"
-                  className="px-5 py-3.5 text-left font-semibold text-foreground"
+
+      {/* Centred wrap rather than a grid: five prices in three columns left an
+          empty third on the second row, and the block read as a failed load.
+          Wrapping and centring balances whatever the last row holds, for any
+          number of prices. Bases are computed against the gap so the cards
+          still line up in columns. */}
+      <div
+        className={cn(
+          "mt-8 flex flex-wrap justify-center gap-5",
+          single && "block",
+        )}
+      >
+        {rows.map((row, i) => {
+          const stock = PRICE_PAPERS[i % PRICE_PAPERS.length];
+          return (
+            <div
+              key={row.label}
+              className={cn(
+                "relative rounded-[1.75rem] border-2 border-border card-shadow",
+                single
+                  ? "overflow-hidden bg-surface p-8 sm:flex sm:items-end sm:justify-between sm:gap-8"
+                  : cn(
+                      // Nothing is clipped here: the tape and the sticker are
+                      // meant to sit off the sheet, the way they would if
+                      // someone had actually stuck them on.
+                      "flex basis-full flex-col p-7 pt-9 transition-transform duration-500",
+                      "[transition-timing-function:cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1.5 hover:rotate-0",
+                      "sm:basis-[calc((100%-1.25rem)/2)] lg:basis-[calc((100%-2.5rem)/3)]",
+                      stock.paper,
+                      stock.rotate,
+                    ),
+              )}
+            >
+              {single ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-sage/40 blur-2xl"
+                />
+              ) : (
+                <>
+                  {/* washi tape pinning the note */}
+                  <span
+                    aria-hidden
+                    className="absolute -top-3 left-8 h-6 w-20 -rotate-6 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm"
+                  />
+                  {/* corner sticker */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface",
+                      PASTEL_INK[i % PASTEL_INK.length].tint,
+                      PASTEL_INK[i % PASTEL_INK.length].ink,
+                    )}
+                  >
+                    <Tag className="h-5 w-5" strokeWidth={1.8} />
+                  </span>
+                  {/* oversized currency glyph, the note's watermark */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-3 right-5 select-none font-display text-7xl leading-none text-foreground/[0.07]"
+                  >
+                    ₹
+                  </span>
+                </>
+              )}
+
+              <h3
+                className={cn(
+                  "relative text-xs font-bold uppercase tracking-[0.08em] text-accent-text",
+                  single && "sm:text-sm",
+                )}
+              >
+                {row.label}
+              </h3>
+              <p
+                className={cn(
+                  "relative flex items-baseline gap-1.5",
+                  single ? "mt-3 sm:mt-0" : "mt-auto pt-6",
+                )}
+              >
+                {row.from && (
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    from
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "font-display font-semibold leading-none tracking-[-0.02em] text-foreground",
+                    single ? "text-4xl sm:text-5xl" : "text-3xl",
+                  )}
                 >
-                  {row.label}
-                </th>
-                <td className="px-5 py-3.5 text-right text-muted-foreground">
                   {row.price}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </span>
+                {row.unit && (
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {row.unit}
+                  </span>
+                )}
+              </p>
+            </div>
+          );
+        })}
       </div>
-      {note && <p className="mt-3 text-xs text-muted-foreground">{note}</p>}
+
+      {note && (
+        <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
+          {note}
+        </p>
+      )}
     </section>
   );
 }
@@ -257,26 +430,43 @@ export function BookingCta({
   label,
   whatsappUrl,
   secondary,
+  /** The funnel keyword this CTA belongs to, recorded against the click so
+   *  §16's "WhatsApp keyword conversions" can be read per service. */
+  intent,
 }: {
   label: string;
   whatsappUrl: string | null;
   secondary?: { href: string; label: string };
+  intent?: string;
 }) {
+  // Both branches are measured, not just the WhatsApp one: while the operator
+  // has no support phone every booking falls back to the contact form, and a
+  // funnel that only counts the branch that isn't running yet reads as zero
+  // demand rather than as an unconfigured number.
+  const props = { intent: intent ?? "unknown", via: whatsappUrl ? "whatsapp" : "contact_form" };
+
   return (
     <>
       {whatsappUrl ? (
-        <a
+        <TrackedExternalLink
+          event="booking_cta_click"
+          eventProps={props}
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(buttonVariants({ size: "lg" }), "gap-2")}
         >
           <MessageCircle className="h-4 w-4" /> {label}
-        </a>
+        </TrackedExternalLink>
       ) : (
-        <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
+        <TrackedLink
+          event="booking_cta_click"
+          eventProps={props}
+          href="/contact"
+          className={cn(buttonVariants({ size: "lg" }), "gap-2")}
+        >
           {label}
-        </Link>
+        </TrackedLink>
       )}
       {secondary && (
         <Link

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrackedLink } from "@/components/tracked-link";
 import { ShoppingBag, Tag, Gift, ShieldCheck, Leaf, ArrowRight } from "lucide-react";
 import type { Category, Listing } from "@nutrimom/shared";
 import { Container } from "@/components/ui/primitives";
@@ -76,15 +77,22 @@ export default async function PrelovedPage() {
         title="Loved before. Loved again."
         subtitle="Give useful baby and maternity essentials another loving chapter — and find what your family needs next without paying retail for it."
       >
-        <Link href="/listings" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
+        <TrackedLink
+          event="preloved_click"
+          eventProps={{ action: "shop", placement: "hero" }}
+          href="/listings"
+          className={cn(buttonVariants({ size: "lg" }), "gap-2")}
+        >
           <ShoppingBag className="h-4 w-4" /> Shop preloved
-        </Link>
-        <Link
+        </TrackedLink>
+        <TrackedLink
+          event="preloved_click"
+          eventProps={{ action: "sell", placement: "hero" }}
           href="/sell"
           className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
         >
           <Tag className="h-4 w-4" /> Sell an item
-        </Link>
+        </TrackedLink>
       </ServiceHero>
 
       <OfferingGrid heading="Three ways to take part" items={ways} />
@@ -160,9 +168,14 @@ export default async function PrelovedPage() {
         title="Have something to pass on?"
         body="List it in a few minutes. Another mom is already looking for it."
       >
-        <Link href="/sell" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
+        <TrackedLink
+          event="preloved_click"
+          eventProps={{ action: "sell", placement: "closing" }}
+          href="/sell"
+          className={cn(buttonVariants({ size: "lg" }), "gap-2")}
+        >
           <Tag className="h-4 w-4" /> Sell an item
-        </Link>
+        </TrackedLink>
         <Link
           href="/policies"
           className={cn(buttonVariants({ variant: "outline", size: "lg" }))}

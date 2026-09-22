@@ -146,6 +146,7 @@ export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
       { href: "/nutrition/starting-solids", label: "Starting Solids" },
       { href: "/community", label: "Community" },
       { href: "/journal", label: "Journal" },
+      { href: "/faq", label: "FAQs" },
     ],
   },
   {
@@ -206,6 +207,7 @@ export const STATIC_SITEMAP_ROUTES: readonly {
   { path: "/journal", changeFrequency: "weekly", priority: 0.6 },
   { path: "/sell", changeFrequency: "monthly", priority: 0.5 },
   { path: "/about", changeFrequency: "monthly", priority: 0.4 },
+  { path: "/faq", changeFrequency: "monthly", priority: 0.5 },
   { path: "/contact", changeFrequency: "yearly", priority: 0.3 },
   // Not gated on the BusinessProfile: a plain-English guidelines hub, not a
   // statutory document, so it publishes regardless of the operator's details.

@@ -55,11 +55,11 @@ const services: Offering[] = [
 ];
 
 const pricing = [
-  { label: "Quick guidance", price: "from ₹299" },
-  { label: "1:1 consultation", price: "from ₹699" },
+  { label: "Quick guidance", price: "₹299", from: true },
+  { label: "1:1 consultation", price: "₹699", from: true },
   { label: "Starting Solids session", price: "₹799" },
-  { label: "Mom + Baby bundle", price: "from ₹1,299" },
-  { label: "Monthly support", price: "from ₹1,499" },
+  { label: "Mom + Baby bundle", price: "₹1,299", from: true },
+  { label: "Monthly support", price: "₹1,499", from: true, unit: "per month" },
 ];
 
 export default async function NutritionPage() {
@@ -81,8 +81,8 @@ export default async function NutritionPage() {
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/80 to-transparent"
         />
-        <div className="absolute inset-0 flex items-center">
-          <Container className="w-full">
+        <div className="absolute inset-0">
+          <Container className="flex h-full w-full flex-col items-stretch justify-start pt-10 sm:justify-center sm:pt-0">
             <ServiceHero
               eyebrow="Nourish"
               title="Nutrition for Mom & Baby"
@@ -90,6 +90,7 @@ export default async function NutritionPage() {
               subtitleClassName="max-w-md"
             >
               <BookingCta
+                intent="nutrition"
                 label="Book a nutrition consultation"
                 whatsappUrl={whatsappUrl}
                 secondary={{
@@ -124,6 +125,7 @@ export default async function NutritionPage() {
         body="Pregnancy, the fourth trimester, first spoons or a fussy toddler — we'll start from wherever you actually are."
       >
         <BookingCta
+          intent="nutrition"
           label="Book a consultation"
           whatsappUrl={whatsappUrl}
           secondary={{ href: "/journal", label: "Read the Journal" }}

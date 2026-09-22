@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, FileText, Image as ImageIcon } from "lucide-react";
-import { blogPostInputSchema, type BlogPost } from "@nutrimom/shared";
+import { BLOG_CATEGORIES, blogPostInputSchema, type BlogPost } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
 import { revalidatePublicPages } from "@/lib/revalidate";
 import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
@@ -19,6 +19,9 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
     excerpt: initial?.excerpt ?? "",
     bodyMarkdown: initial?.bodyMarkdown ?? "",
     authorName: initial?.authorName ?? "",
+    // "" is the uncategorised choice in the select; the payload turns it back
+    // into null, which is what the column stores.
+    category: initial?.category ?? "",
   });
   const [coverImage, setCoverImage] = useState<string[]>(initial?.coverImageUrl ? [initial.coverImageUrl] : []);
   const [preview, setPreview] = useState(false);
@@ -36,6 +39,7 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
       bodyMarkdown: form.bodyMarkdown,
       coverImageUrl: coverImage[0] || undefined,
       authorName: form.authorName,
+      category: form.category || null,
     };
     const parsed = blogPostInputSchema.safeParse(payload);
     if (!parsed.success) {
@@ -69,6 +73,19 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
         </Field>
         <Field label="Slug" id="slug" error={issues.slug} helper="Lowercase, hyphens only — used in the URL">
           <Input id="slug" value={form.slug} onChange={(e) => set("slug", e.target.value)} aria-invalid={!!issues.slug} placeholder="used-stroller-checklist" />
+        </Field>
+        <Field label="Category" id="category" error={issues.category}>
+          <select
+            id="category"
+            value={form.category}
+            onChange={(e) => set("category", e.target.value)}
+            className="h-11 w-full rounded-xl border border-border-control/60 bg-surface px-4 text-sm text-foreground focus-visible:border-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <option value="">Uncategorised</option>
+            {BLOG_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
         </Field>
         <Field label="Author" id="authorName" error={issues.authorName}>
           <Input id="authorName" value={form.authorName} onChange={(e) => set("authorName", e.target.value)} aria-invalid={!!issues.authorName} placeholder="The Nurture Moms team" />

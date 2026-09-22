@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { isBusinessProfileComplete } from "@nutrimom/shared";
+import { BLOG_CATEGORIES, isBusinessProfileComplete } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { getBlogPostsForSitemap } from "@/lib/blog";
 import { getBusinessProfile } from "@/lib/business-profile";
@@ -75,6 +75,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  // The ten journal categories are fixed topic pages, not filter permutations,
+  // so they are submitted like any other landing page.
+  const journalCategoryRoutes: MetadataRoute.Sitemap = BLOG_CATEGORIES.map(
+    (category) => ({
+      url: `${SITE_URL}/journal?category=${category.slug}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    }),
+  );
+
   const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
     url: `${SITE_URL}/journal/${post.slug}`,
     lastModified: post.updatedAt,
@@ -86,6 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticRoutes,
     ...legalRoutes,
     ...categoryRoutes,
+    ...journalCategoryRoutes,
     ...blogRoutes,
     ...listingRoutes,
   ];
