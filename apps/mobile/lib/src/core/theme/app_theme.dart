@@ -183,6 +183,11 @@ class AppTheme {
         labelStyle: TextStyle(color: t.mutedForeground),
         hintStyle: TextStyle(color: t.mutedForeground),
         helperStyle: TextStyle(color: t.mutedForeground),
+        // Two lines, not one: in a half-width field (the checkout PIN code)
+        // "Enter a valid 6-digit postal code" was cut to "Enter a valid 6-d...",
+        // which drops the part that says what is wrong.
+        errorMaxLines: 2,
+        helperMaxLines: 2,
       ),
       cardTheme: CardThemeData(
         color: t.surface,

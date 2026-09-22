@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/about/about_screen.dart';
+import '../../features/bag/presentation/bag_screen.dart';
+import '../../features/checkout/presentation/checkout_screen.dart';
+import '../../features/orders/presentation/order_screen.dart';
+import '../../features/orders/presentation/orders_screen.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
@@ -31,7 +35,7 @@ import '../shell/app_shell.dart';
 /// catalog app (PRD R2.5). Every tab handles its own signed-out state, so a
 /// tab never bounces you to a login screen. Nothing is gated here today; the
 /// list stays so a future account-only route has one obvious place to go.
-const _authedPrefixes = <String>[];
+const _authedPrefixes = <String>['/checkout', '/orders'];
 
 final _rootKey = GlobalKey<NavigatorState>();
 
@@ -126,6 +130,34 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _rootKey,
             builder: (_, state) =>
                 JournalPostScreen(slug: state.pathParameters['slug']!),
+          ),
+        ],
+      ),
+      // Bag, checkout and orders open over the shell: they are reachable from
+      // any tab, and a checkout with a tab bar under it invites a tab switch
+      // halfway through paying (PRD §11.4).
+      GoRoute(
+        path: '/bag',
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const BagScreen(),
+      ),
+      GoRoute(
+        path: '/checkout',
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const CheckoutScreen(),
+      ),
+      GoRoute(
+        path: '/orders',
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const OrdersScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            parentNavigatorKey: _rootKey,
+            builder: (_, state) => OrderScreen(
+              id: state.pathParameters['id']!,
+              autoPay: state.uri.queryParameters['pay'] == '1',
+            ),
           ),
         ],
       ),

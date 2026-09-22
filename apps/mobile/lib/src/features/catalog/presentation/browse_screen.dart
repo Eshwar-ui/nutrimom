@@ -8,6 +8,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/async_view.dart';
 import '../application/browse_controller.dart';
 import '../application/catalog_providers.dart';
+import '../../bag/presentation/bag_button.dart';
 import 'filters_sheet.dart';
 import 'widgets/listing_card.dart';
 
@@ -66,7 +67,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final browse = ref.watch(browseProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Shop preloved')),
+      appBar: AppBar(
+        title: const Text('Shop preloved'),
+        actions: const [BagButton(), SizedBox(width: 6)],
+      ),
       body: Column(
         children: [
           Padding(

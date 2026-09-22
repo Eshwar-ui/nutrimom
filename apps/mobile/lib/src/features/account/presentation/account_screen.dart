@@ -117,7 +117,27 @@ class AccountScreen extends ConsumerWidget {
               ),
               child: const Text('Edit profile'),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 22),
+            Container(
+              decoration: BoxDecoration(
+                color: context.tokens.surface,
+                borderRadius: BorderRadius.circular(NmTokens.radiusXl),
+                border: Border.all(color: context.tokens.border, width: 2),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  Icons.receipt_long_outlined,
+                  color: context.tokens.foreground,
+                ),
+                title: Text('Your orders', style: theme.textTheme.bodyLarge),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: context.tokens.mutedForeground,
+                ),
+                onTap: () => context.push('/orders'),
+              ),
+            ),
+            const SizedBox(height: 22),
             const _InfoLinks(),
             const SizedBox(height: 12),
             const Divider(),

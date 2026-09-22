@@ -7,6 +7,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/brand.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../bag/presentation/bag_button.dart';
 import '../../catalog/application/browse_controller.dart';
 import '../../catalog/application/catalog_providers.dart';
 import '../../catalog/presentation/widgets/category_rail.dart';
@@ -169,15 +170,26 @@ class _Hero extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: topInset + 96,
-          width: double.infinity,
-          child: Image.asset(
-            'assets/images/bg-mobile.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            excludeFromSemantics: true,
-          ),
+        Stack(
+          children: [
+            SizedBox(
+              height: topInset + 96,
+              width: double.infinity,
+              child: Image.asset(
+                'assets/images/bg-mobile.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                excludeFromSemantics: true,
+              ),
+            ),
+            // Home has no app bar, so the bag sits on the art band, on its own
+            // ground so it reads against the drawing.
+            Positioned(
+              top: topInset + 6,
+              right: 14,
+              child: const BagButton(onDark: true),
+            ),
+          ],
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),

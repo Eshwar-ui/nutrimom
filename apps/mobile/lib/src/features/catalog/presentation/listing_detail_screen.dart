@@ -11,6 +11,8 @@ import '../../../core/shell/shell_nav.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../bag/application/bag_controller.dart';
+import '../../bag/presentation/bag_button.dart';
 import '../application/browse_controller.dart';
 import '../application/catalog_providers.dart';
 import '../data/catalog_repository.dart';
@@ -25,12 +27,93 @@ class ListingDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final listing = ref.watch(listingDetailProvider(id));
 
+    final item = listing.value;
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(actions: const [BagButton(), SizedBox(width: 6)]),
       body: AsyncView(
         value: listing,
         onRetry: () => ref.invalidate(listingDetailProvider(id)),
         data: (item) => _Detail(listing: item),
+      ),
+      // Held and sold items keep their notice in the body and get no bar: the
+      // only action that could go here is one that would fail.
+      bottomNavigationBar: item != null && item.isBuyable
+          ? _BuyBar(listing: item)
+          : null,
+    );
+  }
+}
+
+/// Price and the one action, pinned where a thumb can reach it.
+class _BuyBar extends ConsumerWidget {
+  const _BuyBar({required this.listing});
+
+  final Listing listing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final theme = Theme.of(context);
+    final me = ref.watch(authControllerProvider.select((s) => s.user?.id));
+    final inBag = ref.watch(
+      bagProvider.select((b) => b.any((i) => i.listingId == listing.id)),
+    );
+    // The server refuses to sell you your own listing; the button should not
+    // offer what the server will refuse.
+    final own = me != null && me == listing.seller.id;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  formatPaise(listing.sellingPriceInPaise),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: t.primary,
+                  ),
+                ),
+              ),
+              if (own)
+                Text(
+                  'This is your listing',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: t.mutedForeground,
+                  ),
+                )
+              else if (inBag)
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/bag'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 52),
+                  ),
+                  icon: Icon(Icons.check, size: 18, color: t.primary),
+                  label: const Text('In your bag'),
+                )
+              else
+                FilledButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(bagProvider.notifier)
+                        .add(BagItem.fromListing(listing));
+                    // No snackbar: it floated over this bar and hid the button
+                    // as it flipped to "In your bag". The flip and the badge
+                    // on the bag icon are the confirmation.
+                  },
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
+                  icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                  label: const Text('Add to bag'),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -249,8 +332,10 @@ class _StatusNotice extends StatelessWidget {
       child: Text(
         sold
             ? 'This one has found a new home. Browse similar items — stock changes daily.'
+            // The hold is OrdersService's HOLD_MINUTES (30). This said "two
+            // days", which was the original design and has not been true since.
             : 'Another buyer is checking out with this right now. If they do not complete it, '
-                  'it comes back automatically within two days.',
+                  'it comes back automatically within about half an hour.',
         style: Theme.of(context).textTheme.bodyMedium,
       ),
     );

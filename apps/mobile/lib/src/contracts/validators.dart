@@ -73,3 +73,16 @@ String? validateBio(String? value) {
   }
   return null;
 }
+
+/// Mirrors `shippingAddressSchema.postalCode`: exactly six digits, after the
+/// schema's own trim.
+String? validatePostalCode(String? value) {
+  if (!RegExp(r'^\d{6}$').hasMatch((value ?? '').trim())) {
+    return 'Enter a valid 6-digit postal code';
+  }
+  return null;
+}
+
+/// A required field, worded as the shipping schema words it.
+String? Function(String?) requiredField(String message, {int min = 1}) =>
+    (value) => (value ?? '').trim().length < min ? message : null;
