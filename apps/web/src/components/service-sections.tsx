@@ -221,10 +221,15 @@ export function PricingTable({
         {heading}
       </h2>
 
+      {/* Centred wrap rather than a grid: five prices in three columns left an
+          empty third on the second row, and the block read as a failed load.
+          Wrapping and centring balances whatever the last row holds, for any
+          number of prices. Bases are computed against the gap so the cards
+          still line up in columns. */}
       <div
         className={cn(
-          "mt-6 grid gap-4",
-          !single && "sm:grid-cols-2 lg:grid-cols-3",
+          "mt-6 flex flex-wrap justify-center gap-4",
+          single && "block",
         )}
       >
         {rows.map((row) => (
@@ -236,7 +241,9 @@ export function PricingTable({
               // are not links, and a card that rises under the cursor promises
               // a click that never happens.
               "relative overflow-hidden rounded-[1.75rem] border-2 border-border bg-surface card-shadow",
-              single ? "p-8 sm:flex sm:items-end sm:justify-between sm:gap-8" : "flex flex-col p-6",
+              single
+                ? "p-8 sm:flex sm:items-end sm:justify-between sm:gap-8"
+                : "flex basis-full flex-col p-6 sm:basis-[calc((100%-1rem)/2)] lg:basis-[calc((100%-2rem)/3)]",
             )}
           >
             {single && (
