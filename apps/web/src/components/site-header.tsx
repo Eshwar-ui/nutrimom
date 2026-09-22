@@ -28,6 +28,7 @@ import { authedRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
 import { PRIMARY_NAV } from "@/lib/site-nav";
+import { NavDropdown } from "./nav-dropdown";
 
 // The nav tree lives in lib/site-nav so the header, the footer and the sitemap
 // cannot drift apart. Items with `children` render as a dropdown; the parent
@@ -150,28 +151,12 @@ export function SiteHeader() {
           <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
             {PRIMARY_NAV.map((item) =>
               item.children ? (
-                <div key={item.href} className="group relative">
-                  <Link
-                    href={item.href}
-                    className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    {item.label}
-                    <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
-                  </Link>
-                  <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                    <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
-                      {item.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <NavDropdown
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  items={item.children}
+                />
               ) : (
                 <Link
                   key={item.href}
