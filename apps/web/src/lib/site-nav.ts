@@ -79,9 +79,34 @@ export const PILLARS: readonly Pillar[] = [
   },
 ] as const;
 
+/**
+ * The homepage's "choose your stage" entry points (brief §3).
+ *
+ * Deliberately phrased in the visitor's words rather than ours — someone
+ * arriving from a reel knows they are six weeks postpartum, not that they want
+ * the "Nourish" pillar. Each stage routes to the one page that answers it, so
+ * the choice is a shortcut rather than another menu.
+ */
+export interface Stage {
+  label: string;
+  /** The services this stage leads to, shown under the label. */
+  covers: string;
+  href: string;
+}
+
+export const STAGES: readonly Stage[] = [
+  { label: "I'm pregnant", covers: "Yoga · Garbhasanskar · Nutrition", href: "/yoga" },
+  { label: "I'm postpartum", covers: "Recovery · Yoga · Nutrition · Support", href: "/nutrition" },
+  { label: "My baby is starting solids", covers: "Solids session · Baby nutrition · Meal ideas", href: "/nutrition/starting-solids" },
+  { label: "I'm navigating toddlerhood", covers: "Nutrition · Activities · Resources", href: "/nutrition" },
+  { label: "I need mom support", covers: "Community · Events · Expert sessions", href: "/community" },
+  { label: "I want preloved", covers: "Buy · Sell · Donate", href: "/preloved" },
+] as const;
+
 export interface NavLink {
   href: string;
   label: string;
+  placeholder?: boolean;
 }
 
 export interface NavItem extends NavLink {
@@ -120,25 +145,33 @@ export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
       { href: "/nutrition", label: "Nutrition" },
       { href: "/nutrition/starting-solids", label: "Starting Solids" },
       { href: "/community", label: "Community" },
-      { href: "/preloved", label: "Preloved" },
+      { href: "/journal", label: "Journal" },
     ],
   },
   {
     title: "Marketplace",
     links: [
       { href: "/listings", label: "Shop all" },
+      { href: "/categories/strollers", label: "Strollers" },
+      { href: "/categories/maternity-wear", label: "Maternity" },
       { href: "/sell", label: "Sell an item" },
-      { href: "/account/listings", label: "My listings" },
-      { href: "/wishlist", label: "Wishlist" },
     ],
   },
   {
-    title: "More",
+    title: "Your space",
     links: [
-      { href: "/journal", label: "The Nurture Journal" },
-      { href: "/about", label: "About us" },
-      { href: "/contact", label: "Contact" },
       { href: "/account", label: "My account" },
+      { href: "/account/listings", label: "My listings" },
+      { href: "/wishlist", label: "Wishlist" },
+      { href: "/contact", label: "Contact us" },
+    ],
+  },
+  {
+    title: "Socials",
+    links: [
+      { href: "#", label: "Instagram · coming soon", placeholder: true },
+      { href: "#", label: "Facebook · coming soon", placeholder: true },
+      { href: "#", label: "YouTube · coming soon", placeholder: true },
     ],
   },
 ] as const;
