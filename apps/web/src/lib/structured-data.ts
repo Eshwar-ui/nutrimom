@@ -154,7 +154,7 @@ export function listingJsonLd(listing: Listing): JsonLdNode {
  *  exactly, including the derived-from-body fallback for posts with no
  *  excerpt. */
 export function blogPostJsonLd(post: BlogPost, description?: string): JsonLdNode {
-  const url = absoluteUrl(`/blog/${post.slug}`);
+  const url = absoluteUrl(`/journal/${post.slug}`);
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",

@@ -15,7 +15,7 @@ import { API_URL } from "@/lib/api";
  * trigger runs in the browser, where a secret would be readable by anyone.
  */
 const SCOPES = {
-  blog: ["/blog", "/sitemap.xml"],
+  blog: ["/journal", "/sitemap.xml"],
   // The legal pages read the BusinessProfile server-side to decide whether
   // they may be indexed at all, so filling it in has to reach them promptly —
   // otherwise the operator saves their details and the pages still say
@@ -61,7 +61,7 @@ export async function POST(request: Request): Promise<Response> {
 
   for (const path of SCOPES[scope]) revalidatePath(path);
   // Dynamic segments need the route pattern plus an explicit type.
-  if (scope === "blog") revalidatePath("/blog/[slug]", "page");
+  if (scope === "blog") revalidatePath("/journal/[slug]", "page");
 
   return Response.json({ revalidated: true, scope });
 }

@@ -9,19 +9,19 @@ import { buttonVariants } from "@/components/ui/button";
 import { StatePanel } from "@/components/ui/states";
 import { ListingThumb } from "@/components/ui/listing-thumb";
 
-const BLOG_DESCRIPTION =
-  "Guides on buying and selling preloved baby gear, care tips and stories from our community.";
+const JOURNAL_DESCRIPTION =
+  "Practical writing on pregnancy, yoga, postpartum recovery, nutrition, starting solids, toddler life and conscious reuse — from the moms behind The Nurture Moms.";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Blog",
-  description: BLOG_DESCRIPTION,
-  path: "/blog",
+  title: "The Nurture Journal",
+  description: JOURNAL_DESCRIPTION,
+  path: "/journal",
 });
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
-export default async function BlogPage({
+export default async function JournalPage({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string }>;
@@ -38,9 +38,9 @@ export default async function BlogPage({
 
   return (
     <Container className="max-w-3xl py-12 sm:py-16">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">The Nurture journal</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold text-foreground sm:text-5xl">Blog</h1>
-      <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">{BLOG_DESCRIPTION}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Move. Nourish. Connect. Pass it on.</p>
+      <h1 className="mt-2 font-display text-4xl font-semibold text-foreground sm:text-5xl">The Nurture Journal</h1>
+      <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">{JOURNAL_DESCRIPTION}</p>
 
       {data.items.length === 0 ? (
         <div className="mt-8">
@@ -54,7 +54,7 @@ export default async function BlogPage({
       ) : (
         <div className="mt-8 space-y-4">
           {data.items.map((post) => (
-            <Link key={post.id} href={`/blog/${post.slug}`}>
+            <Link key={post.id} href={`/journal/${post.slug}`}>
               <Card className="flex items-center gap-4 p-4 transition-transform hover:-translate-y-0.5 sm:p-5">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted sm:h-24 sm:w-24">
                   <ListingThumb src={post.coverImageUrl} alt={post.title} />
@@ -73,11 +73,11 @@ export default async function BlogPage({
           {data.totalPages > 1 && (
             <div className="flex items-center justify-center gap-4 pt-4">
               {page > 1 && (
-                <Link href={`/blog?page=${page - 1}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Previous</Link>
+                <Link href={`/journal?page=${page - 1}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Previous</Link>
               )}
               <span className="text-sm text-muted-foreground">Page {page} of {data.totalPages}</span>
               {page < data.totalPages && (
-                <Link href={`/blog?page=${page + 1}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Next</Link>
+                <Link href={`/journal?page=${page + 1}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Next</Link>
               )}
             </div>
           )}
