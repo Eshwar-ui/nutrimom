@@ -483,7 +483,12 @@ function HeroCopy() {
         Yoga, nutrition, mom support and preloved essentials — thoughtfully
         brought together for moms from pregnancy to toddlerhood.
       </p>
-      <div className="mt-5 flex items-center gap-2 sm:mt-8 sm:gap-3">
+      {/* flex-wrap: side by side the two buttons need ~380px, more than a
+          375px phone has after padding. Unwrapped, that row's min-content
+          width pushed the whole copy block, headline included, past the
+          right edge; body's overflow-x: clip then hid the scrollbar, so it
+          showed up as clipped text rather than as sideways scroll. */}
+      <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-3">
         <Playful>
           <Link href="#explore" className={cn(buttonVariants({ size: "md" }), "lg:h-14 lg:px-8 lg:text-base")}>
             Explore our services <ArrowRight className="h-4 w-4" />
