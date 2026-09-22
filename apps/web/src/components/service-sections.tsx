@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, ArrowRight, BadgeCheck, Tag } from "lucide-react";
+import { MessageCircle, ArrowRight, BadgeCheck, Tag, Check, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Container } from "./ui/primitives";
 import { buttonVariants } from "./ui/button";
@@ -155,7 +155,33 @@ export function OfferingGrid({
   );
 }
 
-/** A plain checklist — "what a session includes", "what the community covers". */
+/**
+ * The pastel-and-ink pairs the paper world is built from.
+ *
+ * The ink is a fixed dark tone rather than a token because the pastel under it
+ * is defined identically in light and dark mode, so dark ink stays correct in
+ * both — the same reason the home page's testimonial stickers do it.
+ */
+const PASTEL_INK = [
+  { tint: "bg-blush", ink: "text-[#7a2447]" },
+  { tint: "bg-sky", ink: "text-[#215172]" },
+  { tint: "bg-sage", ink: "text-[#2f5236]" },
+  { tint: "bg-lavender", ink: "text-[#4a3170]" },
+  { tint: "bg-gold", ink: "text-[#5c4410]" },
+] as const;
+
+/**
+ * A checklist — "what a session includes", "what the community covers".
+ *
+ * One sheet rather than a card each: this is a single list, and both callers
+ * pass seven items, which in a two-column grid of cards left the last one
+ * stranded in its own row. CSS columns flow and balance it instead, so an odd
+ * count reads as a list rather than a layout that ran out.
+ *
+ * Deliberately not the tinted, tilted stock the prices use — seven rotated
+ * notes would fight for the same attention the figures need, and a list is a
+ * different kind of thing from a set of options.
+ */
 export function IncludesList({
   heading,
   items,
@@ -168,17 +194,44 @@ export function IncludesList({
       <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
         {heading}
       </h2>
-      <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-        {items.map((item) => (
-          <li
-            key={item}
-            className="flex gap-3 rounded-2xl border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground"
-          >
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            {item}
-          </li>
-        ))}
-      </ul>
+
+      <div className="relative mt-8 rounded-[1.75rem] border-2 border-border bg-surface p-7 card-shadow sm:p-9">
+        {/* washi tape pinning the sheet */}
+        <span
+          aria-hidden
+          className="absolute -top-3 left-10 h-6 w-24 -rotate-6 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm"
+        />
+        {/* corner sticker */}
+        <span
+          aria-hidden
+          className="absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface bg-sage text-[#2f5236]"
+        >
+          <ClipboardCheck className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+
+        <ul className="gap-x-10 sm:columns-2">
+          {items.map((item, i) => {
+            const swatch = PASTEL_INK[i % PASTEL_INK.length];
+            return (
+              <li
+                key={item}
+                className="flex break-inside-avoid gap-3.5 py-3 text-sm leading-relaxed text-foreground"
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full",
+                    swatch.tint,
+                    swatch.ink,
+                  )}
+                >
+                  <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
+                </span>
+                {item}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -212,11 +265,11 @@ export interface PriceRow {
  * ink stays correct in both — the same reason the testimonial cards do it.
  */
 const PRICE_PAPERS = [
-  { paper: "bg-blush/45", sticker: "bg-blush text-[#7a2447]", rotate: "-rotate-2" },
-  { paper: "bg-sky/50", sticker: "bg-sky text-[#215172]", rotate: "rotate-1" },
-  { paper: "bg-sage/45", sticker: "bg-sage text-[#2f5236]", rotate: "-rotate-1" },
-  { paper: "bg-lavender/45", sticker: "bg-lavender text-[#4a3170]", rotate: "rotate-2" },
-  { paper: "bg-beige", sticker: "bg-gold text-[#5c4410]", rotate: "-rotate-1" },
+  { paper: "bg-blush/45", rotate: "-rotate-2" },
+  { paper: "bg-sky/50", rotate: "rotate-1" },
+  { paper: "bg-sage/45", rotate: "-rotate-1" },
+  { paper: "bg-lavender/45", rotate: "rotate-2" },
+  { paper: "bg-beige", rotate: "-rotate-1" },
 ] as const;
 
 export function PricingTable({
@@ -288,7 +341,8 @@ export function PricingTable({
                     aria-hidden
                     className={cn(
                       "absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface",
-                      stock.sticker,
+                      PASTEL_INK[i % PASTEL_INK.length].tint,
+                      PASTEL_INK[i % PASTEL_INK.length].ink,
                     )}
                   >
                     <Tag className="h-5 w-5" strokeWidth={1.8} />
