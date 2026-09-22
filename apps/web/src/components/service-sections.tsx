@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, ArrowRight, BadgeCheck } from "lucide-react";
+import { MessageCircle, ArrowRight, BadgeCheck, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Container } from "./ui/primitives";
 import { buttonVariants } from "./ui/button";
@@ -201,6 +201,24 @@ export interface PriceRow {
  * fee. The note under the table says so in the visitor's words rather than
  * leaving them to discover it at checkout.
  */
+/**
+ * Paper stock for the price notes — the same vocabulary as the home page's
+ * testimonial cards: a tinted sheet, a slight rotation that straightens under
+ * the cursor, washi tape and a corner sticker. Cycled by index so the
+ * component takes any number of prices without a per-page palette.
+ *
+ * The sticker's ink is a fixed dark tone rather than a token because the
+ * pastel it sits on is defined identically in light and dark mode, so a dark
+ * ink stays correct in both — the same reason the testimonial cards do it.
+ */
+const PRICE_PAPERS = [
+  { paper: "bg-blush/45", sticker: "bg-blush text-[#7a2447]", rotate: "-rotate-2" },
+  { paper: "bg-sky/50", sticker: "bg-sky text-[#215172]", rotate: "rotate-1" },
+  { paper: "bg-sage/45", sticker: "bg-sage text-[#2f5236]", rotate: "-rotate-1" },
+  { paper: "bg-lavender/45", sticker: "bg-lavender text-[#4a3170]", rotate: "rotate-2" },
+  { paper: "bg-beige", sticker: "bg-gold text-[#5c4410]", rotate: "-rotate-1" },
+] as const;
+
 export function PricingTable({
   heading = "Pricing",
   rows,
@@ -211,7 +229,7 @@ export function PricingTable({
   note?: string;
 }) {
   // One price is a statement, several are a comparison. A lone row in a
-  // three-column grid reads as two missing cards, so it gets the wider
+  // three-column row reads as two missing cards, so it gets the wider
   // treatment instead of a third of a row.
   const single = rows.length === 1;
 
@@ -228,69 +246,103 @@ export function PricingTable({
           still line up in columns. */}
       <div
         className={cn(
-          "mt-6 flex flex-wrap justify-center gap-4",
+          "mt-8 flex flex-wrap justify-center gap-5",
           single && "block",
         )}
       >
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className={cn(
-              // The home page's card language — same radius, border weight and
-              // shadow. No hover lift: unlike the pillar and stage cards these
-              // are not links, and a card that rises under the cursor promises
-              // a click that never happens.
-              "relative overflow-hidden rounded-[1.75rem] border-2 border-border bg-surface card-shadow",
-              single
-                ? "p-8 sm:flex sm:items-end sm:justify-between sm:gap-8"
-                : "flex basis-full flex-col p-6 sm:basis-[calc((100%-1rem)/2)] lg:basis-[calc((100%-2rem)/3)]",
-            )}
-          >
-            {single && (
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-sage/40 blur-2xl"
-              />
-            )}
-            <h3
+        {rows.map((row, i) => {
+          const stock = PRICE_PAPERS[i % PRICE_PAPERS.length];
+          return (
+            <div
+              key={row.label}
               className={cn(
-                "relative text-xs font-bold uppercase tracking-[0.08em] text-accent-text",
-                single && "sm:text-sm",
+                "relative rounded-[1.75rem] border-2 border-border card-shadow",
+                single
+                  ? "overflow-hidden bg-surface p-8 sm:flex sm:items-end sm:justify-between sm:gap-8"
+                  : cn(
+                      // Nothing is clipped here: the tape and the sticker are
+                      // meant to sit off the sheet, the way they would if
+                      // someone had actually stuck them on.
+                      "flex basis-full flex-col p-7 pt-9 transition-transform duration-500",
+                      "[transition-timing-function:cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1.5 hover:rotate-0",
+                      "sm:basis-[calc((100%-1.25rem)/2)] lg:basis-[calc((100%-2.5rem)/3)]",
+                      stock.paper,
+                      stock.rotate,
+                    ),
               )}
             >
-              {row.label}
-            </h3>
-            <p
-              className={cn(
-                "relative flex items-baseline gap-1.5",
-                single ? "mt-3 sm:mt-0" : "mt-auto pt-5",
+              {single ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-sage/40 blur-2xl"
+                />
+              ) : (
+                <>
+                  {/* washi tape pinning the note */}
+                  <span
+                    aria-hidden
+                    className="absolute -top-3 left-8 h-6 w-20 -rotate-6 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm"
+                  />
+                  {/* corner sticker */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface",
+                      stock.sticker,
+                    )}
+                  >
+                    <Tag className="h-5 w-5" strokeWidth={1.8} />
+                  </span>
+                  {/* oversized currency glyph, the note's watermark */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-3 right-5 select-none font-display text-7xl leading-none text-foreground/[0.07]"
+                  >
+                    ₹
+                  </span>
+                </>
               )}
-            >
-              {row.from && (
-                <span className="text-sm font-semibold text-muted-foreground">
-                  from
-                </span>
-              )}
-              <span
+
+              <h3
                 className={cn(
-                  "font-display font-semibold leading-none tracking-[-0.02em] text-foreground",
-                  single ? "text-4xl sm:text-5xl" : "text-3xl",
+                  "relative text-xs font-bold uppercase tracking-[0.08em] text-accent-text",
+                  single && "sm:text-sm",
                 )}
               >
-                {row.price}
-              </span>
-              {row.unit && (
-                <span className="text-sm font-semibold text-muted-foreground">
-                  {row.unit}
+                {row.label}
+              </h3>
+              <p
+                className={cn(
+                  "relative flex items-baseline gap-1.5",
+                  single ? "mt-3 sm:mt-0" : "mt-auto pt-6",
+                )}
+              >
+                {row.from && (
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    from
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "font-display font-semibold leading-none tracking-[-0.02em] text-foreground",
+                    single ? "text-4xl sm:text-5xl" : "text-3xl",
+                  )}
+                >
+                  {row.price}
                 </span>
-              )}
-            </p>
-          </div>
-        ))}
+                {row.unit && (
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {row.unit}
+                  </span>
+                )}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {note && (
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           {note}
         </p>
       )}
