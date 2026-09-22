@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, ArrowRight } from "lucide-react";
+import { MessageCircle, ArrowRight, BadgeCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Container } from "./ui/primitives";
 import { buttonVariants } from "./ui/button";
@@ -20,11 +20,17 @@ export function ServiceHero({
   eyebrow,
   title,
   subtitle,
+  subtitleClassName,
   children,
 }: {
   eyebrow: string;
   title: string;
   subtitle: string;
+  /**
+   * Extra classes for the subtitle — the pillars that sit on top of a hero
+   * illustration cap its width so the copy wraps before it reaches the art.
+   */
+  subtitleClassName?: string;
   children?: React.ReactNode;
 }) {
   return (
@@ -35,7 +41,12 @@ export function ServiceHero({
       <h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.02em] text-foreground sm:text-5xl">
         {title}
       </h1>
-      <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+      <p
+        className={cn(
+          "mt-4 text-lg leading-relaxed text-muted-foreground",
+          subtitleClassName,
+        )}
+      >
         {subtitle}
       </p>
       {children && <div className="mt-7 flex flex-wrap gap-3">{children}</div>}
@@ -46,16 +57,29 @@ export function ServiceHero({
 /** A row of short trust signals — certifications, training, credentials. */
 export function CredentialStrip({ items }: { items: readonly string[] }) {
   return (
-    <ul className="mt-8 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <li
-          key={item}
-          className="rounded-full bg-muted px-3.5 py-1.5 text-xs font-semibold text-muted-foreground"
-        >
-          {item}
-        </li>
-      ))}
-    </ul>
+    <section
+      aria-label="Credentials"
+      className="mt-8 rounded-3xl border border-border bg-surface/70 p-3 sm:p-4"
+    >
+      <div className="flex items-center gap-2 px-2 pb-3">
+        <BadgeCheck className="h-4 w-4 text-accent-text" strokeWidth={1.8} />
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-text">
+          Credentials
+        </p>
+      </div>
+      <ul className="grid overflow-hidden rounded-2xl bg-background/70 sm:grid-cols-3 sm:divide-x sm:divide-border">
+        {items.map((item) => (
+          <li key={item} className="flex items-center gap-3 border-t border-border px-4 py-4 first:border-t-0 sm:border-t-0">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-sage/45 text-foreground">
+              <BadgeCheck className="h-4 w-4" strokeWidth={1.8} />
+            </span>
+            <span className="text-sm font-semibold leading-snug text-foreground">
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

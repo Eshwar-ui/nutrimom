@@ -1,10 +1,12 @@
+import { Sparkles } from "lucide-react";
 import { Container } from "@/components/ui/primitives";
 import {
-  ServiceHero,
   IncludesList,
   BookingCta,
   ClosingCta,
 } from "@/components/service-sections";
+import { Reveal } from "@/components/reveal";
+import { DecorativeElement } from "@/components/decorative-element";
 import { bookingWhatsappUrl } from "@/lib/booking";
 import { pageMetadata } from "@/lib/seo";
 
@@ -29,18 +31,47 @@ export default async function CommunityPage() {
   const whatsappUrl = await bookingWhatsappUrl("community");
 
   return (
-    <Container className="max-w-4xl py-12 sm:py-16">
-      <ServiceHero
-        eyebrow="Connect"
-        title="Find your village"
-        subtitle="Motherhood can be beautiful, overwhelming, confusing and everything in between. You don't have to figure it all out alone."
-      >
-        <BookingCta
-          label="Join the community"
-          whatsappUrl={whatsappUrl}
-          secondary={{ href: "/journal", label: "Read the Journal" }}
+    <>
+      <section className="relative overflow-hidden">
+        <DecorativeElement
+          src="/images/bg-element-sun-doodle.png"
+          className="left-6 top-10 hidden w-20 opacity-80 sm:block"
         />
-      </ServiceHero>
+        <DecorativeElement
+          src="/images/bg-element-leaf-sprig.png"
+          className="-left-16 bottom-0 hidden w-48 -rotate-12 opacity-35 lg:block"
+        />
+        <DecorativeElement
+          src="/images/bg-element-doodle-cluster.png"
+          className="right-6 top-16 hidden w-28 rotate-6 opacity-60 md:block"
+        />
+        <DecorativeElement
+          src="/images/bg-element-toy-accent.png"
+          className="-right-8 bottom-2 hidden w-28 rotate-6 opacity-40 lg:block"
+        />
+        <Container className="relative py-14 text-center sm:py-20">
+          <Reveal>
+            <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-surface px-4 py-1.5 text-xs font-bold text-primary">
+              <Sparkles className="h-3.5 w-3.5" /> A circle for mothers
+            </span>
+            <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+              Find your <span className="ink-underline whitespace-nowrap">village</span>.
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+              Motherhood can be beautiful, overwhelming, confusing and everything in between. You don&apos;t have to figure it all out alone.
+            </p>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <BookingCta
+                label="Join the community"
+                whatsappUrl={whatsappUrl}
+                secondary={{ href: "/journal", label: "Read the Journal" }}
+              />
+            </div>
+          </Reveal>
+        </Container>
+      </section>
+
+      <Container className="max-w-4xl py-12 sm:py-16">
 
       <IncludesList heading="What we talk about" items={areas} />
 
@@ -77,6 +108,7 @@ export default async function CommunityPage() {
           secondary={{ href: "/about", label: "Meet the founders" }}
         />
       </ClosingCta>
-    </Container>
+      </Container>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { Apple, Baby, Soup, Utensils, MessageSquareHeart } from "lucide-react";
 import { Container } from "@/components/ui/primitives";
+import { HeroWave } from "@/components/section-wave";
 import {
   ServiceHero,
   OfferingGrid,
@@ -65,21 +66,44 @@ export default async function NutritionPage() {
   const whatsappUrl = await bookingWhatsappUrl("nutrition");
 
   return (
-    <Container className="py-12 sm:py-16">
-      <ServiceHero
-        eyebrow="Nourish"
-        title="Nutrition for Mom & Baby"
-        subtitle="Practical, judgment-free nutrition support for pregnancy, postpartum, babies and toddlers."
-      >
-        <BookingCta
-          label="Book a nutrition consultation"
-          whatsappUrl={whatsappUrl}
-          secondary={{
-            href: "/nutrition/starting-solids",
-            label: "Starting solids?",
-          }}
+    <>
+      <section className="relative overflow-hidden">
+        <picture>
+          <source media="(min-width: 1024px)" srcSet="/hero-images/nutrition-desktop.png" />
+          <source media="(min-width: 768px)" srcSet="/hero-images/nutrition-tablet.png" />
+          <img
+            src="/hero-images/nutrition-mobile.png"
+            alt="A mother and baby sharing a nourishing meal"
+            className="block w-full"
+          />
+        </picture>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/80 to-transparent"
         />
-      </ServiceHero>
+        <div className="absolute inset-0 flex items-center">
+          <Container className="w-full">
+            <ServiceHero
+              eyebrow="Nourish"
+              title="Nutrition for Mom & Baby"
+              subtitle="Practical, judgment-free nutrition support for pregnancy, postpartum, babies and toddlers."
+              subtitleClassName="max-w-md"
+            >
+              <BookingCta
+                label="Book a nutrition consultation"
+                whatsappUrl={whatsappUrl}
+                secondary={{
+                  href: "/nutrition/starting-solids",
+                  label: "Starting solids?",
+                }}
+              />
+            </ServiceHero>
+          </Container>
+        </div>
+        <HeroWave />
+      </section>
+
+      <Container className="py-12 sm:py-16">
 
       <OfferingGrid heading="How we can help" items={services} />
 
@@ -105,6 +129,7 @@ export default async function NutritionPage() {
           secondary={{ href: "/journal", label: "Read the Journal" }}
         />
       </ClosingCta>
-    </Container>
+      </Container>
+    </>
   );
 }

@@ -1,5 +1,9 @@
 import { createHmac } from 'crypto';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { RazorpayProvider } from './providers/razorpay.provider';
 
@@ -248,4 +252,107 @@ describe('PaymentsService — money path', () => {
       BadRequestException,
     );
   });
+});
+
+/**
+ * Creating the gateway order is where a retry can quietly go wrong: mint a
+ * second gateway order for the same internal order and any payment made
+ * against the first one matches nothing by the time it reaches settle().
+ * Verified live during the Razorpay pass, but never in CI until now.
+ */
+describe('PaymentsService — createGatewayOrder', () => {
+  const pendingOrder = (over: Record<string, unknown> = {}) => ({
+    id: 'o1',
+    buyerId: 'b1',
+    status: 'PENDING',
+    totalInPaise: 120000,
+    razorpayOrderId: null,
+    ...over,
+  });
+
+  it('mints a gateway order and records its id against the order', async () => {
+    const { svc, prisma, provider } = makeService();
+    prisma.order.findUnique.mockResolvedValue(pendingOrder());
+    const createOrder = jest.spyOn(provider, 'createOrder').mockResolvedValue({
+      gatewayOrderId: 'order_abc',
+      currency: 'INR',
+      keyId: 'kid',
+    });
+
+    const result = await svc.createGatewayOrder('b1', 'o1');
+
+    expect(createOrder).toHaveBeenCalledWith(120000, 'o1');
+    expect(prisma.order.update).toHaveBeenCalledWith({
+      where: { id: 'o1' },
+      data: { razorpayOrderId: 'order_abc' },
+    });
+    expect(result).toMatchObject({
+      orderId: 'o1',
+      razorpayOrderId: 'order_abc',
+      amountInPaise: 120000,
+      currency: 'INR',
+      keyId: 'kid',
+    });
+  });
+
+  it('reuses an open gateway order on retry instead of minting a second', async () => {
+    const { svc, prisma, provider } = makeService();
+    prisma.order.findUnique.mockResolvedValue(
+      pendingOrder({ razorpayOrderId: 'order_existing' }),
+    );
+    const createOrder = jest.spyOn(provider, 'createOrder');
+
+    const result = await svc.createGatewayOrder('b1', 'o1');
+
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(prisma.order.update).not.toHaveBeenCalled();
+    expect(result.razorpayOrderId).toBe('order_existing');
+  });
+
+  it('quotes the amount from the order, never from the caller', async () => {
+    const { svc, prisma, provider } = makeService();
+    prisma.order.findUnique.mockResolvedValue(
+      pendingOrder({ razorpayOrderId: 'order_existing', totalInPaise: 999 }),
+    );
+    jest.spyOn(provider, 'createOrder');
+
+    const result = await svc.createGatewayOrder('b1', 'o1');
+
+    expect(result.amountInPaise).toBe(999);
+    expect(result.currency).toBe('INR');
+  });
+
+  it('404s an order that does not exist', async () => {
+    const { svc, prisma } = makeService();
+    prisma.order.findUnique.mockResolvedValue(null);
+
+    await expect(svc.createGatewayOrder('b1', 'nope')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it("403s another buyer's order", async () => {
+    const { svc, prisma, provider } = makeService();
+    prisma.order.findUnique.mockResolvedValue(pendingOrder({ buyerId: 'b2' }));
+    const createOrder = jest.spyOn(provider, 'createOrder');
+
+    await expect(svc.createGatewayOrder('b1', 'o1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it.each(['PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'])(
+    'refuses to open a payment on a %s order',
+    async (status) => {
+      const { svc, prisma, provider } = makeService();
+      prisma.order.findUnique.mockResolvedValue(pendingOrder({ status }));
+      const createOrder = jest.spyOn(provider, 'createOrder');
+
+      await expect(svc.createGatewayOrder('b1', 'o1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(createOrder).not.toHaveBeenCalled();
+    },
+  );
 });

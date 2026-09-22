@@ -1,5 +1,6 @@
 import { Flower2, HeartPulse, Sparkles, Users, PlayCircle, UserRound } from "lucide-react";
 import { Container } from "@/components/ui/primitives";
+import { HeroWave } from "@/components/section-wave";
 import {
   ServiceHero,
   CredentialStrip,
@@ -80,45 +81,67 @@ export default async function YogaPage() {
   const whatsappUrl = await bookingWhatsappUrl("yoga");
 
   return (
-    <Container className="py-12 sm:py-16">
-      <ServiceHero
-        eyebrow="Move"
-        title="Yoga for every stage of motherhood"
-        subtitle="Move, breathe and reconnect with yourself through pregnancy, postpartum recovery and beyond."
-      >
-        <BookingCta
-          label="View classes & book a session"
-          whatsappUrl={whatsappUrl}
-          secondary={{ href: "/nutrition", label: "Explore Nutrition" }}
+    <>
+      <section className="relative overflow-hidden">
+        <picture>
+          <source media="(min-width: 1024px)" srcSet="/hero-images/yoga-desktop.png" />
+          <source media="(min-width: 768px)" srcSet="/hero-images/yoga-tablet.png" />
+          <img
+            src="/hero-images/yoga-mobile.png"
+            alt="A mother practicing gentle prenatal yoga"
+            className="block w-full"
+          />
+        </picture>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/80 to-transparent"
         />
-      </ServiceHero>
+        <div className="absolute inset-0">
+          <Container className="flex h-full items-start pt-14 sm:pt-20 md:pt-24 lg:pt-28">
+            <ServiceHero
+              eyebrow="Move"
+              title="Yoga for every stage of motherhood"
+              subtitle="Move, breathe and reconnect with yourself through pregnancy, postpartum recovery and beyond."
+            >
+              <BookingCta
+                label="View classes & book a session"
+                whatsappUrl={whatsappUrl}
+                secondary={{ href: "/nutrition", label: "Explore Nutrition" }}
+              />
+            </ServiceHero>
+          </Container>
+        </div>
+        <HeroWave />
+      </section>
 
-      <CredentialStrip items={credentials} />
+      <Container className="py-12 sm:py-16">
+        <CredentialStrip items={credentials} />
 
-      <OfferingGrid heading="What we offer" items={offerings} />
+        <OfferingGrid heading="What we offer" items={offerings} />
 
-      <PricingTable
-        rows={pricing}
-        note="Starting prices. Final fees vary by batch, session length and format — we'll confirm before you book."
-      />
-
-      <SafetyNote>
-        Our yoga sessions are wellness and fitness support — they do not replace
-        medical care. If you have a high-risk pregnancy or any specific medical
-        condition, please speak to your doctor before joining a class, and let
-        us know anything we should work around.
-      </SafetyNote>
-
-      <ClosingCta
-        title="Not sure which session fits?"
-        body="Tell us your stage and what you're hoping for, and we'll point you to the right class."
-      >
-        <BookingCta
-          label="Talk to us"
-          whatsappUrl={whatsappUrl}
-          secondary={{ href: "/community", label: "Join the community" }}
+        <PricingTable
+          rows={pricing}
+          note="Starting prices. Final fees vary by batch, session length and format — we'll confirm before you book."
         />
-      </ClosingCta>
-    </Container>
+
+        <SafetyNote>
+          Our yoga sessions are wellness and fitness support — they do not replace
+          medical care. If you have a high-risk pregnancy or any specific medical
+          condition, please speak to your doctor before joining a class, and let
+          us know anything we should work around.
+        </SafetyNote>
+
+        <ClosingCta
+          title="Not sure which session fits?"
+          body="Tell us your stage and what you're hoping for, and we'll point you to the right class."
+        >
+          <BookingCta
+            label="Talk to us"
+            whatsappUrl={whatsappUrl}
+            secondary={{ href: "/community", label: "Join the community" }}
+          />
+        </ClosingCta>
+      </Container>
+    </>
   );
 }
