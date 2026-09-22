@@ -73,7 +73,13 @@ export function HeroWave({ className }: { className?: string }) {
     <div
       aria-hidden
       className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 leading-[0]",
+        // -bottom-px, not bottom-0: the hero <img> is w-full with an intrinsic
+        // aspect ratio, so the section's height is fractional and the image's
+        // last row and the wave's bottom edge round independently — leaving a
+        // hairline of photo showing as a straight seam under the wave. Dropping
+        // the wave a pixel past the edge covers it; it only overlaps the next
+        // section, which is the same background colour.
+        "pointer-events-none absolute inset-x-0 -bottom-px leading-[0]",
         className,
       )}
       style={{ filter: "drop-shadow(0 -5px 6px rgb(36 28 24 / 0.15))" }}

@@ -81,8 +81,8 @@ export default async function NutritionPage() {
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/80 to-transparent"
         />
-        <div className="absolute inset-0 flex items-center">
-          <Container className="w-full">
+        <div className="absolute inset-0">
+          <Container className="flex h-full w-full flex-col items-stretch justify-start pt-10 sm:justify-center sm:pt-0">
             <ServiceHero
               eyebrow="Nourish"
               title="Nutrition for Mom & Baby"
@@ -90,7 +90,7 @@ export default async function NutritionPage() {
               subtitleClassName="max-w-md"
             >
               <BookingCta
-          intent="nutrition"
+                intent="nutrition"
                 label="Book a nutrition consultation"
                 whatsappUrl={whatsappUrl}
                 secondary={{
