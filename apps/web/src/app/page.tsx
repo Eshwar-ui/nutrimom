@@ -119,7 +119,8 @@ export default async function HomePage() {
       <JsonLd data={[organizationJsonLd(businessProfile), websiteJsonLd()]} />
 
       {/* Hero — full image; pulled up so the transparent nav floats over it. */}
-      <section className="relative -mt-16">
+      <Reveal className="-mt-16">
+        <section className="relative">
         <picture>
           <source media="(min-width: 1024px)" srcSet="/images/nutrimom-playful-mama-banner-extended.png" />
           <source media="(min-width: 768px)" srcSet="/hero-images/bg-tablet.png" />
@@ -149,17 +150,18 @@ export default async function HomePage() {
           src="/images/bg-element-doodle-cluster.png"
           className="bottom-16 left-[28%] hidden w-28 -rotate-12 opacity-65 xl:block"
         />
-        <HeroWave />
-      </section>
+          <HeroWave />
+        </section>
+      </Reveal>
 
       {/* Stage selector + four pillars — the ecosystem entrance. These sit
           above every marketplace block because the brief asks for the four
           pillars to be obvious within the first screen; a visitor who came for
           prenatal yoga should not scroll past a product grid to find it. */}
       <div id="explore" className="scroll-mt-24">
-        <StageSelector />
-        <PillarGrid />
-        <AffordableSupport />
+        <Reveal delay={0.08}><StageSelector /></Reveal>
+        <Reveal delay={0.12}><PillarGrid /></Reveal>
+        <Reveal delay={0.16}><AffordableSupport /></Reveal>
       </div>
 
       {/* --- Preloved pillar: the marketplace, unchanged below this line --- */}
@@ -167,7 +169,8 @@ export default async function HomePage() {
       {/* Category tiles — plain shared cream, tucked up under the banner so the
           seam is cream-on-cream and disappears. */}
       {categories.length > 0 && (
-        <section className="relative isolate overflow-hidden bg-background pt-8">
+        <Reveal delay={0.08} className="w-full">
+          <section className="relative isolate overflow-hidden bg-background pt-8">
           <PlayfulBackground variant="market" />
           <DecorativeElement
             src="/images/bg-element-leaf-sprig.png"
@@ -184,13 +187,15 @@ export default async function HomePage() {
           <Container className="relative z-[1] pb-16 pt-10">
             <CategoryTiles visual={visualCategories} extra={extraCategories} />
           </Container>
-        </section>
+          </section>
+        </Reveal>
       )}
 
 
       {/* Featured */}
-      <section className="relative isolate overflow-hidden">
-        <PlayfulBackground variant="fresh" />
+      <Reveal delay={0.08} className="w-full">
+        <section className="relative isolate overflow-hidden">
+          <PlayfulBackground variant="fresh" />
         <DecorativeElement
           src="/images/bg-element-blush-swash.png"
           className="-left-44 top-2 hidden w-[38rem] opacity-25 lg:block"
@@ -263,10 +268,12 @@ export default async function HomePage() {
           )}
         </Container>
       </section>
+      </Reveal>
 
       {/* Latest listings — every newly approved item shows up here */}
       {latest.length > 0 && (
-        <section className="relative">
+        <Reveal delay={0.08} className="w-full">
+          <section className="relative">
           <Container className="py-14">
             <div className="mb-9 flex items-end justify-between">
               <div>
@@ -294,12 +301,14 @@ export default async function HomePage() {
               ))}
             </div>
           </Container>
-        </section>
+          </section>
+        </Reveal>
       )}
 
       {/* How it works */}
-      <section className="relative overflow-hidden">
-        <DecorativeElement
+      <Reveal delay={0.08} className="w-full">
+        <section className="relative overflow-hidden">
+          <DecorativeElement
           src="/images/bg-element-dotted-trail.png"
           className="left-[8%] top-28 hidden w-[30rem] -rotate-6 opacity-30 lg:block"
         />
@@ -347,16 +356,18 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
+      </Reveal>
 
       {/* Trust & safety — buyer protection */}
-      <TrustSafety />
+      <Reveal delay={0.08} className="w-full"><TrustSafety /></Reveal>
 
       {/* Social proof */}
-      <Testimonials />
+      <Reveal delay={0.08} className="w-full"><Testimonials /></Reveal>
 
       {/* CTA band */}
-      <section className="relative isolate overflow-hidden bg-primary text-primary-foreground">
-        <PlayfulBackground variant="cta" />
+      <Reveal delay={0.08} className="w-full">
+        <section className="relative isolate overflow-hidden bg-primary text-primary-foreground">
+          <PlayfulBackground variant="cta" />
         <DecorativeElement
           src="/images/bg-element-blush-swash.png"
           className="-left-40 -top-20 w-[34rem] opacity-20"
@@ -392,13 +403,14 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
+      </Reveal>
 
       {/* Closing band — the page ends on the whole ecosystem, not on the
           marketplace's seller pitch above it. */}
-      <FindYourVillage />
+      <Reveal delay={0.08} className="w-full"><FindYourVillage /></Reveal>
 
       {/* Newsletter — first-order offer */}
-      <Newsletter />
+      <Reveal delay={0.08} className="w-full"><Newsletter /></Reveal>
     </>
   );
 }
