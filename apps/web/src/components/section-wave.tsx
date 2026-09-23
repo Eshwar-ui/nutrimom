@@ -64,9 +64,9 @@ export function SectionWave({
 
 /**
  * The custom wave asset (public/wave.svg), recoloured to the page background and
- * lifted with a soft upward shadow. Drop it inside the `relative` hero section:
+ * placed flush at the bottom of the hero section. Drop it inside the `relative` hero section:
  * it sits flush on the bottom edge and turns the image's hard base into a wavy,
- * shadowed transition into the section below.
+ * clean transition into the section below.
  */
 export function HeroWave({ className }: { className?: string }) {
   return (
@@ -82,7 +82,6 @@ export function HeroWave({ className }: { className?: string }) {
         "pointer-events-none absolute inset-x-0 -bottom-px leading-[0]",
         className,
       )}
-      style={{ filter: "drop-shadow(0 -5px 6px rgb(36 28 24 / 0.15))" }}
     >
       <svg
         viewBox="0 0 1440 105"

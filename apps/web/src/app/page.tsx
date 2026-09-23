@@ -141,7 +141,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 mx-auto flex w-full max-w-7xl items-start px-5 pt-20 sm:px-8 sm:pt-24 md:items-center md:pt-0 lg:items-start lg:pl-24 lg:pr-10 lg:pt-[max(112px,11vw)]">
           <HeroCopy />
         </div>
-        {/* Wavy, shadowed base — turns the image's hard bottom into a soft edge. */}
+        {/* Wavy base — turns the image's hard bottom into a soft edge. */}
         <DecorativeElement
           src="/images/bg-element-sun-doodle.png"
           className="left-8 top-28 hidden w-20 opacity-80 lg:block"

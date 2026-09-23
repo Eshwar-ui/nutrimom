@@ -13,6 +13,13 @@ import { authedRequest } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
 import { flyToCart } from "@/lib/fly-to-cart";
 
+/* WhatsApp's brand green, darkened from the #25D366 of their own UI so it holds
+   contrast as a glyph on this site's cream surface and stays visible on the
+   dark one. Written as a literal in the classes below rather than a constant or
+   a CSS variable: Tailwind reads class names statically, so only a literal
+   compiles. (`border-[--var]` was the v3 shorthand and silently emits
+   `border-color: --var` — no `var()`, no rule — under v4.) */
+
 export function ListingActions({ listing }: { listing: Listing }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -124,14 +131,26 @@ export function ListingActions({ listing }: { listing: Listing }) {
       </div>
 
       {listing.seller.hasWhatsapp && (
-        <button
-          type="button"
+        /* Built on the shared Button rather than a hand-rolled one, which is
+           what this was: a raw <button> on a #25D366 slab, with no focus ring,
+           no hover, and — because form controls size to fit — narrower than the
+           Save row above it.
+
+           It is the third action here, under "Buy now" and "Add to bag", so it
+           takes the same subordinate outline the Save button uses. The WhatsApp
+           green survives on the glyph, where it still identifies the channel
+           without a saturated slab competing with the primary CTA in a palette
+           built on cream and forest green. */
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full hover:border-[#1da851]"
           onClick={() => void chatOnWhatsapp()}
           disabled={contacting}
-          className="flex h-14 items-center justify-center gap-2 rounded-full bg-[#25D366] text-base font-bold text-[#0b3d24] transition-transform active:scale-[0.98] disabled:opacity-70"
         >
-          <MessageCircle className="h-5 w-5" /> {contacting ? "Opening…" : "Chat with seller on WhatsApp"}
-        </button>
+          <MessageCircle className="h-5 w-5 text-[#1da851]" />
+          {contacting ? "Opening…" : "Chat with seller on WhatsApp"}
+        </Button>
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
