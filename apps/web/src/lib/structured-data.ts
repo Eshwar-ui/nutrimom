@@ -12,10 +12,83 @@ import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "./seo";
 export type JsonLdNode = Record<string, unknown>;
 
 /**
- * The marketplace itself. Rendered on the home page so search engines can
- * attach the brand to a knowledge panel. Contact details come from the
- * admin-filled BusinessProfile and are omitted entirely until it's complete —
- * a half-filled Organization block is worse than none.
+ * The four things this business offers, as the home page's Organization node
+ * advertises them. Kept here rather than derived from `site-nav.ts` because
+ * that file's job is what a human clicks; this is what the entity claims to
+ * do, and Preloved is deliberately absent — it is covered far better by the
+ * Product nodes on the listings themselves than by a vague Service node.
+ */
+const PILLAR_SERVICES = [
+  { name: "Prenatal & Postnatal Yoga", path: "/yoga" },
+  { name: "Pregnancy & Baby Nutrition", path: "/nutrition" },
+  { name: "Starting Solids Guidance", path: "/nutrition/starting-solids" },
+  { name: "Mom Support Community", path: "/community" },
+] as const;
+
+/**
+ * A `Service` node for one of the pillar pages.
+ *
+ * **No `offers` block, deliberately.** Every one of these pages prints its
+ * fees under "Starting prices … we'll confirm before you book", and the
+ * founders' brief flags them all as unconfirmed planning ranges. `Offer.price`
+ * asserts a firm price, so emitting one would publish a machine-readable
+ * commitment the page itself declines to make. Name the services, price them
+ * when the prices are real.
+ */
+export function serviceJsonLd({
+  name,
+  description,
+  path,
+  serviceType,
+  offerings,
+}: {
+  name: string;
+  description: string;
+  path: string;
+  serviceType: string;
+  /** The individual sessions the page lists, by title. */
+  offerings: string[];
+}): JsonLdNode {
+  const url = absoluteUrl(path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "@id": `${url}#service`,
+    name,
+    description,
+    serviceType,
+    url,
+    provider: { "@id": `${absoluteUrl("/")}#organization` },
+    areaServed: { "@type": "Country", name: "India" },
+    // Sessions run online, so the audience is the whole country rather than a
+    // catchment around a studio.
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: url,
+      availableLanguage: ["en", "hi"],
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name,
+      itemListElement: offerings.map((title) => ({
+        "@type": "Offer",
+        itemOffered: { "@type": "Service", name: title },
+      })),
+    },
+  };
+}
+
+/**
+ * The business itself. Rendered on the home page so search engines can attach
+ * the brand to a knowledge panel. Contact details come from the admin-filled
+ * BusinessProfile and are omitted entirely until it's complete — a half-filled
+ * Organization block is worse than none.
+ *
+ * Still an `OnlineStore`, because the marketplace is a real online shop and
+ * dropping the type would cost that signal. But the site is a four-pillar
+ * ecosystem now, so `hasOfferCatalog` names what else it offers — otherwise
+ * the only machine-readable claim this brand makes is that it sells used
+ * pushchairs, which is a quarter of what it does.
  */
 export function organizationJsonLd(profile: BusinessProfile | null): JsonLdNode {
   const complete = isBusinessProfileComplete(profile);
@@ -30,6 +103,19 @@ export function organizationJsonLd(profile: BusinessProfile | null): JsonLdNode 
     image: absoluteUrl("/og-default.png"),
     description: SITE_DESCRIPTION,
     areaServed: { "@type": "Country", name: "India" },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Services",
+      itemListElement: PILLAR_SERVICES.map((svc) => ({
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          "@id": `${absoluteUrl(svc.path)}#service`,
+          name: svc.name,
+          url: absoluteUrl(svc.path),
+        },
+      })),
+    },
     ...(complete && profile
       ? {
           email: profile.supportEmail,

@@ -19,6 +19,7 @@ export class ContactService {
         phone: input.phone || null,
         subject: input.subject,
         message: input.message,
+        service: input.service ?? null,
       },
     });
     return { id: row.id };
@@ -53,6 +54,7 @@ function toDto(row: ContactMessageRow): ContactMessage {
     subject: row.subject,
     message: row.message,
     status: row.status,
+    service: row.service,
     createdAt: row.createdAt.toISOString(),
   };
 }

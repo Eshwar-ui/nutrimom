@@ -504,6 +504,14 @@ enum ContactMessageStatus {
 }
 
 // "Send us a message" submissions from the public contact form (roadmap 4.3).
+enum EnquiryService {
+  YOGA
+  NUTRITION
+  STARTING_SOLIDS
+  COMMUNITY
+  PRELOVED
+}
+
 model ContactMessage {
   id        String               @id @default(cuid())
   name      String
@@ -512,7 +520,12 @@ model ContactMessage {
   subject   String
   message   String
   status    ContactMessageStatus @default(NEW)
+  // Which service page sent this enquiry. Nullable: the footer contact link
+  // belongs to no service, and every message predating this column has none
+  // — backfilling a guess would invent an attribution nobody recorded.
+  service   EnquiryService?
   createdAt DateTime             @default(now())
 
   @@index([status])
+  @@index([service, createdAt])
 }

@@ -21,10 +21,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!post) return { title: "The Nurture Journal" };
 
   // Redirect from here rather than from the component below: metadata resolves
-  // before the response starts streaming, so this emits a real HTTP 308. Once
-  // the render has begun Next can only fall back to a client-side meta refresh,
-  // which is a much weaker signal to a crawler. Deliberately not inside a
-  // try/catch — permanentRedirect works by throwing.
+  // before the response starts streaming, so this emits a real HTTP 308.
+  // (Verified 2026-09-23. It really did only manage a client-side meta refresh
+  // until the root loading.tsx was removed — that boundary made every route
+  // stream, committing the status before any redirect decision.) Deliberately
+  // not inside a try/catch — permanentRedirect works by throwing.
   if (post.slug !== slug) permanentRedirect(`/journal/${post.slug}`);
 
   // Canonical points at the post's current slug, so a retired slug that's

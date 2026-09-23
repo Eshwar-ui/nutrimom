@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail, MailOpen, CheckCheck } from "lucide-react";
+import { enquiryServiceByValue } from "@nutrimom/shared";
 import type { ContactMessage, ContactMessageStatus } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
@@ -71,6 +72,15 @@ export default function AdminMessagesPage() {
                     <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", statusStyles[message.status])}>
                       {message.status}
                     </span>
+                    {/* Which pillar sent this. Absent on general enquiries and on
+                        everything received before the column existed, so the chip
+                        is omitted rather than shown as "None" — a blank reads as
+                        "no service", an explicit label reads as a fact. */}
+                    {enquiryServiceByValue(message.service) && (
+                      <span className="shrink-0 rounded-full bg-sky/40 px-2 py-0.5 text-[10px] font-bold uppercase text-foreground">
+                        {enquiryServiceByValue(message.service)!.label}
+                      </span>
+                    )}
                   </p>
                   <p className="mt-0.5 truncate text-sm text-muted-foreground">{message.name} · {message.email}</p>
                 </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Search, SearchX, SlidersHorizontal, Store, LayoutGrid, ChevronDown,
@@ -19,6 +20,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing-card";
 import { ListingsSort } from "@/components/listings-sort";
 import { StatePanel } from "@/components/ui/states";
+import { ProductCardSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const BROWSE_DESCRIPTION =
@@ -96,8 +98,59 @@ export async function generateMetadata({
   });
 }
 
+/**
+ * The shell renders immediately; everything that needs the API is suspended
+ * behind it.
+ *
+ * This used to be a segment-level `loading.tsx`, which Next applies to the
+ * segment **and its children** — so `/listings/[id]` inherited it, every
+ * response streamed, and the HTTP status was committed before `notFound()`
+ * could be reached. A missing listing answered 200 with a "page not found"
+ * body, which is a soft 404 to a crawler. Keeping the boundary inside this
+ * page keeps the skeleton here and lets the detail route answer 404 for real.
+ *
+ * The `<h1>` sits outside the boundary deliberately: it is static text, so it
+ * belongs in the first byte rather than behind a spinner.
+ */
 export default async function ListingsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
+
+  return (
+    <Container className="py-8 sm:py-12">
+      <h1 className="font-display text-4xl font-semibold tracking-[-0.035em] text-foreground sm:text-5xl">Shop preloved</h1>
+      {/* Keyed on the query so changing a filter shows the skeleton again
+          rather than holding the previous results in place. */}
+      <Suspense key={JSON.stringify(sp)} fallback={<ListingsSkeleton />}>
+        <ListingsResults sp={sp} />
+      </Suspense>
+    </Container>
+  );
+}
+
+function ListingsSkeleton() {
+  return (
+    <>
+      <Skeleton className="mb-8 mt-2 h-5 w-52 rounded-full" />
+      <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <aside className="hidden space-y-3 lg:block">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-11 w-full rounded-xl" />
+          ))}
+        </aside>
+        <div className="min-w-0">
+          <Skeleton className="mb-6 h-12 w-full rounded-2xl" />
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+async function ListingsResults({ sp }: { sp: SP }) {
   const page = Math.max(1, Number(sp.page) || 1);
 
   let data: Paginated<Listing> = { items: [], page, pageSize: 12, total: 0, totalPages: 1 };
@@ -133,11 +186,8 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
   };
 
   return (
-    <Container className="py-8 sm:py-12">
-      <header className="mb-8">
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.035em] text-foreground sm:text-5xl">Shop preloved</h1>
-        <p className="mt-2 text-muted-foreground">{data.total} treasure{data.total === 1 ? "" : "s"} waiting for a new home.</p>
-      </header>
+    <>
+      <p className="mb-8 mt-2 text-muted-foreground">{data.total} treasure{data.total === 1 ? "" : "s"} waiting for a new home.</p>
 
       <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
         {/* ---- Desktop sidebar rail: collections + filters ---- */}
@@ -242,7 +292,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
           )}
         </div>
       </div>
-    </Container>
+    </>
   );
 }
 

@@ -1086,6 +1086,42 @@ export type BlogQuery = z.infer<typeof blogQuerySchema>;
 /* Contact                                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Which part of the ecosystem an enquiry came from.
+ *
+ * The slug is what a service page puts in `/contact?service=`, so — like
+ * `BLOG_CATEGORIES` above — it is a URL contract and must not be derived from
+ * the label. The value is what the column stores.
+ *
+ * Null is a real and common state, not a gap: the contact page reached from
+ * the footer belongs to no service, and every message sent before this column
+ * existed has none. Inferring one from the subject line would be guessing.
+ */
+export const ENQUIRY_SERVICES = [
+  { value: "YOGA", slug: "yoga", label: "Yoga" },
+  { value: "NUTRITION", slug: "nutrition", label: "Nutrition" },
+  { value: "STARTING_SOLIDS", slug: "starting-solids", label: "Starting Solids" },
+  { value: "COMMUNITY", slug: "community", label: "Community" },
+  { value: "PRELOVED", slug: "preloved", label: "Preloved" },
+] as const;
+
+export type EnquiryService = (typeof ENQUIRY_SERVICES)[number]["value"];
+
+const ENQUIRY_SERVICE_VALUES = ENQUIRY_SERVICES.map((s) => s.value) as [
+  EnquiryService,
+  ...EnquiryService[],
+];
+
+export function enquiryServiceBySlug(slug: string | null | undefined) {
+  if (!slug) return null;
+  return ENQUIRY_SERVICES.find((s) => s.slug === slug) ?? null;
+}
+
+export function enquiryServiceByValue(value: string | null | undefined) {
+  if (!value) return null;
+  return ENQUIRY_SERVICES.find((s) => s.value === value) ?? null;
+}
+
 export const ContactMessageStatus = {
   NEW: "NEW",
   READ: "READ",
@@ -1102,6 +1138,8 @@ export interface ContactMessage {
   subject: string;
   message: string;
   status: ContactMessageStatus;
+  /** The service page this enquiry came from, or null for a general one. */
+  service: EnquiryService | null;
   createdAt: string;
 }
 
@@ -1111,6 +1149,10 @@ export const contactMessageInputSchema = z.object({
   phone: phoneNumberSchema.optional().or(z.literal("")),
   subject: z.string().min(3, "Enter a subject").max(160),
   message: z.string().min(10, "A little more detail helps us help you").max(4000),
+  // Optional because the footer's own contact link carries no service, and a
+  // stale or hand-edited `?service=` must not fail a real enquiry — the form
+  // drops an unrecognised value rather than rejecting the message behind it.
+  service: z.enum(ENQUIRY_SERVICE_VALUES).optional(),
 });
 export type ContactMessageInput = z.infer<typeof contactMessageInputSchema>;
 

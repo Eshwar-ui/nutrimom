@@ -9,6 +9,8 @@ import { Reveal } from "@/components/reveal";
 import { DecorativeElement } from "@/components/decorative-element";
 import { bookingWhatsappUrl } from "@/lib/booking";
 import { pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 
 export const metadata = pageMetadata({
   title: "Mom Support Community",
@@ -32,6 +34,22 @@ export default async function CommunityPage() {
 
   return (
     <>
+      <JsonLd
+        data={[
+          serviceJsonLd({
+            name: "Mom Support Community",
+            description:
+              "A free community for Indian moms: pregnancy and postpartum support, baby and toddler talk, wellness, mompreneur conversations, expert sessions and events.",
+            path: "/community",
+            serviceType: "Peer support community",
+            offerings: areas,
+          }),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Community", path: "/community" },
+          ]),
+        ]}
+      />
       <section className="relative overflow-hidden">
         <DecorativeElement
           src="/images/bg-element-sun-doodle.png"

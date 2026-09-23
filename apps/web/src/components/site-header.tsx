@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -27,7 +28,7 @@ import { useWishlistStore } from "@/lib/wishlist-store";
 import { authedRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
-import { PRIMARY_NAV } from "@/lib/site-nav";
+import { isNavItemActive, isNavPathActive, PRIMARY_NAV } from "@/lib/site-nav";
 import { NavDropdown } from "./nav-dropdown";
 
 // The nav tree lives in lib/site-nav so the header, the footer and the sitemap
@@ -42,6 +43,7 @@ const ticker = [
 ];
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const hydrated = useAuthHydrated();
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -161,7 +163,13 @@ export function SiteHeader() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-current={isNavPathActive(pathname, item.href) ? "page" : undefined}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-muted hover:text-foreground",
+                    isNavPathActive(pathname, item.href)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground",
+                  )}
                 >
                   {item.label}
                 </Link>
@@ -320,7 +328,11 @@ export function SiteHeader() {
                   <Link
                     href={item.href}
                     onClick={() => setMenuOpen(false)}
-                    className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                    aria-current={isNavItemActive(pathname, item) ? "page" : undefined}
+                    className={cn(
+                      "block rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors hover:bg-muted",
+                      isNavItemActive(pathname, item) ? "bg-primary/10 text-primary" : "text-foreground",
+                    )}
                   >
                     {item.label}
                   </Link>
@@ -331,7 +343,13 @@ export function SiteHeader() {
                           key={child.href}
                           href={child.href}
                           onClick={() => setMenuOpen(false)}
-                          className="block rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          aria-current={isNavPathActive(pathname, child.href) ? "page" : undefined}
+                          className={cn(
+                            "block rounded-xl px-3 py-2 text-sm transition-colors hover:bg-muted hover:text-foreground",
+                            isNavPathActive(pathname, child.href)
+                              ? "bg-primary/10 font-semibold text-primary"
+                              : "text-muted-foreground",
+                          )}
                         >
                           {child.label}
                         </Link>

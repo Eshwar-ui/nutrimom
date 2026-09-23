@@ -352,7 +352,8 @@ cascade delete); `update()` records the old slug in the same transaction, and th
 falls back to it. Live-beats-retired is enforced both ways: taking a slug deletes any history row
 for it, so a redirect can never shadow the post now sitting there. Verified live (13 checks incl.
 rename-back, another post claiming a retired slug, drafts not leaking through old slugs).
-**Caveat:** the old URL redirects via an instant client-side meta refresh, **not a 308** — the root
+**Caveat** (⚠️ **no longer true since 2026-09-23 — it is a real 308 now; the root `loading.tsx` was
+the cause and has been removed**): the old URL redirects via an instant client-side meta refresh, **not a 308** — the root
 `loading.tsx` makes every page stream, so the HTTP status is committed before the redirect decision.
 Moving the call into `generateMetadata` did not change it (metadata streams too in Next 16). Links
 work and the destination carries the canonical. A true 308 needs a `proxy.ts` doing a slug lookup on
@@ -372,7 +373,8 @@ against `GET /admin/blog`) rather than a shared secret, since the trigger runs i
 a secret would be readable. Verified: unpublishing dropped the post from list *and* detail page
 immediately; re-publishing restored both plus the sitemap entry.
 
-**Found, not fixed (pre-existing, not blog-specific):** `notFound()` returns **HTTP 200** app-wide —
+**Found, not fixed (pre-existing, not blog-specific)** — ⚠️ **both since fixed, 2026-09-23; see
+"Streaming, status codes & admin polish" at the end of this file:** `notFound()` returns **HTTP 200** app-wide —
 `/blog/never-existed` and `/listings/does-not-exist` both do it (same streaming cause as #4).
 Readers get the correct "We couldn't find that page" screen, but crawlers see soft 404s. Also two
 leftover **"Flow Test"** listings still carry `https://example.com/test-image.jpg`, which 404s
@@ -719,7 +721,7 @@ source change was needed. Worth knowing that `pnpm install`'s postinstall does e
 **Not done, and why:** no `ItemList` on category/listing pages (Google only uses it for
 carousel-eligible pages and it needs per-item markup that duplicates the Product nodes);
 no `hasMerchantReturnPolicy`/`shippingDetails` on offers (they encode a marketplace-wide
-promise the operator hasn't set); the soft-404 status code is still 200 app-wide (a real 404
+promise the operator hasn't set); the soft-404 status code is still 200 app-wide (⚠️ **fixed 2026-09-23**) (a real 404
 needs the `loading.tsx` streaming change noted in the blog QA pass). **Still needs the
 operator:** fill the `BusinessProfile` at `/admin/settings` — until then `/terms`, `/privacy`
 and `/refunds` stay noindex and out of the sitemap, and the `OnlineStore` node has no contact
@@ -742,3 +744,52 @@ details. Then submit `https://www.thenurturemoms.com/sitemap.xml` in Google Sear
    (tsconfig.build excludes `prisma` → output is `dist/main.js`) · ~~reservation sweeper (#6)~~ ✅ ·
    ~~real legal copy (#7)~~ ✅ (admin-editable `BusinessProfile` gates publishing; operator just
    fills it in at `/admin/settings`).
+
+---
+
+## Streaming, status codes & admin polish (2026-09-23)
+
+> Five long-standing defects closed in one pass. The first two shared a single root cause that
+> earlier passes had recorded as unfixable-without-a-rewrite; it turned out to be one file.
+> 158/158 API tests pass, typecheck + lint clean, both apps build.
+
+**1. `notFound()` answered HTTP 200 app-wide. ✅ FIXED — the cause was `app/loading.tsx`.**
+The root `loading.tsx` put **every** route behind a Suspense boundary, so Next committed the
+status before any page could reach `notFound()`. Deleting it makes `/journal/never-existed`,
+`/categories/nope` and `/sellers/nope` answer a real **404** immediately. `/listings/[id]` needed
+one more step: `app/listings/loading.tsx` applied to the segment **and its children**, so the
+detail route inherited it. That skeleton now lives inside `listings/page.tsx` as a `<Suspense>`
+around a `ListingsResults` component, with the static `<h1>` outside the boundary (it belongs in
+the first byte). Verified live: all five URLs 404, `/listings` still renders its 12 cards and
+count, no skeleton left in the settled HTML.
+**Consequence to know:** there is no global route skeleton any more. Server pages now commit when
+their data resolves. That is the trade the correct status code costs, and the fetches are ~100ms.
+
+**2. Blog slug renames now issue a real 308. ✅ FIXED — free consequence of #1.** The code already
+called `permanentRedirect` in `generateMetadata`; the Blog QA pass recorded that it still only
+managed a client-side meta refresh "because metadata streams too in Next 16". It was the same root
+boundary. Verified live against a retired slug: `HTTP/1.1 308` with `location: /journal/test-1` and
+no meta refresh in the body. The stale comments in `not-found.tsx` and `journal/[slug]/page.tsx`
+have been corrected — they asserted the old behaviour as a permanent constraint.
+
+**3. Blog admin UX. ✅ FIXED.** Auto-slug from the title in `blog-post-form.tsx` (`slugify`),
+**new posts only and only until the admin types a slug of their own** — an existing post's slug is
+a published URL and changing it retires the old one via `BlogPostSlug`, so the title must never
+drive it silently. The helper text says which rule applies. Toggling Preview no longer collapses
+the page: the preview box inherits the textarea's measured height. The list gained a view-live
+link (published rows only — a draft has no public URL), the published/edited date, the category,
+and pagination. **Paging is client-side** because `GET /admin/blog` returns every post in one
+array; move it into the endpoint when the payload is the problem, not before.
+
+**4. `/account/membership` told verified sellers they were unverified. ✅ FIXED.** The step-1 card
+said "An admin will verify your account" unconditionally, so a fully approved seller read it as
+their money being in limbo. Now branches on `status.sellerVerified`.
+
+**5. `/sell` blanked for seconds behind a full-page skeleton. ✅ FIXED.** The static heading and
+intro were inside the `!ready || isLoading` early return, so an auth-plus-billing resolve looked
+like a page that had failed to load. Only the gated area waits now, and the query carries
+`staleTime: 60_000` — `/account/membership` already writes its result into the same cache key.
+
+**Also:** the four-pillar cards were duplicated by hand on `/about`. Extracted to
+[pillar-cards.tsx](apps/web/src/components/pillar-cards.tsx), used by both the home page and
+`/about`, with a `source` prop so `pillar_click` can be read per entry point.

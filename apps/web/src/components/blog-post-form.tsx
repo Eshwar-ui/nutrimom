@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, FileText, Image as ImageIcon } from "lucide-react";
 import { BLOG_CATEGORIES, blogPostInputSchema, type BlogPost } from "@nutrimom/shared";
@@ -29,6 +29,31 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+
+  // An existing post's slug is a published URL: changing it retires the old
+  // one (see BlogPostSlug), so the title must never drive it silently. On a new
+  // post it may, until the admin types a slug of their own — after which the
+  // field is theirs. The first real post's slug is literally `test-1` because
+  // this didn't exist.
+  const [slugTouched, setSlugTouched] = useState(Boolean(initial));
+
+  const setTitle = (value: string) => {
+    setForm((current) => ({
+      ...current,
+      title: value,
+      slug: slugTouched ? current.slug : slugify(value),
+    }));
+  };
+
+  // Toggling to Preview replaced a tall textarea with a short rendered block,
+  // so the page collapsed and the scroll position landed in blank space. The
+  // preview inherits the editor's height instead.
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const [editorHeight, setEditorHeight] = useState<number | null>(null);
+  const togglePreview = () => {
+    if (!preview) setEditorHeight(editorRef.current?.offsetHeight ?? null);
+    setPreview((p) => !p);
+  };
 
   const submit = async () => {
     setError(null);
@@ -69,10 +94,10 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
       <fieldset className="grid gap-5 border-b border-border p-6 sm:grid-cols-2 sm:p-8">
         <legend className="sr-only">Post details</legend>
         <Field label="Title" id="title" error={issues.title} className="sm:col-span-2">
-          <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} aria-invalid={!!issues.title} placeholder="5 things to check before buying a used stroller" />
+          <Input id="title" value={form.title} onChange={(e) => setTitle(e.target.value)} aria-invalid={!!issues.title} placeholder="5 things to check before buying a used stroller" />
         </Field>
-        <Field label="Slug" id="slug" error={issues.slug} helper="Lowercase, hyphens only — used in the URL">
-          <Input id="slug" value={form.slug} onChange={(e) => set("slug", e.target.value)} aria-invalid={!!issues.slug} placeholder="used-stroller-checklist" />
+        <Field label="Slug" id="slug" error={issues.slug} helper={initial ? "Lowercase, hyphens only — changing this retires the old URL" : "Lowercase, hyphens only — filled in from the title until you edit it"}>
+          <Input id="slug" value={form.slug} onChange={(e) => { setSlugTouched(true); set("slug", e.target.value); }} aria-invalid={!!issues.slug} placeholder="used-stroller-checklist" />
         </Field>
         <Field label="Category" id="category" error={issues.category}>
           <select
@@ -105,12 +130,15 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
         <legend className="sr-only">Content</legend>
         <div className="flex items-start justify-between gap-3">
           <SectionHeading icon={FileText} title="Content" description="Markdown supported — headings, bold, links, lists." />
-          <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => setPreview((p) => !p)}>
+          <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={togglePreview}>
             {preview ? <><EyeOff className="h-4 w-4" /> Edit</> : <><Eye className="h-4 w-4" /> Preview</>}
           </Button>
         </div>
         {preview ? (
-          <div className="min-h-[16rem] rounded-xl border border-border p-4">
+          <div
+            className="min-h-[16rem] overflow-y-auto rounded-xl border border-border p-4"
+            style={editorHeight ? { height: editorHeight } : undefined}
+          >
             {/* Same offset/title handling as the live post page, so the
                 preview is what a reader actually gets. */}
             <MarkdownContent
@@ -122,6 +150,7 @@ export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?:
         ) : (
           <Textarea
             id="bodyMarkdown"
+            ref={editorRef}
             value={form.bodyMarkdown}
             onChange={(e) => set("bodyMarkdown", e.target.value)}
             rows={16}
@@ -148,4 +177,19 @@ function SectionHeading({ icon: Icon, title, description }: { icon: typeof FileT
 
 function Field({ label, id, helper, error, className, children }: { label: string; id: string; helper?: string; error?: string; className?: string; children: React.ReactNode }) {
   return <div className={className}><div className="flex items-center justify-between gap-3"><Label htmlFor={id}>{label}</Label>{helper && <span className="mb-1.5 text-xs text-muted-foreground">{helper}</span>}</div>{children}{error && <p className="mt-1.5 text-xs text-danger">{error}</p>}</div>;
+}
+
+/** Title → URL slug: lowercase, accents stripped, anything that is not a
+ *  letter or digit collapsed to a single hyphen. Matches what
+ *  `blogPostInputSchema` will accept, so the generated value never fails
+ *  validation the admin didn't cause. */
+function slugify(title: string): string {
+  return title
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/, "");
 }

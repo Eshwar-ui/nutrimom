@@ -20,7 +20,6 @@ import { Reveal } from "@/components/reveal";
 import { HeroWave } from "@/components/section-wave";
 import { ListingCard } from "@/components/listing-card";
 import {
-  ShopYourWay,
   TrustSafety,
   Testimonials,
 } from "@/components/home-sections";
@@ -188,8 +187,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Shop your way — functional catalog entry points (budget, condition, search) */}
-      <ShopYourWay />
 
       {/* Featured */}
       <section className="relative isolate overflow-hidden">

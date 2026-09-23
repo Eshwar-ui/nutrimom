@@ -14,6 +14,8 @@ import { ListingCard } from "@/components/listing-card";
 import { Reveal } from "@/components/reveal";
 import { getCategories, getListings } from "@/lib/listings";
 import { pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 import { cn } from "@/lib/utils";
 
 /**
@@ -71,7 +73,17 @@ export default async function PrelovedPage() {
   }
 
   return (
-    <Container className="py-12 sm:py-16">
+    <>
+      {/* Breadcrumb only. The marketplace's machine-readable substance is the
+          Product + Offer node on each listing; a Service node here would
+          restate that vaguely and compete with the pages that carry it. */}
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Preloved", path: "/preloved" },
+        ])}
+      />
+      <Container className="py-12 sm:py-16">
       <ServiceHero
         eyebrow="Pass it on"
         title="Loved before. Loved again."
@@ -167,6 +179,20 @@ export default async function PrelovedPage() {
       <ClosingCta
         title="Have something to pass on?"
         body="List it in a few minutes. Another mom is already looking for it."
+        decorations={[
+          {
+            src: "/images/category-baby-clothes.png",
+            className: "-left-14 -top-10 w-40 -rotate-12 sm:-left-20 sm:-top-16 sm:w-60",
+          },
+          {
+            src: "/images/category-strollers.png",
+            className: "-right-14 -top-10 w-60 rotate-12 sm:-right-20 sm:-top-16 sm:w-100",
+          },
+          {
+            src: "/images/category-toys.png",
+            className: "-bottom-14 -left-20 w-40 -rotate-20 sm:-bottom-20 sm:left-40 sm:w-64",
+          },
+        ]}
       >
         <TrackedLink
           event="preloved_click"
@@ -183,6 +209,7 @@ export default async function PrelovedPage() {
           How it works
         </Link>
       </ClosingCta>
-    </Container>
+      </Container>
+    </>
   );
 }

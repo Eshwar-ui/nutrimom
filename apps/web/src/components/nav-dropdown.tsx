@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import type { NavLink } from "@/lib/site-nav";
+import { isNavItemActive, isNavPathActive, type NavLink } from "@/lib/site-nav";
 import { cn } from "@/lib/utils";
 
 /**
@@ -34,6 +34,7 @@ export function NavDropdown({
   const containerRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
+  const active = isNavItemActive(pathname, { href, children: [...items] });
 
   const openNow = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -95,11 +96,21 @@ export function NavDropdown({
       onMouseEnter={openNow}
       onMouseLeave={scheduleClose}
     >
-      <div className="flex items-center">
+      <div
+        className={cn(
+          "flex items-center rounded-full transition-colors",
+          active
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        )}
+      >
         <Link
           href={href}
           onClick={closeNow}
-          className="flex items-center gap-1 rounded-full py-1.5 pl-3 pr-1 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "flex items-center gap-1 py-1.5 pl-3 pr-1 text-sm font-semibold",
+          )}
         >
           {label}
         </Link>
@@ -109,7 +120,7 @@ export function NavDropdown({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="rounded-full py-1.5 pl-0.5 pr-2.5 text-muted-foreground transition-colors hover:text-foreground"
+          className="rounded-full py-1.5 pl-0.5 pr-2.5"
         >
           <ChevronDown
             className={cn(
@@ -138,7 +149,13 @@ export function NavDropdown({
                   role="menuitem"
                   href={item.href}
                   onClick={closeNow}
-                  className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                  aria-current={isNavPathActive(pathname, item.href) ? "page" : undefined}
+                  className={cn(
+                    "block rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors hover:bg-muted",
+                    isNavPathActive(pathname, item.href)
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground",
+                  )}
                 >
                   {item.label}
                 </Link>

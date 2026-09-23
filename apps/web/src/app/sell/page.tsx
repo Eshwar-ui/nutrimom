@@ -17,14 +17,17 @@ export default function SellPage() {
     queryKey: ["seller-billing"],
     queryFn: getBillingStatus,
     enabled: ready,
+    // The gate answer barely changes within a visit — registering, being
+    // approved and buying a plan all write the result straight into this cache
+    // key from /account/membership. Without it, every arrival here re-waited on
+    // the round trip behind a full-page skeleton.
+    staleTime: 60_000,
   });
 
-  if (!ready || isLoading)
-    return (
-      <Container className="py-16">
-        <PageSkeleton rows={5} />
-      </Container>
-    );
+  // Only the gated area waits. The heading and intro are static, so blanking
+  // the whole page behind a skeleton made a two-second auth-plus-billing
+  // resolve look like a page that had failed to load.
+  const resolving = !ready || isLoading;
 
   return (
     <Container className="max-w-3xl py-12">
@@ -36,7 +39,9 @@ export default function SellPage() {
       </p>
 
       <div className="mt-8">
-        {status?.canList ? (
+        {resolving ? (
+          <PageSkeleton rows={4} />
+        ) : status?.canList ? (
           <ListingForm />
         ) : (
           <Card className="flex flex-col items-start gap-4 p-6 sm:p-8">

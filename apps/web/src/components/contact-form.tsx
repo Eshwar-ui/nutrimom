@@ -11,6 +11,7 @@ import { Input, Textarea, Label } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { Playful } from "@/components/ui/playful";
 import { CustomSelect } from "@/components/ui/custom-select";
+import type { EnquiryService } from "@nutrimom/shared";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Please tell us your name"),
@@ -20,9 +21,39 @@ const contactSchema = z.object({
 });
 type ContactInput = z.infer<typeof contactSchema>;
 
-const topics = ["Order support", "Listing question", "Payment safety", "Selling on the marketplace", "Something else"];
+/**
+ * The topic a visitor picks, and the service it attributes the enquiry to.
+ *
+ * The four service topics come first: since the site became a four-pillar
+ * ecosystem this form is the booking fallback for yoga, nutrition, solids and
+ * community, and a topic list that opens with "Order support" reads as a
+ * marketplace help desk to someone who arrived from /yoga.
+ */
+const TOPICS: { topic: string; service: EnquiryService | null }[] = [
+  { topic: "Yoga sessions", service: "YOGA" },
+  { topic: "Nutrition consultation", service: "NUTRITION" },
+  { topic: "Starting Solids session", service: "STARTING_SOLIDS" },
+  { topic: "Mom support community", service: "COMMUNITY" },
+  { topic: "Order support", service: null },
+  { topic: "Listing question", service: null },
+  { topic: "Payment safety", service: null },
+  { topic: "Selling on the marketplace", service: "PRELOVED" },
+  { topic: "Something else", service: null },
+];
 
-export function ContactForm() {
+const topics = TOPICS.map((t) => t.topic);
+
+function topicForService(service: EnquiryService | null): string {
+  if (!service) return "";
+  return TOPICS.find((t) => t.service === service)?.topic ?? "";
+}
+
+export function ContactForm({
+  /** The service page this visitor came from, from `/contact?service=`. */
+  service = null,
+}: {
+  service?: EnquiryService | null;
+}) {
   const [sent, setSent] = useState<string | null>(null);
   const {
     register,
@@ -30,9 +61,19 @@ export function ContactForm() {
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<ContactInput>({ resolver: zodResolver(contactSchema), defaultValues: { topic: "" } });
+  } = useForm<ContactInput>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: { topic: topicForService(service) },
+  });
 
   const onSubmit = async (data: ContactInput) => {
+    // What they picked beats where they came from: someone who opened this
+    // from /yoga and then chose "Order support" has an order problem. The URL
+    // only speaks when the chosen topic maps to no service of its own, which
+    // is how "Something else" from /yoga still reaches the yoga enquiries.
+    const chosen = TOPICS.find((t) => t.topic === data.topic);
+    const attributed = chosen?.service ?? (chosen ? service : null);
+
     try {
       await request("/contact", {
         method: "POST",
@@ -41,6 +82,7 @@ export function ContactForm() {
           email: data.email,
           subject: data.topic,
           message: data.message,
+          ...(attributed ? { service: attributed } : {}),
         },
       });
       setSent(data.name.split(" ")[0]);

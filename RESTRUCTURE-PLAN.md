@@ -68,70 +68,90 @@ Refund/Cancellation · Instagram · YouTube · WhatsApp.
 
 ---
 
-## Phase 0 — IA & routing foundation  ← this branch
+## Phase 0 — IA & routing foundation ✅ DONE
 
 The structural move. No new page design yet; every new route ships as a real page with
 correct metadata so the sitemap, nav and redirects can be verified independently of copy.
 
-- [ ] `lib/site-nav.ts` — one definition of the four pillars and the nav/footer trees,
+- [x] `lib/site-nav.ts` — one definition of the four pillars and the nav/footer trees,
       consumed by the header, the footer and `sitemap.ts`. (The header, footer and sitemap
       currently each hardcode their own link lists; that is how a nav and a sitemap drift.)
-- [ ] `git mv app/blog app/journal`; update the in-page links, `structured-data.ts`'s
+- [x] `git mv app/blog app/journal`; update the in-page links, `structured-data.ts`'s
       `blogPostingJsonLd` URL and `sitemap.ts`.
-- [ ] `next.config.ts` — permanent redirects `/blog` → `/journal`, `/blog/:slug` → `/journal/:slug`.
-- [ ] `app/api/revalidate/route.ts` — `blog` scope purges `/journal` and `/journal/[slug]`.
-- [ ] New routes: `/yoga`, `/nutrition`, `/nutrition/starting-solids`, `/community`, `/preloved`.
-- [ ] `sitemap.ts` — add the five new URLs, move the blog URLs to `/journal`.
-- [ ] `robots.ts` — unchanged, but re-verified against the new tree.
-- [ ] Header + footer rebuilt on `site-nav.ts`, with the Book/Join CTA.
-- [ ] `lib/seo.ts` — `SITE_TAGLINE` and `SITE_DESCRIPTION` still say "preloved marketplace";
+- [x] `next.config.ts` — permanent redirects `/blog` → `/journal`, `/blog/:slug` → `/journal/:slug`.
+- [x] `app/api/revalidate/route.ts` — `blog` scope purges `/journal` and `/journal/[slug]`.
+- [x] New routes: `/yoga`, `/nutrition`, `/nutrition/starting-solids`, `/community`, `/preloved`.
+- [x] `sitemap.ts` — add the five new URLs, move the blog URLs to `/journal`.
+- [x] `robots.ts` — unchanged, but re-verified against the new tree.
+- [x] Header + footer rebuilt on `site-nav.ts`, with the Book/Join CTA.
+- [x] `lib/seo.ts` — `SITE_TAGLINE` and `SITE_DESCRIPTION` still say "preloved marketplace";
       they become the ecosystem line. **This changes the meta description of every page that
       doesn't set its own.**
 
-## Phase 1 — Brand & homepage
+## Phase 1 — Brand & homepage ✅ DONE
 
-- [ ] Home restructured: hero ("Motherhood is a journey. You don't have to do it alone."),
+- [x] Home restructured: hero ("Motherhood is a journey. You don't have to do it alone."),
       stage selector (6 cards), four-pillar grid, then the existing marketplace sections.
-- [ ] Brand line "Move. Nourish. Connect. Pass it on." in hero, footer and OG copy.
-- [ ] `/about` rewritten for Sudha & Nandini as Co-founders.
-      **Constraint from the brief: invent nothing about Nandini beyond "Co-founder."**
-- [ ] Palette + type check against the brief (Deep Teal `#006B6B`, Sage `#A8BFA0`, warm ivory,
+- [x] Brand line "Move. Nourish. Connect. Pass it on." in hero, footer and OG copy.
+- [x] `/about` rewritten for Sudha & Nandini as Co-founders. Shipped 2026-09-23 —
+      hero, story, values and pillar grid all re-cut from marketplace-only copy.
+      **Nandini's card says "Co-founder" and nothing else**, per the brief; Sudha's adds
+      only what `/yoga` already publishes. The code comment on `founders` says so, so the
+      gap reads as deliberate rather than unfinished.
+- [x] Palette + type check against the brief (Deep Teal `#006B6B`, Sage `#A8BFA0`, warm ivory,
       muted terracotta, soft gold; Playfair Display + DM Sans). Audit what the theme already
       has before adding tokens — much of this may already be in place.
-- [ ] New `og-default.png` reflecting the ecosystem, not the marketplace.
+- [x] New `og-default.png` reflecting the ecosystem, not the marketplace. Shipped
+      2026-09-23 — composed from the existing brand assets (horizontal logo + the four
+      `images/pillars/*` illustrations) on the same cream ground and corner washes as the
+      old card, so it still reads as this brand in a feed. The old one sold the
+      marketplace alone: "Preloved baby, kids & maternity marketplace · Buy · Sell · Pass
+      it on".
 
-## Phase 2 — Service pages
+## Phase 2 — Service pages ✅ DONE
 
-- [ ] `/yoga` — hero, credential strip, 6 offering cards, pricing ("starting from"), safety copy.
-- [ ] `/nutrition` — hero, 5 services, free-resource cards, pricing.
-- [ ] `/nutrition/starting-solids` — dedicated landing page, "session includes" list, single CTA.
-- [ ] `/community` — hero, 7 community areas, free tier + "Nurture Moms Plus" as *future*.
+- [x] `/yoga` — hero, credential strip, 6 offering cards, pricing ("starting from"), safety copy.
+- [x] `/nutrition` — hero, 5 services, free-resource cards, pricing.
+- [x] `/nutrition/starting-solids` — dedicated landing page, "session includes" list, single CTA.
+- [x] `/community` — hero, 7 community areas, free tier + "Nurture Moms Plus" as *future*.
       **The brief says do not launch a paid tier until benefits and delivery are defined.**
-- [ ] `/preloved` — pillar hub: buy / sell / donate, links into the live marketplace.
-- [ ] Reusable `ServiceCard` / `PricingTable` / `BookingCta` components so the four pages
+- [x] `/preloved` — pillar hub: buy / sell / donate, links into the live marketplace.
+- [x] Reusable `ServiceCard` / `PricingTable` / `BookingCta` components so the four pages
       share one visual language and the marketplace's card grammar (brief §13).
 
-## Phase 3 — Booking, enquiry & lead capture
+## Phase 3 — Booking, enquiry & lead capture 🟡 ONE ITEM LEFT
 
-- [ ] Business WhatsApp sourced from the `BusinessProfile` (`supportPhone`) rather than a
+- [x] Business WhatsApp sourced from the `BusinessProfile` (`supportPhone`) rather than a
       new constant — the admin already fills that in at `/admin/settings`.
-- [ ] `BookingCta` → `whatsappLink()` (already in `packages/shared`) with the per-service
+- [x] `BookingCta` → `whatsappLink()` (already in `packages/shared`) with the per-service
       keyword: YOGA · FOOD · SOLIDS · CONNECTION.
-- [ ] Enquiry form reusing the existing `ContactMessage` model + `POST /contact`.
-      **Needs a migration:** a `service` / `source` column so admin → Messages can tell a
-      yoga enquiry from a general one.
+- [x] Enquiry form reusing the existing `ContactMessage` model + `POST /contact`.
+      Shipped 2026-09-23: `EnquiryService` enum + nullable `ContactMessage.service`
+      (migration `20260923120000_add_contact_message_service`), `?service=` on every
+      `BookingCta` fallback, service-aware topic list and heading on `/contact`, and a
+      pillar chip in admin → Messages. **The submitted attribution comes from the topic
+      the visitor picked**, falling back to the URL only when the topic maps to no
+      service — someone who opens the form from `/yoga` and then chooses "Order support"
+      has an order problem, not a yoga enquiry.
 - [ ] Free-resource downloads (lead magnets) — email capture then file. Decide storage
       (Supabase bucket, same as listing images) before building.
 
-## Phase 4 — Journal, SEO & measurement
+## Phase 4 — Journal, SEO & measurement 🟡 ONE ITEM LEFT
 
-- [ ] `BlogPost.category` + `/journal?category=` filter + category landing pages
+- [x] `BlogPost.category` + `/journal?category=` filter + category landing pages
       (Pregnancy · Yoga · Postpartum · Nutrition · Starting Solids · Baby · Toddler ·
       Motherhood · Mompreneur · Preloved). **Needs a migration.**
-- [ ] Structured data for the new pages: `Service` nodes on yoga/nutrition/solids,
+- [x] Structured data for the new pages: `Service` nodes on yoga/nutrition/solids,
       `Organization` updated from marketplace-only to the ecosystem, breadcrumbs.
+      Shipped 2026-09-23. **No `offers`/`price` on any `Service` node** — every service
+      page prints its fees under "Starting prices … we'll confirm before you book", so a
+      machine-readable price would publish a commitment the page declines to make.
+      `/preloved` gets breadcrumbs only: the marketplace's real structured data is the
+      `Product` + `Offer` node on each listing, and a vague `Service` node would compete
+      with it. The home page's `OnlineStore` keeps its type (the marketplace is a real
+      shop) and gains a `hasOfferCatalog` naming the other three pillars.
 - [ ] SEO landing pages from brief §11 (prenatal yoga online, Garbhasanskar sessions, …).
-- [ ] Analytics: pillar click-through, solids-page conversion, WhatsApp keyword attribution.
+- [x] Analytics: pillar click-through, solids-page conversion, WhatsApp keyword attribution.
       Nothing is installed today — this is a from-zero item.
 
 ---
@@ -155,6 +175,17 @@ reusing the marketplace card language) is followed.
 4. **Pricing** — publish the ranges as "starting from", or hold every price until final?
 5. **Instagram / YouTube URLs** — the footer is specified to carry them; neither is in the repo.
 6. **Lead magnets** — do the six PDFs in brief §11 exist yet?
+
+## Found in passing — migration drift on the dev database (2026-09-23)
+
+`prisma migrate status` reports a migration applied to the dev database that **does not
+exist in `prisma/migrations`**: `20260808094732_route_payouts`. It predates this branch
+(there is a `stash@{0}` on master named "route payouts on razorpay route") and nothing
+here caused it, but it means the repo cannot reproduce the live schema from scratch —
+`migrate deploy` on a fresh database would build something subtly different from dev.
+Not fixed: recovering it needs whoever wrote it to say what it did. Worth resolving
+before the next deploy, either by committing the missing SQL or by confirming it was a
+no-op and clearing the row.
 
 ## Risks
 

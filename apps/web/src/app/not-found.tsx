@@ -4,9 +4,10 @@ import { Container } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { privateMetadata } from "@/lib/seo";
 
-// `notFound()` still answers HTTP 200 app-wide (the root loading.tsx makes
-// every route stream, so the status is committed before the 404 decision), so
-// the noindex tag is what stops these from being indexed as soft 404s.
+// `notFound()` answers a real HTTP 404 since the root loading.tsx was removed
+// (it put every route behind a Suspense boundary, so the status was committed
+// before the 404 decision could be reached). The noindex stays regardless —
+// it costs nothing and this page should never be indexed on its own.
 export const metadata = privateMetadata("Page not found");
 
 export default function NotFound() {

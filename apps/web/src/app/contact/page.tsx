@@ -17,7 +17,7 @@ import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 import { ContactForm } from "@/components/contact-form";
 import { getBusinessProfile } from "@/lib/business-profile";
 import { pageMetadata } from "@/lib/seo";
-import { isBusinessProfileComplete } from "@nutrimom/shared";
+import { enquiryServiceBySlug, isBusinessProfileComplete } from "@nutrimom/shared";
 
 // Not gated on the business profile the way /terms and /privacy are: this page
 // carries a working contact form regardless, and `sitemap.ts` has always
@@ -65,9 +65,18 @@ const baseDetails = [
   },
 ];
 
-export default async function ContactPage() {
-  const profile = await getBusinessProfile();
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string }>;
+}) {
+  const [profile, sp] = await Promise.all([getBusinessProfile(), searchParams]);
   const published = isBusinessProfileComplete(profile);
+
+  // Set by every service page's booking CTA while the operator has no WhatsApp
+  // number. An unknown or hand-edited slug reads as no service rather than
+  // 404ing — someone mid-enquiry should land on a working form, not an error.
+  const service = enquiryServiceBySlug(sp.service);
 
   // The business card carries the operator's real details once they exist,
   // and otherwise says plainly that they don't yet — never a stand-in address.
@@ -122,12 +131,16 @@ export default async function ContactPage() {
                 <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary-foreground/15">
                   <Mail className="h-7 w-7" strokeWidth={1.5} />
                 </span>
-                <h2 className="font-display text-3xl font-semibold leading-tight">Send us a message</h2>
+                <h2 className="font-display text-3xl font-semibold leading-tight">
+                  {service ? `Enquire about ${service.label}` : "Send us a message"}
+                </h2>
                 <p className="max-w-xs leading-relaxed text-primary-foreground/80">
-                  Questions about an order, a listing, or selling on the marketplace? Drop us a note and we&apos;ll get back to you.
+                  {service
+                    ? "Tell us a little about where you are in your journey and what you're looking for, and we'll come back to you personally."
+                    : "Questions about an order, a listing, or selling on the marketplace? Drop us a note and we'll get back to you."}
                 </p>
               </div>
-              <ContactForm />
+              <ContactForm service={service?.value ?? null} />
             </div>
           </Reveal>
         </Container>

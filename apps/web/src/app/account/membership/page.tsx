@@ -250,13 +250,25 @@ export default function MembershipPage() {
             <Check className="h-3 w-3" /> Paid
           </span>
         </div>
+        {/* Two states, not one line for both: a seller who has already been
+            approved was being told an admin still had to verify them, which
+            reads as "your money is in limbo" to someone whose account is in
+            fact fully live. */}
         <p className="mt-2 max-w-prose text-sm text-muted-foreground">
-          Your one-time {formatPaise(status.registrationFeePaise)} registration is complete. An
-          admin will verify your account (see your{" "}
-          <Link href="/account" className="underline">
-            profile
-          </Link>
-          ) before you can start listing.
+          Your one-time {formatPaise(status.registrationFeePaise)} registration is complete.{" "}
+          {status.sellerVerified ? (
+            <>
+              Your seller account is verified — all that’s left is an active plan below.
+            </>
+          ) : (
+            <>
+              An admin will verify your account (see your{" "}
+              <Link href="/account" className="underline">
+                profile
+              </Link>
+              ) before you can start listing.
+            </>
+          )}
         </p>
       </Card>
 

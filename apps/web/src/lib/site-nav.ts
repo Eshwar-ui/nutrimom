@@ -27,6 +27,23 @@ export const WHATSAPP_KEYWORDS = {
   community: "CONNECTION",
 } as const;
 
+/**
+ * The `?service=` slug each booking intent hands to the contact form, so the
+ * on-site fallback carries the same attribution the WhatsApp keyword does.
+ *
+ * Kept as its own map rather than reusing the keyword: the keywords are copy
+ * the founders type into WhatsApp, while these are `ENQUIRY_SERVICES` slugs in
+ * shared and part of a URL contract. They diverge already — SOLIDS against
+ * `starting-solids` — and tying them together would make renaming one rename
+ * the other.
+ */
+export const ENQUIRY_SERVICE_SLUGS = {
+  yoga: "yoga",
+  nutrition: "nutrition",
+  solids: "starting-solids",
+  community: "community",
+} as const;
+
 export type PillarKey = "move" | "nourish" | "connect" | "pass-it-on";
 
 export interface Pillar {
@@ -112,6 +129,21 @@ export interface NavLink {
 export interface NavItem extends NavLink {
   /** Rendered as a dropdown when present; the parent stays a real link. */
   children?: NavLink[];
+}
+
+/** Matches a route and its nested pages without making `/` match everything. */
+export function isNavPathActive(pathname: string, href: string) {
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** A dropdown stays active when one of its marketplace shortcuts is active. */
+export function isNavItemActive(pathname: string, item: Pick<NavItem, "href" | "children">) {
+  return (
+    isNavPathActive(pathname, item.href) ||
+    item.children?.some((child) => isNavPathActive(pathname, child.href)) === true
+  );
 }
 
 /**

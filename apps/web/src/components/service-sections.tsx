@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { TrackedLink, TrackedExternalLink } from "./tracked-link";
 import { MessageCircle, ArrowRight, BadgeCheck, Tag, Check, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -6,6 +7,8 @@ import { Container } from "./ui/primitives";
 import { buttonVariants } from "./ui/button";
 import { Reveal } from "./reveal";
 import { cn } from "@/lib/utils";
+import { ENQUIRY_SERVICE_SLUGS } from "@/lib/site-nav";
+import type { BookingIntent } from "@/lib/booking";
 
 /**
  * Shared building blocks for the four pillar pages (/yoga, /nutrition,
@@ -89,16 +92,99 @@ export interface Offering {
   body: string;
   icon?: LucideIcon;
   tint?: string;
+  /** Optional pastel border token for a more illustrated service-card treatment. */
+  borderColor?: string;
+  /** Optional classes for the grid item wrapper. */
+  gridClassName?: string;
+  /** Optional classes for the illustrated panel and its image. */
+  illustrationClassName?: string;
+  illustrationImageClassName?: string;
+  /** A compact visual cue that makes the service easier to recognise at a glance. */
+  illustration?: {
+    primary: LucideIcon;
+    secondary?: LucideIcon;
+    label: string;
+    detail: string;
+    surface: string;
+    image?: string;
+  };
   /** Turns the whole card into a link when this pillar has a deeper page. */
   href?: string;
+}
+
+function OfferingIllustration({
+  illustration,
+  className,
+  imageClassName,
+  fillHeight = false,
+}: {
+  illustration: NonNullable<Offering['illustration']>;
+  className?: string;
+  imageClassName?: string;
+  fillHeight?: boolean;
+}) {
+  const Primary = illustration.primary;
+  const Secondary = illustration.secondary;
+
+  return (
+    <div
+      className={cn(
+        "relative mb-5 overflow-hidden rounded-[1.35rem] border border-border/70 p-4",
+        illustration.surface,
+        className,
+        fillHeight && "flex-1",
+      )}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -bottom-8 -right-8 h-24 w-24 rounded-full bg-white/45 blur-sm"
+      />
+      {illustration.image && (
+        <Image
+          src={illustration.image}
+          alt=""
+          aria-hidden="true"
+          width={180}
+          height={180}
+          className={cn(
+            "pointer-events-none absolute -bottom-5 -right-2 h-28 w-28 object-contain opacity-85",
+            imageClassName,
+          )}
+        />
+      )}
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/70 text-foreground shadow-sm">
+            <Primary className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          {Secondary && (
+            <>
+              <span aria-hidden className="h-px w-4 bg-foreground/20" />
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-white/55 text-foreground/80">
+                <Secondary className="h-4 w-4" strokeWidth={1.8} />
+              </span>
+            </>
+          )}
+        </div>
+        <span className="max-w-[8rem] text-right text-[0.68rem] font-bold uppercase leading-tight tracking-[0.12em] text-foreground/65">
+          {illustration.label}
+        </span>
+      </div>
+      <p className="relative mt-4 max-w-[15rem] text-xs font-medium leading-relaxed text-foreground/75">
+        {illustration.detail}
+      </p>
+    </div>
+  );
 }
 
 export function OfferingGrid({
   heading,
   items,
+  equalCards = false,
 }: {
   heading?: string;
   items: readonly Offering[];
+  equalCards?: boolean;
 }) {
   return (
     <section className="mt-14">
@@ -107,20 +193,29 @@ export function OfferingGrid({
           {heading}
         </h2>
       )}
-      <div className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3", heading && "mt-6")}>
+      <div className={cn("grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3", heading && "mt-6")}>
         {items.map((item, i) => {
           const Icon = item.icon;
           const inner = (
             <>
-              {Icon && (
-                <span
-                  className={cn(
-                    "mb-4 grid h-11 w-11 place-items-center rounded-2xl",
-                    item.tint ?? "bg-sage/60",
-                  )}
-                >
-                  <Icon className="h-5 w-5 text-foreground" />
-                </span>
+              {item.illustration ? (
+                <OfferingIllustration
+                  illustration={item.illustration}
+                  className={item.illustrationClassName}
+                  imageClassName={item.illustrationImageClassName}
+                  fillHeight={equalCards}
+                />
+              ) : (
+                Icon && (
+                  <span
+                    className={cn(
+                      "mb-4 grid h-11 w-11 place-items-center rounded-2xl",
+                      item.tint ?? "bg-sage/60",
+                    )}
+                  >
+                    <Icon className="h-5 w-5 text-foreground" />
+                  </span>
+                )
               )}
               <h3 className="font-display text-lg font-semibold text-foreground">
                 {item.title}
@@ -136,11 +231,19 @@ export function OfferingGrid({
             </>
           );
           const className = cn(
-            "block rounded-2xl border border-border bg-surface p-6 card-shadow transition-transform",
+            equalCards
+              ? "flex h-full min-h-[18rem] flex-col"
+              : "block",
+            "rounded-2xl bg-surface p-6 card-shadow transition-transform",
+            item.borderColor ? cn("border-2", item.borderColor) : "border border-border",
             item.href && "hover:-translate-y-0.5 hover:border-primary/40",
           );
           return (
-            <Reveal key={item.title} delay={i * 0.04}>
+            <Reveal
+              key={item.title}
+              delay={i * 0.04}
+              className={cn(equalCards ? "h-full" : undefined, item.gridClassName)}
+            >
               {item.href ? (
                 <Link href={item.href} className={className}>
                   {inner}
@@ -437,13 +540,20 @@ export function BookingCta({
   label: string;
   whatsappUrl: string | null;
   secondary?: { href: string; label: string };
-  intent?: string;
+  intent?: BookingIntent;
 }) {
   // Both branches are measured, not just the WhatsApp one: while the operator
   // has no support phone every booking falls back to the contact form, and a
   // funnel that only counts the branch that isn't running yet reads as zero
   // demand rather than as an unconfigured number.
   const props = { intent: intent ?? "unknown", via: whatsappUrl ? "whatsapp" : "contact_form" };
+  // The fallback carries the same attribution the WhatsApp keyword does.
+  // Without it every booking made while `supportPhone` is blank — which is
+  // every booking today — arrives in admin → Messages indistinguishable from
+  // someone asking about a delivery.
+  const contactHref = intent
+    ? `/contact?service=${ENQUIRY_SERVICE_SLUGS[intent]}`
+    : "/contact";
 
   return (
     <>
@@ -462,7 +572,7 @@ export function BookingCta({
         <TrackedLink
           event="booking_cta_click"
           eventProps={props}
-          href="/contact"
+          href={contactHref}
           className={cn(buttonVariants({ size: "lg" }), "gap-2")}
         >
           {label}
@@ -485,14 +595,30 @@ export function ClosingCta({
   title,
   body,
   children,
+  decorations,
 }: {
   title: string;
   body: string;
   children: React.ReactNode;
+  decorations?: readonly { src: string; className: string }[];
 }) {
   return (
-    <section className="mt-20 rounded-3xl border border-border bg-surface-2 py-14">
-      <Container className="max-w-2xl text-center">
+    <section className="relative mt-20 overflow-hidden rounded-3xl border border-border bg-surface-2 py-14">
+      {decorations?.map((decoration) => (
+        <Image
+          key={decoration.src}
+          src={decoration.src}
+          alt=""
+          aria-hidden="true"
+          width={180}
+          height={180}
+          className={cn(
+            "pointer-events-none absolute h-auto object-contain opacity-90",
+            decoration.className,
+          )}
+        />
+      ))}
+      <Container className="relative z-10 max-w-2xl text-center">
         <h2 className="font-display text-3xl font-semibold text-foreground">
           {title}
         </h2>

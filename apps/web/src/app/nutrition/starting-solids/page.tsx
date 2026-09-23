@@ -9,6 +9,8 @@ import {
 } from "@/components/service-sections";
 import { bookingWhatsappUrl } from "@/lib/booking";
 import { pageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
 
 /**
  * A landing page of its own rather than a section of /nutrition, because
@@ -37,6 +39,24 @@ export default async function StartingSolidsPage() {
   const whatsappUrl = await bookingWhatsappUrl("solids");
 
   return (
+    <>
+      <JsonLd
+        data={[
+          serviceJsonLd({
+            name: "Starting Solids Session",
+            description:
+              "A 60-minute session on readiness, first foods, textures, allergens, meal ideas and responsive feeding, personalised to your baby's stage.",
+            path: "/nutrition/starting-solids",
+            serviceType: "Infant feeding consultation",
+            offerings: includes,
+          }),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Nutrition", path: "/nutrition" },
+            { name: "Starting Solids", path: "/nutrition/starting-solids" },
+          ]),
+        ]}
+      />
     <Container className="max-w-4xl py-12 sm:py-16">
       <ServiceHero
         eyebrow="Nourish · Starting Solids"
@@ -76,6 +96,7 @@ export default async function StartingSolidsPage() {
           whatsappUrl={whatsappUrl}
         />
       </ClosingCta>
-    </Container>
+      </Container>
+    </>
   );
 }

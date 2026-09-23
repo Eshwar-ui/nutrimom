@@ -4,9 +4,7 @@ import {
   Leaf,
   ShieldCheck,
   Users,
-  ShoppingBag,
   Tag,
-  Gift,
   ArrowRight,
   Sparkles,
 } from "lucide-react";
@@ -16,19 +14,28 @@ import { Reveal } from "@/components/reveal";
 import { Playful } from "@/components/ui/playful";
 import { DecorativeElement } from "@/components/decorative-element";
 import { pageMetadata } from "@/lib/seo";
+import { BRAND_LINE } from "@/lib/site-nav";
+import { PillarCards } from "@/components/pillar-cards";
 
 export const metadata = pageMetadata({
   title: "About us",
   description:
-    "Why The Nurture Moms exists: a community marketplace where Indian families pass on outgrown baby, kids and maternity gear instead of throwing it away.",
+    "Why The Nurture Moms exists: yoga, nutrition, community and preloved essentials for Indian moms — founded by Sudha and Nandini to support every stage of motherhood.",
   path: "/about",
 });
 
+/**
+ * What the business stands for, across all four pillars.
+ *
+ * Rewritten from the marketplace-only set: three of the four used to describe
+ * secondhand gear, which read as the whole identity on the page whose job is
+ * to say what the identity is.
+ */
 const values = [
   {
     icon: Heart,
-    title: "From families, for families",
-    body: "Listings come from community members passing on gear their families have outgrown.",
+    title: "Mom-led, start to finish",
+    body: "Built by mothers who have been through it, for mothers going through it now.",
     paper: "bg-blush/45",
     sticker: "bg-blush text-[#7a2447]",
     rotate: "-rotate-2",
@@ -36,55 +43,62 @@ const values = [
     lift: "sm:mt-6",
   },
   {
-    icon: Leaf,
-    title: "Kinder to the planet",
-    body: "Strollers, cots, clothes and toys get a useful second life instead of becoming waste.",
-    paper: "bg-sage/45",
-    sticker: "bg-sage text-[#2f5236]",
+    icon: ShieldCheck,
+    title: "Practical over perfect",
+    body: "Guidance you can act on this week — not an ideal routine nobody has time for.",
+    paper: "bg-sky/50",
+    sticker: "bg-sky text-[#215172]",
     rotate: "rotate-1",
     tape: "right-10 rotate-3",
     lift: "",
   },
   {
-    icon: ShieldCheck,
-    title: "Context before checkout",
-    body: "Condition details, seller profiles, handover options and feedback help buyers choose well.",
-    paper: "bg-sky/50",
-    sticker: "bg-sky text-[#215172]",
+    icon: Users,
+    title: "Nobody does this alone",
+    body: "Pregnancy, postpartum and toddler years are easier with people who understand them.",
+    paper: "bg-lavender/50",
+    sticker: "bg-lavender text-[#4a3170]",
     rotate: "rotate-1",
     tape: "left-10 -rotate-3",
     lift: "sm:mt-6",
   },
   {
-    icon: Users,
-    title: "A community marketplace",
-    body: "Parenting gear is costly and used briefly. We help that value circulate to another family.",
-    paper: "bg-lavender/50",
-    sticker: "bg-lavender text-[#4a3170]",
+    icon: Leaf,
+    title: "Affordable, and kinder to the planet",
+    body: "Sessions priced for real families, and gear that circulates instead of becoming waste.",
+    paper: "bg-sage/45",
+    sticker: "bg-sage text-[#2f5236]",
     rotate: "-rotate-1",
     tape: "right-8 rotate-6",
     lift: "",
   },
 ];
 
-const steps = [
+/**
+ * The founders.
+ *
+ * **Nandini's entry says "Co-founder" and nothing else, on purpose.** The
+ * founders' brief gives no further detail about her, and inventing a
+ * background for a real person — however flattering — would be publishing a
+ * claim nobody made. Sudha's line repeats only what /yoga already publishes.
+ * Fill these in when the founders supply their own words; do not guess.
+ */
+const founders = [
   {
-    icon: ShoppingBag,
-    tint: "bg-blush/60",
-    title: "Shop preloved",
-    body: "Browse gently used pieces from local families at a fraction of retail.",
+    name: "Sudha",
+    role: "Co-founder",
+    detail: "Leads the yoga and Garbhasanskar practice.",
+    paper: "bg-blush/45",
+    rotate: "-rotate-1",
+    tape: "left-10 -rotate-6",
   },
   {
-    icon: Tag,
-    tint: "bg-sage/60",
-    title: "Sell your outgrown",
-    body: "Snap a few photos, set a price, and give your baby gear a second home.",
-  },
-  {
-    icon: Gift,
-    tint: "bg-sky/60",
-    title: "Or pass it on",
-    body: "Donate what you no longer need to another mom who'll treasure it.",
+    name: "Nandini",
+    role: "Co-founder",
+    detail: null,
+    paper: "bg-sage/45",
+    rotate: "rotate-1",
+    tape: "right-10 rotate-3",
   },
 ];
 
@@ -103,11 +117,14 @@ export default function AboutPage() {
               <Sparkles className="h-3.5 w-3.5" /> Our purpose
             </span>
             <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-              Useful things deserve{" "}
-              <span className="ink-underline whitespace-nowrap">another chapter</span>.
+              Motherhood is a journey.{" "}
+              <span className="ink-underline whitespace-nowrap">You don&apos;t have to do it alone</span>.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              The Nurture Moms is a marketplace for buying, selling and donating gently used baby and maternity essentials — a joyful second life for the gear your family has outgrown.
+              The Nurture Moms is a mom-led space for every stage of motherhood — yoga and Garbhasanskar, nutrition for you and your baby, a community that gets it, and preloved essentials that pass from one family to the next.
+            </p>
+            <p className="mx-auto mt-5 text-sm font-bold uppercase tracking-widest text-accent-text">
+              {BRAND_LINE}
             </p>
           </Reveal>
         </Container>
@@ -119,7 +136,7 @@ export default function AboutPage() {
           <div className="relative mx-auto max-w-3xl rotate-[-0.6deg] rounded-[2rem] border-2 border-border bg-cream p-8 card-shadow sm:p-10">
             <span aria-hidden className="absolute -top-3 left-1/2 h-6 w-28 -translate-x-1/2 -rotate-3 rounded-[4px] border border-white/50 bg-surface/70 shadow-sm backdrop-blur-sm" />
             <p className="text-center font-display text-xl leading-relaxed text-foreground sm:text-2xl">
-              Baby gear has a short shelf life and a long price tag. A stroller may be outgrown in a year, a maternity wardrobe in months. We make it easy to pass useful things to the next family — at a price that makes sense.
+              Pregnancy, birth and the years that follow ask a lot of a mother — and the support tends to arrive in fragments. A class here, an opinion there, a marketplace somewhere else. We put the pieces in one place, run by people who have been through it.
             </p>
           </div>
         </Reveal>
@@ -155,29 +172,50 @@ export default function AboutPage() {
         </Container>
       </section>
 
-      {/* How it works */}
+      {/* Founders */}
+      <section className="relative overflow-hidden">
+        <DecorativeElement src="/images/bg-element-dotted-trail.png" className="-right-24 top-6 hidden w-[26rem] opacity-25 xl:block" />
+        <Container className="relative py-14">
+          <div className="mb-10 text-center">
+            <p className="text-sm font-bold uppercase tracking-widest text-accent-text">Who we are</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">The moms behind it</h2>
+          </div>
+          <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
+            {founders.map((f, i) => (
+              <Reveal key={f.name} delay={i * 0.08}>
+                <div
+                  className={`relative flex h-full flex-col items-center rounded-[1.75rem] border-2 border-border ${f.paper} p-7 text-center card-shadow transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${f.rotate} hover:-translate-y-1.5 hover:rotate-0`}
+                >
+                  <span aria-hidden className={`absolute -top-3 h-6 w-20 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm ${f.tape}`} />
+                  <span className="grid h-16 w-16 place-items-center rounded-full border-2 border-surface bg-surface/70 font-display text-2xl font-semibold text-foreground">
+                    {f.name.charAt(0)}
+                  </span>
+                  <h3 className="mt-4 font-display text-2xl font-semibold text-foreground">{f.name}</h3>
+                  <p className="mt-1 text-sm font-bold uppercase tracking-widest text-accent-text">{f.role}</p>
+                  {f.detail && (
+                    <p className="mt-3 leading-relaxed text-muted-foreground">{f.detail}</p>
+                  )}
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* The four pillars */}
       <section className="relative overflow-hidden bg-surface-2">
         <DecorativeElement src="/images/bg-element-sage-pram.png" className="-left-6 bottom-6 hidden w-40 -rotate-3 opacity-25 lg:block" />
         <DecorativeElement src="/images/bg-element-folded-clothes.png" className="right-6 top-10 hidden w-28 rotate-3 opacity-30 lg:block" />
         <Container className="relative py-16">
           <div className="mb-10 text-center">
-            <p className="text-sm font-bold uppercase tracking-widest text-accent-text">Buy · Sell · Donate</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">How the marketplace works</h2>
+            <p className="text-sm font-bold uppercase tracking-widest text-accent-text">{BRAND_LINE}</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">What we do</h2>
           </div>
-          <div className="grid gap-8 md:grid-cols-3 md:gap-6">
-            {steps.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.08} className={i === 1 ? "md:mt-6" : ""}>
-                <div className="flex flex-col items-center px-2 text-center">
-                  <span className={`relative grid h-16 w-16 place-items-center rounded-2xl ring-8 ring-surface-2 ${s.tint}`}>
-                    <s.icon className="h-7 w-7 text-foreground/70" strokeWidth={1.6} />
-                    <span className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
-                  </span>
-                  <h3 className="mt-5 font-display text-xl font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-2 max-w-xs leading-relaxed text-muted-foreground">{s.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          {/* The same component the home page's "One place for your motherhood
+              journey" section renders — /about answers the same question, and
+              two hand-built versions of one answer drift the moment a pillar's
+              wording changes. */}
+          <PillarCards source="about" />
         </Container>
       </section>
 
@@ -189,7 +227,7 @@ export default function AboutPage() {
         <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
         <Container className="relative flex flex-col items-center gap-6 py-16 text-center">
           <h2 className="max-w-2xl font-display text-3xl font-semibold leading-tight text-primary-foreground sm:text-4xl">
-            Ready to give baby gear a joyful second life?
+            Wherever you are in the journey, there&apos;s a place to start.
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Playful>

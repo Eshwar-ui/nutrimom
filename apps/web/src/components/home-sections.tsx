@@ -1,7 +1,4 @@
-import Link from "next/link";
 import {
-  ArrowUpRight,
-  TrendingUp,
   ShieldCheck,
   Wallet,
   Sparkles,
@@ -10,119 +7,10 @@ import {
   Star,
   Heart,
 } from "lucide-react";
-import { conditionLabels, type Condition } from "@nutrimom/shared";
 import { Container } from "@/components/ui/primitives";
 import { Reveal } from "@/components/reveal";
 import { PlayfulBackground } from "@/components/playful-background";
 import { cn } from "@/lib/utils";
-
-/* -------------------------------- Shop your way ---------------------------- */
-/* Functional entry points into the catalog: every tile/chip deep-links into
-   /listings with real filters the shop page reads (min/max, condition, search). */
-
-const budgets = [
-  { range: "Under ₹500", note: "Grab-and-go steals", href: "/listings?max=500", tint: "bg-blush/60" },
-  { range: "₹500 – ₹1,000", note: "Everyday essentials", href: "/listings?min=500&max=1000", tint: "bg-sky/60" },
-  { range: "₹1,000 – ₹2,500", note: "Bigger-ticket gear", href: "/listings?min=1000&max=2500", tint: "bg-sage/60" },
-  { range: "₹2,500 & up", note: "Premium & sets", href: "/listings?min=2500", tint: "bg-lavender/60" },
-];
-
-const conditionNotes: Record<Condition, string> = {
-  NEW: "Unused, tags on",
-  LIKE_NEW: "Barely used",
-  GOOD: "Gently loved",
-  FAIR: "Well-loved, works great",
-};
-
-const popularSearches = [
-  "Strollers", "Car seat", "Winter wear", "Cribs",
-  "Baby carrier", "Feeding", "High chair", "Books",
-];
-
-export function ShopYourWay() {
-  return (
-    <Container className="py-14">
-      <div className="mb-9 max-w-2xl">
-        <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
-          Find it fast
-        </p>
-        <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
-          Shop your way
-        </h2>
-        <p className="mt-3 leading-relaxed text-muted-foreground">
-          Skip the scroll — jump straight to what fits by budget, condition, or what everyone&apos;s after.
-        </p>
-      </div>
-
-      {/* By budget */}
-      <GroupLabel icon={Wallet}>By budget</GroupLabel>
-      <div className="mb-11 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {budgets.map((b, i) => (
-          <Reveal key={b.range} delay={i * 0.05}>
-            <Link
-              href={b.href}
-              className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[1.5rem] border-2 border-border bg-surface p-5 card-shadow transition-transform duration-300 hover:-translate-y-1"
-            >
-              <span className={cn("grid h-9 w-9 place-items-center rounded-xl", b.tint)}>
-                <span className="font-display text-base font-bold text-foreground/70">₹</span>
-              </span>
-              <ArrowUpRight className="absolute right-4 top-4 h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
-              <div className="mt-9">
-                <p className="font-display text-xl font-bold leading-tight text-foreground">{b.range}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">{b.note}</p>
-              </div>
-            </Link>
-          </Reveal>
-        ))}
-      </div>
-
-      <div className="grid gap-x-10 gap-y-11 lg:grid-cols-[1.5fr_1fr]">
-        {/* By condition */}
-        <div>
-          <GroupLabel icon={Sparkles}>By condition</GroupLabel>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {(Object.entries(conditionLabels) as [Condition, string][]).map(([key, label], i) => (
-              <Reveal key={key} delay={i * 0.05}>
-                <Link
-                  href={`/listings?condition=${key}`}
-                  className="group flex h-full flex-col rounded-[1.25rem] border-2 border-border bg-surface p-4 card-shadow transition-transform duration-300 hover:-translate-y-1 hover:border-primary/40"
-                >
-                  <span className="font-display text-base font-semibold text-foreground">{label}</span>
-                  <span className="mt-1 text-xs leading-snug text-muted-foreground">{conditionNotes[key]}</span>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-
-        {/* Popular searches */}
-        <div>
-          <GroupLabel icon={TrendingUp}>Popular right now</GroupLabel>
-          <div className="flex flex-wrap gap-2.5">
-            {popularSearches.map((term) => (
-              <Link
-                key={term}
-                href={`/listings?search=${encodeURIComponent(term.toLowerCase())}`}
-                className="inline-flex items-center rounded-full border-2 border-dashed border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
-              >
-                {term}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    </Container>
-  );
-}
-
-function GroupLabel({ icon: Icon, children }: { icon: typeof Wallet; children: React.ReactNode }) {
-  return (
-    <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-      <Icon className="h-4 w-4 text-accent-text" strokeWidth={2} />
-      {children}
-    </h3>
-  );
-}
 
 /* ------------------------------ Trust & safety ----------------------------- */
 
