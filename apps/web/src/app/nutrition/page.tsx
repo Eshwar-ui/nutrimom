@@ -10,6 +10,7 @@ import {
   ClosingCta,
   type Offering,
 } from "@/components/service-sections";
+import { FreeGuideCallout } from "@/components/resource-cards";
 import { bookingWhatsappUrl } from "@/lib/booking";
 import { pageMetadata } from "@/lib/seo";
 import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
@@ -177,6 +178,11 @@ export default async function NutritionPage() {
       <PricingTable
         rows={pricing}
         note="Starting prices. Final fees depend on the format and how much follow-up you'd like — we'll confirm before you book."
+      />
+
+      <FreeGuideCallout
+        slugs={["pregnancy-wellness-guide", "postpartum-nourishment-guide"]}
+        source="nutrition"
       />
 
       <SafetyNote>

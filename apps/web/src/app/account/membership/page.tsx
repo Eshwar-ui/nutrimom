@@ -327,7 +327,7 @@ function PlanCard({ plan, children }: { plan: MembershipPlanInfo; children?: Rea
   return (
     <Card className={`relative flex flex-col p-5 ${plan.bestValue ? "border-primary/40" : ""}`}>
       {plan.bestValue && (
-        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
+        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
           <Sparkles className="h-3 w-3" /> Best value
         </span>
       )}

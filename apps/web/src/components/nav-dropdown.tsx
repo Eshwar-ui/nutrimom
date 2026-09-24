@@ -109,7 +109,7 @@ export function NavDropdown({
           onClick={closeNow}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "flex items-center gap-1 py-1.5 pl-3 pr-1 text-sm font-semibold",
+            "flex items-center gap-1 whitespace-nowrap py-1.5 pl-2.5 pr-1 text-sm font-semibold xl:pl-3",
           )}
         >
           {label}
@@ -120,7 +120,7 @@ export function NavDropdown({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="rounded-full py-1.5 pl-0.5 pr-2.5"
+          className="rounded-full py-1.5 pl-0.5 pr-2 xl:pr-2.5"
         >
           <ChevronDown
             className={cn(

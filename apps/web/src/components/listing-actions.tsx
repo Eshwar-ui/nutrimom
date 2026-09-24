@@ -92,11 +92,13 @@ export function ListingActions({ listing }: { listing: Listing }) {
         </p>
       )}
 
-      <div className="flex gap-3">
+      {/* Wraps to two full-width rows on the narrowest phones (320px), where
+          two large buttons side by side ran off the screen. */}
+      <div className="flex flex-wrap gap-3">
         <Button
           size="lg"
           variant="outline"
-          className="flex-1"
+          className="min-w-[9rem] flex-1"
           disabled={inCart || held}
           onClick={(e) => {
             addToBag(e.currentTarget);
@@ -106,7 +108,7 @@ export function ListingActions({ listing }: { listing: Listing }) {
         </Button>
         <Button
           size="lg"
-          className="flex-1"
+          className="min-w-[9rem] flex-1"
           disabled={held}
           onClick={() => {
             addItem(snapshot);

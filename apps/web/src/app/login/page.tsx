@@ -60,7 +60,7 @@ export default function LoginPage() {
           <div>
             <div className="flex items-baseline justify-between">
               <Label htmlFor="login-password">Password</Label>
-              <Link href="/forgot-password" className="text-xs font-semibold text-accent-text hover:underline">Forgot password?</Link>
+              <Link href="/forgot-password" className="-my-2 py-2 text-xs font-semibold text-accent-text hover:underline">Forgot password?</Link>
             </div>
             <PasswordInput id="login-password" autoComplete="current-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? "login-password-error" : undefined} {...register("password")} placeholder="••••••••" />
             {errors.password && <p id="login-password-error" className="mt-1.5 text-xs text-danger">{errors.password.message}</p>}

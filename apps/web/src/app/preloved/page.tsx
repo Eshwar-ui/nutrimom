@@ -161,12 +161,12 @@ export default async function PrelovedPage() {
             </h2>
             <Link
               href="/listings"
-              className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-accent-text hover:underline"
+              className="-my-2 inline-flex shrink-0 items-center gap-1.5 py-2 text-sm font-semibold text-accent-text hover:underline"
             >
               Shop all <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
             {latest.map((listing, i) => (
               <Reveal key={listing.id} delay={i * 0.04}>
                 <ListingCard listing={listing} />
@@ -182,15 +182,15 @@ export default async function PrelovedPage() {
         decorations={[
           {
             src: "/images/category-baby-clothes.png",
-            className: "-left-14 -top-10 w-40 -rotate-12 sm:-left-20 sm:-top-16 sm:w-60",
+            className: "-left-20 -top-16 w-60 -rotate-12",
           },
           {
             src: "/images/category-strollers.png",
-            className: "-right-14 -top-10 w-60 rotate-12 sm:-right-20 sm:-top-16 sm:w-100",
+            className: "-right-20 -top-16 w-100 rotate-12",
           },
           {
             src: "/images/category-toys.png",
-            className: "-bottom-14 -left-20 w-40 -rotate-20 sm:-bottom-20 sm:left-40 sm:w-64",
+            className: "-bottom-20 left-40 w-64 -rotate-20",
           },
         ]}
       >

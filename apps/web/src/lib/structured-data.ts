@@ -7,6 +7,7 @@ import {
   type Listing,
 } from "@nutrimom/shared";
 import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "./seo";
+import { SOCIAL_LINKS } from "./site-nav";
 
 /** A JSON-LD node. Loose on purpose — schema.org shapes vary per @type. */
 export type JsonLdNode = Record<string, unknown>;
@@ -103,6 +104,7 @@ export function organizationJsonLd(profile: BusinessProfile | null): JsonLdNode 
     image: absoluteUrl("/og-default.png"),
     description: SITE_DESCRIPTION,
     areaServed: { "@type": "Country", name: "India" },
+    sameAs: Object.values(SOCIAL_LINKS),
     hasOfferCatalog: {
       "@type": "OfferCatalog",
       name: "Services",

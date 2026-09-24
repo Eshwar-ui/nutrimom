@@ -166,11 +166,13 @@ function OfferingIllustration({
             </>
           )}
         </div>
-        <span className="max-w-[8rem] text-right text-[0.68rem] font-bold uppercase leading-tight tracking-[0.12em] text-foreground/65">
+        <span className="max-w-[8rem] text-right text-[0.72rem] font-bold uppercase leading-tight tracking-[0.12em] text-foreground/65">
           {illustration.label}
         </span>
       </div>
-      <p className="relative mt-4 max-w-[15rem] text-xs font-medium leading-relaxed text-foreground/75">
+      {/* Stops short of the corner illustration, which would otherwise sit on
+          the last words of the line in a narrow card. */}
+      <p className="relative mt-4 max-w-[min(15rem,calc(100%-5.5rem))] text-xs font-medium leading-relaxed text-foreground/75">
         {illustration.detail}
       </p>
     </div>
@@ -604,6 +606,11 @@ export function ClosingCta({
 }) {
   return (
     <section className="relative mt-20 overflow-hidden rounded-3xl border border-border bg-surface-2 py-14">
+      {/* Floating illustrations need room either side of the copy, which only
+          exists once the card is desktop-wide. Below xl they would sit on the
+          heading (at 1024px the yoga art still clips the subtitle), so there
+          they drop into a small row above it instead, and each page's
+          `className` positions only apply from xl up. */}
       {decorations?.map((decoration) => (
         <Image
           key={decoration.src}
@@ -613,11 +620,25 @@ export function ClosingCta({
           width={180}
           height={180}
           className={cn(
-            "pointer-events-none absolute h-auto object-contain opacity-90",
+            "pointer-events-none absolute hidden h-auto object-contain opacity-90 xl:block",
             decoration.className,
           )}
         />
       ))}
+      {decorations && decorations.length > 0 && (
+        <div aria-hidden="true" className="mb-6 flex items-end justify-center gap-3 px-6 xl:hidden">
+          {decorations.map((decoration) => (
+            <Image
+              key={decoration.src}
+              src={decoration.src}
+              alt=""
+              width={180}
+              height={180}
+              className="h-24 w-auto object-contain sm:h-28"
+            />
+          ))}
+        </div>
+      )}
       <Container className="relative z-10 max-w-2xl text-center">
         <h2 className="font-display text-3xl font-semibold text-foreground">
           {title}

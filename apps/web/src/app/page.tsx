@@ -234,7 +234,7 @@ export default async function HomePage() {
             </nav>
           )}
 
-          <div className="mb-9 flex items-end justify-between">
+          <div className="mb-9 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
                 Fresh finds
@@ -243,10 +243,10 @@ export default async function HomePage() {
                 Just dropped by our moms
               </h2>
             </div>
-            <Playful className="hidden sm:inline-flex">
+            <Playful className="shrink-0">
               <Link
                 href="/listings"
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background sm:px-5 sm:py-2.5 sm:text-sm"
               >
                 See everything <ArrowRight className="h-4 w-4" />
               </Link>
@@ -275,7 +275,7 @@ export default async function HomePage() {
         <Reveal delay={0.08} className="w-full">
           <section className="relative">
           <Container className="py-14">
-            <div className="mb-9 flex items-end justify-between">
+            <div className="mb-9 flex items-end justify-between gap-4">
               <div>
                 <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
                   Latest listings
@@ -284,10 +284,10 @@ export default async function HomePage() {
                   New this week
                 </h2>
               </div>
-              <Playful className="hidden sm:inline-flex">
+              <Playful className="shrink-0">
                 <Link
                   href="/listings"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background sm:px-5 sm:py-2.5 sm:text-sm"
                 >
                   See everything <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -475,14 +475,23 @@ function CategoryTiles({
   );
 }
 
+/**
+ * The hero copy sits over the photo's empty top band, so on a phone it has a
+ * fixed height budget: the buttons shed their icons and padding to stay on one
+ * line at 375px rather than wrapping down onto the photo. Below that they wrap
+ * instead of running off the screen.
+ */
+const HERO_BUTTON =
+  "h-10 px-4 text-[13px] sm:h-11 sm:px-6 sm:text-sm lg:h-14 lg:px-8 lg:text-base";
+
 function HeroCopy() {
   return (
-    <div className="max-w-sm md:max-w-[19rem] lg:max-w-xl">
+    <div className="w-full min-w-0 max-w-sm md:max-w-[19rem] lg:max-w-xl">
       {/* Font sizes scale continuously with viewport width (clamp) within
           each image's zone, instead of jumping between fixed steps. Zones
           reset at md/lg because the tablet/desktop crops swap to a
           differently-shaped empty column, not a smooth continuation. */}
-      <h1 className="mt-3 font-display text-[clamp(1.75rem,1.2rem_+_3.5vw,2.75rem)] font-semibold leading-[1.05] tracking-tight text-foreground sm:mt-6 md:text-[clamp(1.5rem,1rem_+_2vw,2rem)] lg:text-[clamp(2.25rem,1rem_+_2.5vw,3.75rem)]">
+      <h1 className="mt-3 font-display text-[clamp(1.5rem,0.6rem_+_4.4vw,2.75rem)] font-semibold leading-[1.05] tracking-tight text-foreground sm:mt-6 md:text-[clamp(1.5rem,1rem_+_2vw,2rem)] lg:text-[clamp(2.25rem,1rem_+_2.5vw,3.75rem)]">
         Motherhood is a journey.
         <br />
         You don&apos;t have to{" "}
@@ -492,15 +501,15 @@ function HeroCopy() {
         Yoga, nutrition, mom support and preloved essentials — thoughtfully
         brought together for moms from pregnancy to toddlerhood.
       </p>
-      <div className="mt-5 flex items-center gap-2 sm:mt-8 sm:gap-3">
+      <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-3">
         <Playful>
-          <Link href="#explore" className={cn(buttonVariants({ size: "md" }), "lg:h-14 lg:px-8 lg:text-base")}>
-            Explore our services <ArrowRight className="h-4 w-4" />
+          <Link href="#explore" className={cn(buttonVariants({ size: "md" }), HERO_BUTTON)}>
+            Explore our services <ArrowRight className="hidden h-4 w-4 sm:block" />
           </Link>
         </Playful>
         <Playful>
-          <Link href="/community" className={cn(buttonVariants({ size: "md", variant: "outline" }), "lg:h-14 lg:px-8 lg:text-base")}>
-            <Users className="h-4 w-4" /> Join our community
+          <Link href="/community" className={cn(buttonVariants({ size: "md", variant: "outline" }), HERO_BUTTON)}>
+            <Users className="hidden h-4 w-4 sm:block" /> Join our community
           </Link>
         </Playful>
       </div>

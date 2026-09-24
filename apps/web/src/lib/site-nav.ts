@@ -115,7 +115,7 @@ export const STAGES: readonly Stage[] = [
   { label: "I'm pregnant", covers: "Yoga · Garbhasanskar · Nutrition", href: "/yoga" },
   { label: "I'm postpartum", covers: "Recovery · Yoga · Nutrition · Support", href: "/nutrition" },
   { label: "My baby is starting solids", covers: "Solids session · Baby nutrition · Meal ideas", href: "/nutrition/starting-solids" },
-  { label: "I'm navigating toddlerhood", covers: "Nutrition · Activities · Resources", href: "/nutrition" },
+  { label: "I'm navigating toddlerhood", covers: "Nutrition · Meal ideas · Free guides", href: "/nutrition" },
   { label: "I need mom support", covers: "Community · Events · Expert sessions", href: "/community" },
   { label: "I want preloved", covers: "Buy · Sell · Donate", href: "/preloved" },
 ] as const;
@@ -124,7 +124,29 @@ export interface NavLink {
   href: string;
   label: string;
   placeholder?: boolean;
+  /** Off-site destination — opens in a new tab and skips next/link. */
+  external?: boolean;
 }
+
+/**
+ * The brand's own channels, as the founders supplied them. Also emitted as
+ * `sameAs` in the organisation's structured data, so keep these to profiles the
+ * business actually owns. The Instagram link is stored without the QR-code
+ * tracking parameters it was shared with.
+ */
+export const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/thenurturemoms",
+  youtube: "https://www.youtube.com/@thenurturemoms",
+} as const;
+
+/**
+ * WhatsApp community invites. Two groups: the general mom community, and a
+ * separate one for preloved buying and selling.
+ */
+export const WHATSAPP_COMMUNITY_URL =
+  "https://chat.whatsapp.com/LYhXcQjWwvp09OY66kQXgS";
+export const WHATSAPP_PRELOVED_URL =
+  "https://chat.whatsapp.com/DWErNklaubQ4WEQ3uCzkOD";
 
 export interface NavItem extends NavLink {
   /** Rendered as a dropdown when present; the parent stays a real link. */
@@ -161,12 +183,24 @@ const PRELOVED_CHILDREN: NavLink[] = [
   { href: "/sell", label: "Sell an item" },
 ];
 
+/**
+ * Under About: the brand, and the pages people reach for once they are curious
+ * about it. The Journal and FAQs had no header entry before this.
+ */
+const ABOUT_CHILDREN: NavLink[] = [
+  { href: "/about", label: "Our story" },
+  { href: "/journal", label: "Journal" },
+  { href: "/faq", label: "FAQs" },
+  { href: "/contact", label: "Contact us" },
+];
+
 export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/yoga", label: "Yoga" },
   { href: "/nutrition", label: "Nutrition" },
   { href: "/community", label: "Community" },
   { href: "/preloved", label: "Preloved", children: PRELOVED_CHILDREN },
-  { href: "/about", label: "About" },
+  { href: "/resources", label: "Free Guides" },
+  { href: "/about", label: "About", children: ABOUT_CHILDREN },
 ] as const;
 
 export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
@@ -177,6 +211,7 @@ export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
       { href: "/nutrition", label: "Nutrition" },
       { href: "/nutrition/starting-solids", label: "Starting Solids" },
       { href: "/community", label: "Community" },
+      { href: "/resources", label: "Free guides" },
       { href: "/journal", label: "Journal" },
       { href: "/faq", label: "FAQs" },
     ],
@@ -202,9 +237,9 @@ export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
   {
     title: "Socials",
     links: [
-      { href: "#", label: "Instagram · coming soon", placeholder: true },
-      { href: "#", label: "Facebook · coming soon", placeholder: true },
-      { href: "#", label: "YouTube · coming soon", placeholder: true },
+      { href: SOCIAL_LINKS.instagram, label: "Instagram", external: true },
+      { href: SOCIAL_LINKS.youtube, label: "YouTube", external: true },
+      { href: WHATSAPP_COMMUNITY_URL, label: "WhatsApp community", external: true },
     ],
   },
 ] as const;
@@ -236,6 +271,7 @@ export const STATIC_SITEMAP_ROUTES: readonly {
   { path: "/community", changeFrequency: "weekly", priority: 0.8 },
   { path: "/preloved", changeFrequency: "weekly", priority: 0.8 },
   { path: "/listings", changeFrequency: "hourly", priority: 0.9 },
+  { path: "/resources", changeFrequency: "monthly", priority: 0.7 },
   { path: "/journal", changeFrequency: "weekly", priority: 0.6 },
   { path: "/sell", changeFrequency: "monthly", priority: 0.5 },
   { path: "/about", changeFrequency: "monthly", priority: 0.4 },

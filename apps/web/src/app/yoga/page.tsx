@@ -24,6 +24,7 @@ import {
   ClosingCta,
   type Offering,
 } from "@/components/service-sections";
+import { FreeGuideCallout } from "@/components/resource-cards";
 import { bookingWhatsappUrl } from "@/lib/booking";
 import { pageMetadata } from "@/lib/seo";
 import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
@@ -204,6 +205,11 @@ export default async function YogaPage() {
           note="Starting prices. Final fees vary by batch, session length and format — we'll confirm before you book."
         />
 
+        <FreeGuideCallout
+          slugs={["prenatal-yoga-starter-guide", "pregnancy-wellness-guide"]}
+          source="yoga"
+        />
+
         <SafetyNote>
           Our yoga sessions are wellness and fitness support — they do not replace
           medical care. If you have a high-risk pregnancy or any specific medical
@@ -217,11 +223,11 @@ export default async function YogaPage() {
           decorations={[
             {
               src: "/images/yoga/prenatal-yoga.png",
-              className: "left-14 top-10 w-40 -rotate-0 sm:left-8 sm:top-8 sm:w-60",
+              className: "left-8 top-8 w-60",
             },
             {
               src: "/images/yoga/live-group-yoga.png",
-              className: "-right-14 -top-10 w-44 rotate-0 sm:right-12 sm:top-8 sm:w-64",
+              className: "right-12 top-8 w-64",
             },
           ]}
         >

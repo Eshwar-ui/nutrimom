@@ -69,13 +69,24 @@ function FooterCol({
   return (
     <div className={cn("text-center", className)}>
       <h4 className="mb-3 text-sm font-semibold text-foreground">{title}</h4>
-      <ul className="space-y-2">
+      {/* Each link is a 32px row so it is a comfortable thumb target on a
+          phone; the rows replace the old 8px gaps, so the column reads the same. */}
+      <ul className="space-y-0.5">
         {links.map((l) => (
           <li key={l.href + l.label}>
             {l.placeholder ? (
-              <span className="text-sm text-muted-foreground/70">{l.label}</span>
+              <span className="inline-flex min-h-8 items-center text-sm text-muted-foreground/70">{l.label}</span>
+            ) : l.external ? (
+              <a
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-8 items-center text-sm text-muted-foreground transition-colors hover:text-accent"
+              >
+                {l.label}
+              </a>
             ) : (
-              <Link href={l.href} className="text-sm text-muted-foreground transition-colors hover:text-accent">
+              <Link href={l.href} className="inline-flex min-h-8 items-center text-sm text-muted-foreground transition-colors hover:text-accent">
                 {l.label}
               </Link>
             )}

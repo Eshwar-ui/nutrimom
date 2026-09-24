@@ -60,13 +60,13 @@ export function ListingDetail({
 
   return (
     <Container className="pb-28 pt-8 sm:py-10 lg:pb-10">
-      <Link href={backHref} className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link href={backHref} className="-my-2 mb-6 inline-flex items-center gap-1.5 py-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> {backLabel}
       </Link>
 
       {banner}
 
-      <div className="grid gap-10 lg:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2">
         <ListingGallery images={listing.images} alt={listing.title} />
 
         <div className="lg:py-2">

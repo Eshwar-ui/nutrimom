@@ -150,7 +150,7 @@ export function SiteHeader() {
           <Link href="/" aria-label="The Nurture Moms home" className="shrink-0 sm:hidden"><LogoEmblem badgeClassName="h-9 w-9" /></Link>
           <Logo className="hidden shrink-0 sm:inline-flex" />
 
-          <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+          <nav className="hidden flex-1 items-center justify-center gap-0.5 lg:flex xl:gap-1">
             {PRIMARY_NAV.map((item) =>
               item.children ? (
                 <NavDropdown
@@ -165,7 +165,7 @@ export function SiteHeader() {
                   href={item.href}
                   aria-current={isNavPathActive(pathname, item.href) ? "page" : undefined}
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-muted hover:text-foreground",
+                    "whitespace-nowrap rounded-full px-2.5 py-1.5 text-sm font-semibold transition-colors hover:bg-muted hover:text-foreground xl:px-3",
                     isNavPathActive(pathname, item.href)
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground",
@@ -322,7 +322,11 @@ export function SiteHeader() {
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-x-0 top-full overflow-hidden border-b border-border bg-background/95 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] lg:hidden"
           >
-            <nav className="mx-auto flex w-full max-w-7xl flex-col gap-1 px-5 py-4 sm:px-8">
+            {/* The panel hangs below a sticky header, so it never scrolls with
+                the page. Capped at the viewport under the header (ticker 2rem +
+                bar 4rem) and scrollable on its own, or the account links and the
+                Book button fall off the bottom of a phone screen. */}
+            <nav className="mx-auto flex max-h-[calc(100dvh-6rem)] w-full max-w-7xl flex-col gap-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-8">
               {PRIMARY_NAV.map((item) => (
                 <div key={item.href}>
                   <Link
@@ -359,8 +363,6 @@ export function SiteHeader() {
                 </div>
               ))}
               <div className="my-2 border-t border-border" />
-              <Link href="/journal" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">The Nurture Journal</Link>
-              <Link href="/contact" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">Contact</Link>
               {hydrated && user && (
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
                   {user.role === "ADMIN" && <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Visit admin panel</Link>}

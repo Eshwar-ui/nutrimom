@@ -86,12 +86,19 @@ export default function MyListingsPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-foreground">{l.title}</p>
                 <p className="text-sm text-muted-foreground">{formatPaise(l.sellingPriceInPaise)} · {l.city}</p>
+                {/* On a phone the badge rides under the title: as its own column
+                    beside two icon buttons it squeezed the title to four letters. */}
+                <div className="mt-1.5 sm:hidden">
+                  <ListingStatusBadge status={l.status} />
+                </div>
                 {l.status === "REJECTED" && l.rejectionReason && (
                   <p className="mt-1 text-sm text-danger">Not approved: {l.rejectionReason}</p>
                 )}
               </div>
-              <ListingStatusBadge status={l.status} />
-              <div className="flex gap-1">
+              <div className="hidden sm:block">
+                <ListingStatusBadge status={l.status} />
+              </div>
+              <div className="flex shrink-0 gap-1">
                 <Link href={`/account/listings/${l.id}/edit`} aria-label="Edit" className={buttonVariants({ variant: "ghost", size: "icon" })}><Pencil className="h-4 w-4" /></Link>
                 <Button
                   variant="ghost"

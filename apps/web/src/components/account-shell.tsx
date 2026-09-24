@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -52,6 +53,16 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   });
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
 
+  // On a phone the tab bar scrolls sideways, and a later section (Payouts,
+  // Notifications) would otherwise open with its own tab out of view.
+  const mobileTabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const bar = mobileTabsRef.current;
+    const tab = bar?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!bar || !tab) return;
+    bar.scrollLeft = tab.offsetLeft - (bar.clientWidth - tab.offsetWidth) / 2;
+  }, [pathname, ready]);
+
   if (!ready || !user) {
     return <Container className="py-12"><PageSkeleton rows={4} /></Container>;
   }
@@ -94,8 +105,13 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   return (
     <Container className="py-8 sm:py-10">
       {/* Mobile: scrollable tab bar */}
-      <div className="mb-6 overflow-x-auto border-b border-border pb-3 lg:hidden">
-        <nav aria-label="Account sections" className="flex min-w-max gap-2">{links(true)}</nav>
+      {/* The right-edge fade says "there is more this way" — without it the
+          row ends flush at the screen edge and reads as complete. */}
+      <div
+        ref={mobileTabsRef}
+        className="mb-6 overflow-x-auto border-b border-border pb-3 [mask-image:linear-gradient(to_right,black_85%,transparent)] lg:hidden"
+      >
+        <nav aria-label="Account sections" className="flex min-w-max gap-2 pr-12">{links(true)}</nav>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,1fr)]">

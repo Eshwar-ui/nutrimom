@@ -21,7 +21,9 @@ export type AnalyticsEvent =
   /** A booking CTA on a service page. Carries the WhatsApp funnel keyword. */
   | "booking_cta_click"
   /** A marketplace action from the Preloved pillar. */
-  | "preloved_click";
+  | "preloved_click"
+  /** A free guide downloaded. Carries the guide slug and where it was clicked. */
+  | "resource_download";
 
 type EventProps = Record<string, string | number | boolean | null>;
 

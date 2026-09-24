@@ -7,6 +7,7 @@ import {
   BookingCta,
   ClosingCta,
 } from "@/components/service-sections";
+import { FreeGuideCallout } from "@/components/resource-cards";
 import { bookingWhatsappUrl } from "@/lib/booking";
 import { pageMetadata } from "@/lib/seo";
 import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
@@ -78,6 +79,8 @@ export default async function StartingSolidsPage() {
         rows={[{ label: "60-minute 1:1 session", price: "₹799" }]}
         note="A lower-cost group workshop is planned once there's enough demand — ask us if you'd prefer that."
       />
+
+      <FreeGuideCallout slugs={["baby-toddler-meal-ideas"]} source="starting-solids" />
 
       <SafetyNote>
         This is practical feeding guidance, not medical advice. Allergies,
