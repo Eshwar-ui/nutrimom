@@ -1,0 +1,113 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound, permanentRedirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { ApiError } from "@/lib/api";
+import { blogCategoryByValue } from "@nutrimom/shared";
+import { getBlogPost, markdownExcerpt } from "@/lib/blog";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { blogPostJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
+import { JsonLd } from "@/components/json-ld";
+import { Container } from "@/components/ui/primitives";
+import { MarkdownContent } from "@/components/markdown-content";
+import { ListingThumb } from "@/components/ui/listing-thumb";
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getBlogPost(slug).catch(() => null);
+  if (!post) return { title: "The Nurture Journal" };
+
+  // Redirect from here rather than from the component below: metadata resolves
+  // before the response starts streaming, so this emits a real HTTP 308.
+  // (Verified 2026-09-23. It really did only manage a client-side meta refresh
+  // until the root loading.tsx was removed — that boundary made every route
+  // stream, committing the status before any redirect decision.) Deliberately
+  // not inside a try/catch — permanentRedirect works by throwing.
+  if (post.slug !== slug) permanentRedirect(`/journal/${post.slug}`);
+
+  // Canonical points at the post's current slug, so a retired slug that's
+  // still linked from elsewhere consolidates onto one URL.
+  return pageMetadata({
+    title: post.title,
+    description: metaDescription(
+      post.excerpt || markdownExcerpt(post.bodyMarkdown, post.title),
+    ),
+    path: `/journal/${post.slug}`,
+    type: "article",
+    images: post.coverImageUrl
+      ? [{ url: post.coverImageUrl, alt: post.title }]
+      : undefined,
+    publishedTime: post.publishedAt ?? undefined,
+    authors: [post.authorName],
+  });
+}
+
+export default async function JournalPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+
+  const post = await getBlogPost(slug).catch((err) => {
+    if (err instanceof ApiError && err.status === 404) notFound();
+    throw err;
+  });
+
+  // Resolved through a slug this post used to live at — send the visitor (and
+  // any crawler) on to the current address instead of serving the post at two
+  // URLs. Outside the catch above: permanentRedirect signals via a thrown
+  // NEXT_REDIRECT that must not be swallowed.
+  if (post.slug !== slug) permanentRedirect(`/journal/${post.slug}`);
+
+  return (
+    <Container className="max-w-2xl py-12 sm:py-16">
+      <JsonLd
+        data={[
+          blogPostJsonLd(
+            post,
+            metaDescription(post.excerpt || markdownExcerpt(post.bodyMarkdown, post.title)),
+          ),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "The Nurture Journal", path: "/journal" },
+            { name: post.title, path: `/journal/${post.slug}` },
+          ]),
+        ]}
+      />
+      <Link href="/journal" className="-my-2 inline-flex items-center gap-1.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Back to the Journal
+      </Link>
+
+      <header className="mt-4">
+        <h1 className="font-display text-3xl font-semibold text-foreground sm:text-4xl">{post.title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {blogCategoryByValue(post.category) && (
+            <>
+              <Link
+                href={`/journal?category=${blogCategoryByValue(post.category)!.slug}`}
+                className="rounded-full bg-muted px-2.5 py-1 font-bold text-accent-text transition-colors hover:bg-muted/70"
+              >
+                {blogCategoryByValue(post.category)!.label}
+              </Link>
+              {" · "}
+            </>
+          )}
+          {post.publishedAt && fmtDate(post.publishedAt)} · {post.authorName}
+        </p>
+      </header>
+
+      {post.coverImageUrl && (
+        <div className="mt-6 aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
+          <ListingThumb src={post.coverImageUrl} alt={post.title} />
+        </div>
+      )}
+
+      <MarkdownContent
+        markdown={post.bodyMarkdown}
+        className="mt-8"
+        headingOffset={1}
+        dropTitle={post.title}
+      />
+    </Container>
+  );
+}

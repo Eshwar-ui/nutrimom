@@ -1,0 +1,30 @@
+{
+  "name": "nutrimom",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "postinstall": "pnpm --filter @nutrimom/shared build && pnpm --filter api prisma:generate",
+    "dev": "pnpm --parallel --filter \"./apps/*\" --filter \"./packages/*\" dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:ci": "pnpm --filter @nutrimom/shared test && pnpm --filter api test:ci",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "unrs-resolver",
+      "esbuild"
+    ]
+  }
+}

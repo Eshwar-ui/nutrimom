@@ -1,0 +1,156 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, X, Star, Plus, Ban, RotateCcw } from "lucide-react";
+import { formatPaise, type Listing } from "@nutrimom/shared";
+import { authedRequest } from "@/lib/api";
+import { Card } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/button";
+import { ListingStatusBadge } from "@/components/listing-status-badge";
+import { RejectListingDialog } from "@/components/reject-listing-dialog";
+import { PageSkeleton, StatePanel } from "@/components/ui/states";
+import { cn } from "@/lib/utils";
+
+// Rejected is browsable so a listing taken down (or turned down) can be found
+// again and reinstated — otherwise it is only reachable under "All".
+const filters = ["PENDING", "APPROVED", "REJECTED", "SOLD", "ALL"] as const;
+
+export default function AdminListingsPage() {
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<(typeof filters)[number]>("PENDING");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-listings", filter],
+    queryFn: () =>
+      authedRequest<Listing[]>(
+        `/admin/listings${filter === "ALL" ? "" : `?status=${filter}`}`,
+      ),
+  });
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ["admin-listings"] });
+
+  const moderate = useMutation({
+    mutationFn: ({ id, status, reason }: { id: string; status: "APPROVED" | "REJECTED"; reason?: string }) =>
+      authedRequest(`/admin/listings/${id}/moderate`, { method: "PATCH", body: { status, reason } }),
+    onSuccess: invalidate,
+  });
+
+  // Which listing is being rejected or taken down, if any — drives the reason
+  // dialog. `mode` only changes its copy; both send the same REJECTED update.
+  const [rejecting, setRejecting] = useState<
+    { id: string; title: string; mode: "reject" | "takedown" } | null
+  >(null);
+  const feature = useMutation({
+    mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
+      authedRequest(`/admin/listings/${id}/feature`, { method: "PATCH", body: { isFeatured } }),
+    onSuccess: invalidate,
+  });
+
+  return (
+    <div>
+      <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Moderation</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Listings</h1><p className="mt-2 text-muted-foreground">Review item details and decide what goes live.</p></div>
+        <Link href="/admin/listings/new" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground">
+          <Plus className="h-4 w-4" /> New listing
+        </Link>
+      </header>
+
+      <div className="mb-6 flex gap-2">
+        {filters.map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={cn("rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+              filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted")}>
+            {f[0] + f.slice(1).toLowerCase()}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <PageSkeleton rows={4} />
+      ) : !data || data.length === 0 ? (
+        <StatePanel title="Nothing here" description="No listings match this moderation status." />
+      ) : (
+        <div className="space-y-3">
+          {data.map((l) => (
+            <Card key={l.id} className="flex flex-wrap items-center gap-4 p-4">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+                {l.images[0] && (
+                  <Image
+                    src={l.images[0]}
+                    alt={l.title}
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                  />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <Link href={`/admin/listings/${l.id}`} className="truncate font-medium text-foreground hover:text-accent">
+                  {l.title}
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                  {formatPaise(l.sellingPriceInPaise)} · {l.category.name} · by {l.seller.name}
+                </p>
+              </div>
+              <ListingStatusBadge status={l.status} />
+              <div className="flex gap-1">
+                {l.status === "PENDING" && (
+                  <>
+                    <Button variant="ghost" size="icon" aria-label="Approve"
+                      onClick={() => moderate.mutate({ id: l.id, status: "APPROVED" })}>
+                      <Check className="h-4 w-4 text-primary" />
+                    </Button>
+                    <Button variant="ghost" size="icon" aria-label="Reject"
+                      onClick={() => setRejecting({ id: l.id, title: l.title, mode: "reject" })}>
+                      <X className="h-4 w-4 text-accent" />
+                    </Button>
+                  </>
+                )}
+                {l.status === "APPROVED" && (
+                  <>
+                    <Button variant="ghost" size="icon" aria-label="Toggle featured"
+                      onClick={() => feature.mutate({ id: l.id, isFeatured: !l.isFeatured })}>
+                      <Star className={l.isFeatured ? "h-4 w-4 fill-gold text-gold" : "h-4 w-4"} />
+                    </Button>
+                    {/* Pulling a live listing that breaks policy — the one
+                        moderation action the marketplace promises but had no
+                        control for. */}
+                    <Button variant="ghost" size="icon" aria-label="Take down"
+                      onClick={() => setRejecting({ id: l.id, title: l.title, mode: "takedown" })}>
+                      <Ban className="h-4 w-4 text-danger" />
+                    </Button>
+                  </>
+                )}
+                {l.status === "REJECTED" && (
+                  <Button variant="ghost" size="icon" aria-label="Reinstate"
+                    onClick={() => moderate.mutate({ id: l.id, status: "APPROVED" })}>
+                    <RotateCcw className="h-4 w-4 text-primary" />
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {rejecting && (
+        <RejectListingDialog
+          listingTitle={rejecting.title}
+          mode={rejecting.mode}
+          pending={moderate.isPending}
+          onCancel={() => setRejecting(null)}
+          onConfirm={(reason) =>
+            moderate.mutate(
+              { id: rejecting.id, status: "REJECTED", reason },
+              { onSettled: () => setRejecting(null) },
+            )
+          }
+        />
+      )}
+    </div>
+  );
+}

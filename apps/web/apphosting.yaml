@@ -1,0 +1,27 @@
+# Firebase App Hosting config for the NutriMom web frontend (SSR Next.js 16).
+# https://firebase.google.com/docs/app-hosting/configure
+#
+# When you create the App Hosting backend in the console, set:
+#   Repository root directory = /apps/web   (this file must sit at that root)
+
+runConfig:
+  # ponytail: 0/1 keeps idle cost at zero; raise maxInstances if traffic grows.
+  minInstances: 0
+  maxInstances: 1
+
+env:
+  # Base URL of the API (your Render backend). NEXT_PUBLIC_* is inlined into the
+  # client bundle at BUILD time, so it must be available at BUILD, not just RUNTIME.
+  # Replace the value once Render gives you the service URL, then redeploy.
+  - variable: NEXT_PUBLIC_API_URL
+    value: https://REPLACE-with-your-render-backend.onrender.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Absolute site URL for robots.txt / sitemap.xml. Update if you add a custom domain.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://nurturemom-ecommerce.web.app
+    availability:
+      - BUILD
+      - RUNTIME

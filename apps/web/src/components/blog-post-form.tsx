@@ -1,0 +1,195 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, FileText, Image as ImageIcon } from "lucide-react";
+import { BLOG_CATEGORIES, blogPostInputSchema, type BlogPost } from "@nutrimom/shared";
+import { authedRequest, ApiError } from "@/lib/api";
+import { revalidatePublicPages } from "@/lib/revalidate";
+import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/button";
+import { ImageUploader } from "@/components/image-uploader";
+import { MarkdownContent } from "@/components/markdown-content";
+
+export function BlogPostForm({ initial, postId }: { initial?: BlogPost; postId?: string }) {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    title: initial?.title ?? "",
+    slug: initial?.slug ?? "",
+    excerpt: initial?.excerpt ?? "",
+    bodyMarkdown: initial?.bodyMarkdown ?? "",
+    authorName: initial?.authorName ?? "",
+    // "" is the uncategorised choice in the select; the payload turns it back
+    // into null, which is what the column stores.
+    category: initial?.category ?? "",
+  });
+  const [coverImage, setCoverImage] = useState<string[]>(initial?.coverImageUrl ? [initial.coverImageUrl] : []);
+  const [preview, setPreview] = useState(false);
+  const [issues, setIssues] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+
+  // An existing post's slug is a published URL: changing it retires the old
+  // one (see BlogPostSlug), so the title must never drive it silently. On a new
+  // post it may, until the admin types a slug of their own — after which the
+  // field is theirs. The first real post's slug is literally `test-1` because
+  // this didn't exist.
+  const [slugTouched, setSlugTouched] = useState(Boolean(initial));
+
+  const setTitle = (value: string) => {
+    setForm((current) => ({
+      ...current,
+      title: value,
+      slug: slugTouched ? current.slug : slugify(value),
+    }));
+  };
+
+  // Toggling to Preview replaced a tall textarea with a short rendered block,
+  // so the page collapsed and the scroll position landed in blank space. The
+  // preview inherits the editor's height instead.
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const [editorHeight, setEditorHeight] = useState<number | null>(null);
+  const togglePreview = () => {
+    if (!preview) setEditorHeight(editorRef.current?.offsetHeight ?? null);
+    setPreview((p) => !p);
+  };
+
+  const submit = async () => {
+    setError(null);
+    const payload = {
+      title: form.title,
+      slug: form.slug,
+      excerpt: form.excerpt || undefined,
+      bodyMarkdown: form.bodyMarkdown,
+      coverImageUrl: coverImage[0] || undefined,
+      authorName: form.authorName,
+      category: form.category || null,
+    };
+    const parsed = blogPostInputSchema.safeParse(payload);
+    if (!parsed.success) {
+      const nextIssues: Record<string, string> = {};
+      for (const issue of parsed.error.issues) nextIssues[String(issue.path[0] ?? "form")] ??= issue.message;
+      setIssues(nextIssues);
+      setError("Check the highlighted details before saving.");
+      return;
+    }
+    setIssues({});
+    setBusy(true);
+    try {
+      if (postId) await authedRequest(`/admin/blog/${postId}`, { method: "PATCH", body: parsed.data });
+      else await authedRequest("/admin/blog", { method: "POST", body: parsed.data });
+      // Edits to an already-published post should show on the live page now,
+      // not whenever the 60s cache window happens to lapse.
+      await revalidatePublicPages("blog");
+      router.push("/admin/blog");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Could not save this post");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <fieldset className="grid gap-5 border-b border-border p-6 sm:grid-cols-2 sm:p-8">
+        <legend className="sr-only">Post details</legend>
+        <Field label="Title" id="title" error={issues.title} className="sm:col-span-2">
+          <Input id="title" value={form.title} onChange={(e) => setTitle(e.target.value)} aria-invalid={!!issues.title} placeholder="5 things to check before buying a used stroller" />
+        </Field>
+        <Field label="Slug" id="slug" error={issues.slug} helper={initial ? "Lowercase, hyphens only — changing this retires the old URL" : "Lowercase, hyphens only — filled in from the title until you edit it"}>
+          <Input id="slug" value={form.slug} onChange={(e) => { setSlugTouched(true); set("slug", e.target.value); }} aria-invalid={!!issues.slug} placeholder="used-stroller-checklist" />
+        </Field>
+        <Field label="Category" id="category" error={issues.category}>
+          <select
+            id="category"
+            value={form.category}
+            onChange={(e) => set("category", e.target.value)}
+            className="h-11 w-full rounded-xl border border-border-control/60 bg-surface px-4 text-sm text-foreground focus-visible:border-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <option value="">Uncategorised</option>
+            {BLOG_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Author" id="authorName" error={issues.authorName}>
+          <Input id="authorName" value={form.authorName} onChange={(e) => set("authorName", e.target.value)} aria-invalid={!!issues.authorName} placeholder="The Nurture Moms team" />
+        </Field>
+        <Field label="Excerpt" id="excerpt" error={issues.excerpt} helper="Optional — shown on the blog list" className="sm:col-span-2">
+          <Textarea id="excerpt" value={form.excerpt} onChange={(e) => set("excerpt", e.target.value)} rows={2} maxLength={300} aria-invalid={!!issues.excerpt} placeholder="A quick checklist for evaluating a preloved stroller before you buy." />
+        </Field>
+      </fieldset>
+
+      <fieldset className="grid gap-5 border-b border-border p-6 sm:p-8">
+        <legend className="sr-only">Cover image</legend>
+        <SectionHeading icon={ImageIcon} title="Cover image" description="Optional — shown on the blog list and at the top of the post." />
+        <ImageUploader initialImages={coverImage} onChange={setCoverImage} max={1} />
+      </fieldset>
+
+      <fieldset className="grid gap-5 p-6 sm:p-8">
+        <legend className="sr-only">Content</legend>
+        <div className="flex items-start justify-between gap-3">
+          <SectionHeading icon={FileText} title="Content" description="Markdown supported — headings, bold, links, lists." />
+          <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={togglePreview}>
+            {preview ? <><EyeOff className="h-4 w-4" /> Edit</> : <><Eye className="h-4 w-4" /> Preview</>}
+          </Button>
+        </div>
+        {preview ? (
+          <div
+            className="min-h-[16rem] overflow-y-auto rounded-xl border border-border p-4"
+            style={editorHeight ? { height: editorHeight } : undefined}
+          >
+            {/* Same offset/title handling as the live post page, so the
+                preview is what a reader actually gets. */}
+            <MarkdownContent
+              markdown={form.bodyMarkdown || "*Nothing to preview yet.*"}
+              headingOffset={1}
+              dropTitle={form.title}
+            />
+          </div>
+        ) : (
+          <Textarea
+            id="bodyMarkdown"
+            ref={editorRef}
+            value={form.bodyMarkdown}
+            onChange={(e) => set("bodyMarkdown", e.target.value)}
+            rows={16}
+            aria-invalid={!!issues.bodyMarkdown}
+            className="font-mono text-sm"
+            placeholder={"## Heading\n\nWrite the post in Markdown..."}
+          />
+        )}
+        {issues.bodyMarkdown && <p className="text-xs text-danger">{issues.bodyMarkdown}</p>}
+      </fieldset>
+
+      {error && <p role="alert" className="mx-6 mt-6 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger sm:mx-8">{error}</p>}
+      <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-border bg-surface/95 p-5 backdrop-blur-xl sm:flex-row sm:justify-end sm:p-6">
+        <Button size="lg" variant="ghost" onClick={() => router.back()}>Cancel</Button>
+        <Button size="lg" onClick={submit} disabled={busy}>{busy ? "Saving..." : postId ? "Save changes" : "Create post"}</Button>
+      </div>
+    </Card>
+  );
+}
+
+function SectionHeading({ icon: Icon, title, description }: { icon: typeof FileText; title: string; description: string }) {
+  return <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span><div><h2 className="text-lg font-semibold text-foreground">{title}</h2><p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{description}</p></div></div>;
+}
+
+function Field({ label, id, helper, error, className, children }: { label: string; id: string; helper?: string; error?: string; className?: string; children: React.ReactNode }) {
+  return <div className={className}><div className="flex items-center justify-between gap-3"><Label htmlFor={id}>{label}</Label>{helper && <span className="mb-1.5 text-xs text-muted-foreground">{helper}</span>}</div>{children}{error && <p className="mt-1.5 text-xs text-danger">{error}</p>}</div>;
+}
+
+/** Title → URL slug: lowercase, accents stripped, anything that is not a
+ *  letter or digit collapsed to a single hyphen. Matches what
+ *  `blogPostInputSchema` will accept, so the generated value never fails
+ *  validation the admin didn't cause. */
+function slugify(title: string): string {
+  return title
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/, "");
+}

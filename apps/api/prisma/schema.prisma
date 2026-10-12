@@ -1,0 +1,531 @@
+// Prisma schema for The Nurture Moms — a preloved baby & maternity marketplace.
+// Money is stored as integer paise everywhere — never floats.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CUSTOMER // can buy and sell
+  ADMIN
+}
+
+enum Condition {
+  NEW // new with tags / never used
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum DeliveryOption {
+  PICKUP
+  DELIVERY
+  BOTH
+}
+
+enum ListingStatus {
+  PENDING // awaiting admin approval
+  APPROVED // live and buyable
+  REJECTED
+  RESERVED // temporarily held for a buyer
+  SOLD
+}
+
+enum OrderStatus {
+  PENDING // created, awaiting payment
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD // RETIRED — retained only so historical orders stay valid; not selectable
+  ONLINE // Online gateway (Razorpay/…) — the only method for new orders
+}
+
+enum SellerPaymentType {
+  REGISTRATION // one-time ₹100 account activation
+  MEMBERSHIP // a prepaid plan purchase
+}
+
+enum SellerPaymentStatus {
+  PENDING // gateway order created, awaiting payment
+  PAID // verified/settled
+  FAILED
+}
+
+enum MembershipPlan {
+  MONTHLY // 30 days
+  QUARTERLY // 90 days
+  HALF_YEARLY // 180 days
+  YEARLY // 365 days
+}
+
+enum ShipmentStatus {
+  PENDING // order paid, seller has not generated a label yet
+  LABEL_GENERATED // label created, ready to print + hand over
+  SHIPPED // handed to the courier
+  DELIVERED
+}
+
+enum PayoutStatus {
+  PENDING // order paid but still cancellable — not yet owed
+  PAYABLE // order delivered — the marketplace owes this seller
+  PAID // transferred out, reference recorded
+  CANCELLED // order cancelled; the item went back to the seller unsold
+}
+
+enum NotificationType {
+  LISTING_APPROVED
+  LISTING_REJECTED
+  ITEM_SOLD // to the seller
+  ORDER_PLACED // to the admin
+  ORDER_CANCELLED // to the seller
+  PAYMENT_REFUNDED // to the buyer
+  SELLER_REGISTERED // to the admin, on the ₹100 registration payment
+  MEMBERSHIP_EXPIRING // to the seller, before their listing window lapses
+  MEMBERSHIP_EXPIRED // to the seller, once it has lapsed
+}
+
+model User {
+  id                            String         @id @default(cuid())
+  email                         String         @unique
+  passwordHash                  String
+  name                          String
+  role                          Role           @default(CUSTOMER)
+  // Seller profile
+  whatsappNumber                String?
+  city                          String?
+  bio                           String?
+  isSellerVerified              Boolean        @default(false)
+  sellerVerificationRequestedAt DateTime?
+  // The built-in "Marketplace" account admin-created listings are attributed
+  // to (roadmap 4.1) — not a real seller, never logged into by a person.
+  isSystemSeller                Boolean        @default(false)
+  // Monetization: ₹100 one-time registration fee gate (paid online). Must be
+  // set before a seller can buy a membership plan or create listings.
+  registrationPaidAt            DateTime?
+  // Bumped to invalidate every refresh token already issued to this user —
+  // on password reset, and on an explicit "sign out everywhere". Refresh
+  // tokens carry the value they were minted with and are rejected on
+  // mismatch. Access tokens are not checked against it (that would mean a DB
+  // read per request); their 15-minute TTL is what bounds the window.
+  tokenVersion                  Int            @default(0)
+  listings                      Listing[]
+  orders                        Order[]
+  wishlist                      WishlistItem[]
+  notifications                 Notification[]
+  reviewsWritten                Review[]       @relation("ReviewsWritten")
+  reviewsReceived               Review[]       @relation("ReviewsReceived")
+  sellerPayments                SellerPayment[]
+  memberships                   SellerMembership[]
+  payouts                       SellerPayout[]
+  passwordResetTokens           PasswordResetToken[]
+  createdAt                     DateTime       @default(now())
+}
+
+// Only the SHA-256 hash of the reset token is stored — same principle as a
+// password hash — so a DB read alone can't be used to reset an account.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  listings Listing[]
+}
+
+model Listing {
+  id                   String         @id @default(cuid())
+  title                String
+  description          String
+  seller               User           @relation(fields: [sellerId], references: [id])
+  sellerId             String
+  category             Category       @relation(fields: [categoryId], references: [id])
+  categoryId           String
+  condition            Condition
+  originalPriceInPaise Int? // what the seller paid new
+  sellingPriceInPaise  Int
+  purchaseDate         DateTime?
+  usageDuration        String? // free text, e.g. "6 months"
+  reasonForSelling     String?
+  city                 String
+  deliveryOption       DeliveryOption @default(PICKUP)
+  images               String[] // up to 10, enforced in app
+  status               ListingStatus  @default(PENDING)
+  // Set when status = REJECTED so the seller sees why, not just that.
+  // Cleared on the next moderation decision (approve or a fresh reject).
+  rejectionReason      String?
+  isFeatured           Boolean        @default(false)
+  // Optional reservation hold
+  reservedById         String?
+  reservedUntil        DateTime?
+  // The order (if any) currently holding a claim on this listing — set
+  // atomically at order-creation so two buyers can never both check out the
+  // same item, and checked by settle()/cancel() so only the order that
+  // actually holds a listing can flip or release it.
+  holdOrder            Order?         @relation("ListingHold", fields: [holdOrderId], references: [id])
+  holdOrderId          String?
+  orderItems           OrderItem[]
+  wishlistedBy         WishlistItem[]
+  reviews              Review[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([holdOrderId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([userId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  // Human-readable display id, e.g. "NM-20260730-014" — generated from
+  // DailyOrderSequence at creation time. `id` stays the real PK; this is
+  // purely for display (admin UI, notifications, customer-facing pages).
+  orderNumber       String      @unique
+  buyer             User        @relation(fields: [buyerId], references: [id])
+  buyerId           String
+  status            OrderStatus   @default(PENDING)
+  paymentMethod     PaymentMethod @default(ONLINE)
+  totalInPaise      Int
+  shippingAddress   Json
+  razorpayOrderId   String?       @unique
+  razorpayPaymentId String?       @unique
+  refundId          String?
+  refundedAt        DateTime?
+  // One of CancellationPolicy.reasonCodes at the time of cancellation — not
+  // a foreign key, since the policy's codes can change afterward.
+  cancellationReason String?
+  items             OrderItem[]
+  reviews           Review[]
+  shipments         Shipment[]
+  payouts           SellerPayout[]
+  heldListings      Listing[]   @relation("ListingHold")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([buyerId])
+  @@index([status])
+}
+
+// Atomic per-day counter backing Order.orderNumber generation — incremented
+// via a raw upsert (INSERT ... ON CONFLICT DO UPDATE ... RETURNING count)
+// inside the same transaction as order creation, so concurrent checkouts on
+// the same day never collide.
+model DailyOrderSequence {
+  date  String @id // "YYYYMMDD", UTC
+  count Int    @default(0)
+}
+
+// Single global row (id is always "global") — admin-editable rules for
+// buyer/admin order cancellation. Read by OrdersService.cancel/updateStatus.
+model CancellationPolicy {
+  id               String   @id @default("global")
+  cutoffHours      Int      @default(24)
+  reasonCodes      String[] @default(["Changed my mind", "Ordered by mistake", "Found a better price elsewhere", "Seller delay", "Other"])
+  refundPercentage Int      @default(100)
+  // How long after delivery a buyer may raise a condition dispute ("not as
+  // described"). Unlike the fields above this one is NOT enforced anywhere in
+  // code — there is no dispute-raising endpoint yet, so it is the published
+  // promise on the refunds page only. Wire it into that flow when it exists.
+  conditionDisputeHours Int @default(48)
+  updatedAt        DateTime @updatedAt
+}
+
+// Single global row (id is always "global") — the operator's real business
+// identity, required on the legal pages by Indian e-commerce rules and by
+// Razorpay's own KYC. The legal pages stay `noindex` with a draft banner
+// until every required field here is filled in, so half-finished policies
+// can never be published or indexed. Fields start empty on purpose: seeding
+// a plausible-looking company name would be worse than an obvious blank.
+model BusinessProfile {
+  id                    String   @id @default("global")
+  legalEntityName       String   @default("")
+  tradeName             String   @default("")
+  registeredAddress     String   @default("")
+  supportEmail          String   @default("")
+  supportPhone          String   @default("")
+  grievanceOfficerName  String   @default("")
+  grievanceOfficerEmail String   @default("")
+  // Optional — not every operator is GST-registered or incorporated.
+  gstin                 String?
+  cin                   String?
+  updatedAt             DateTime @updatedAt
+}
+
+// Single global row (id is always "global") — the marketplace's commission,
+// in basis points so rates like 5.5% (550) need no floats. Read once per sale
+// and snapshotted onto each SellerPayout, so changing it never moves money
+// that has already been earned.
+model PayoutPolicy {
+  id            String   @id @default("global")
+  commissionBps Int      @default(1000) // 10%
+  updatedAt     DateTime @updatedAt
+}
+
+model OrderItem {
+  id               String  @id @default(cuid())
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String
+  // Restrict: a listing that has been ordered can never be hard-deleted.
+  listing          Listing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  listingId        String
+  listingTitle     String // snapshot at purchase
+  sellerId         String // snapshot — who gets paid / notified
+  unitPriceInPaise Int // snapshot (selling price)
+  image            String?
+
+  @@index([orderId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      NotificationType
+  message   String
+  listingId String?
+  orderId   String?
+  // The user this notification is *about* (not the recipient) — e.g. the
+  // seller who just registered, for an admin's SELLER_REGISTERED alert. Only
+  // set when there's no listing/order to link to instead.
+  relatedUserId String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+}
+
+// A buyer rates the seller of one purchased listing, once per order line.
+model Review {
+  id         String   @id @default(cuid())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId  String
+  reviewer   User     @relation("ReviewsWritten", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+  seller     User     @relation("ReviewsReceived", fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId   String
+  rating     Int // 1-5
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@unique([orderId, listingId])
+  @@index([sellerId])
+  @@index([listingId])
+}
+
+// A seller's payment for registration or a membership plan (online only). The
+// gateway ids mirror Order's; on settle a MEMBERSHIP payment creates/extends a
+// SellerMembership window.
+model SellerPayment {
+  id               String              @id @default(cuid())
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  type             SellerPaymentType
+  plan             MembershipPlan? // set only when type = MEMBERSHIP
+  amountInPaise    Int // authoritative amount from the server
+  status           SellerPaymentStatus @default(PENDING)
+  gatewayOrderId   String?             @unique
+  gatewayPaymentId String?             @unique
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([userId])
+}
+
+// A prepaid access window. A seller may list only while some window has
+// expiresAt in the future. Buying while active stacks onto the current expiry.
+model SellerMembership {
+  id        String         @id @default(cuid())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  plan      MembershipPlan
+  startsAt  DateTime       @default(now())
+  expiresAt DateTime
+  createdAt DateTime       @default(now())
+  // Set once by MembershipExpiryService so a seller is warned once, not on
+  // every sweep. Only ever stamped on the user's latest-expiring row, since
+  // stacked purchases mean earlier rows are already superseded.
+  expiryWarningSentAt DateTime?
+  expiredNoticeSentAt DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// What the marketplace owes one seller for one order — the ledger behind
+// "buyer pays us, we pay the seller". One row per (order, seller), created in
+// the same transaction that marks the order PAID, so a settled sale can never
+// exist without its corresponding debt. Amounts are snapshots: commissionBps
+// is the rate at sale time, and gross = commission + net exactly.
+model SellerPayout {
+  id                 String       @id @default(cuid())
+  // Restrict, not Cascade: this is a money ledger. Cascading would let
+  // deleting an order or a seller account silently erase both an outstanding
+  // debt and the audit record of a transfer that already went out. Mirrors
+  // OrderItem's Restrict on Listing — a row someone was paid for can't be
+  // deleted out from under the record.
+  order              Order        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderId            String
+  seller             User         @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  sellerId           String
+  status             PayoutStatus @default(PENDING)
+  grossInPaise       Int
+  commissionBps      Int
+  commissionInPaise  Int
+  netInPaise         Int
+  // Transfer reference (UTR / bank ref) recorded by the admin on payout.
+  reference          String?
+  paidAt             DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([orderId, sellerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+// One seller's shippable portion of an order (an order may span sellers). The
+// seller generates a marketplace label, prints it, and marks it shipped. For a
+// courier provider (Shiprocket/…) labelUrl + trackingId hold the AWB; for the
+// built-in manual provider the label is rendered on demand and labelGeneratedAt
+// records that it was produced.
+model Shipment {
+  id               String         @id @default(cuid())
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String
+  sellerId         String
+  status           ShipmentStatus @default(PENDING)
+  courier          String?
+  trackingId       String?
+  labelUrl         String?
+  labelGeneratedAt DateTime?
+  shippedAt        DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([orderId, sellerId])
+  @@index([sellerId])
+}
+
+// Admin-authored marketplace journal content (roadmap 4.2). authorName is a
+// free-text label, not a User relation — the admin who wrote it doesn't need
+// to stay resolvable if their account is later removed.
+// The Nurture Journal's taxonomy, fixed by the founders' brief (section 11).
+// An enum rather than free text: these are the categories the journal is
+// organised around and each one is a page a reader can land on, so a typo in
+// the admin form would silently create a category nobody can reach.
+enum BlogCategory {
+  PREGNANCY
+  YOGA
+  POSTPARTUM
+  NUTRITION
+  STARTING_SOLIDS
+  BABY
+  TODDLER
+  MOTHERHOOD
+  MOMPRENEUR
+  PRELOVED
+}
+
+model BlogPost {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  excerpt       String?
+  bodyMarkdown  String
+  coverImageUrl String?
+  published     Boolean   @default(false)
+  publishedAt   DateTime?
+  authorName    String
+  // Nullable: every post written before the taxonomy existed has no category,
+  // and guessing one for them would be inventing editorial intent.
+  category      BlogCategory?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  previousSlugs BlogPostSlug[]
+
+  @@index([published, publishedAt])
+  @@index([category, published, publishedAt])
+}
+
+// Slugs a post used to live at. Renaming a published post would otherwise turn
+// every existing link to it — search results, shares, other sites — into a 404
+// with nothing recording where it went. The public lookup falls back to this
+// table and the post page 308s to the current slug.
+model BlogPostSlug {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  postId    String
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+enum ContactMessageStatus {
+  NEW
+  READ
+  RESPONDED
+}
+
+// "Send us a message" submissions from the public contact form (roadmap 4.3).
+enum EnquiryService {
+  YOGA
+  NUTRITION
+  STARTING_SOLIDS
+  COMMUNITY
+  PRELOVED
+}
+
+model ContactMessage {
+  id        String               @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    ContactMessageStatus @default(NEW)
+  // Which service page sent this enquiry. Nullable: the footer contact link
+  // belongs to no service, and every message predating this column has none
+  // — backfilling a guess would invent an attribution nobody recorded.
+  service   EnquiryService?
+  createdAt DateTime             @default(now())
+
+  @@index([status])
+  @@index([service, createdAt])
+}

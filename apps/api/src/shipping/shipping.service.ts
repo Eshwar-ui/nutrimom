@@ -1,0 +1,264 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
+import type {
+  GenerateLabelResponse,
+  SellerSale,
+  ShippingAddress,
+} from '@nutrimom/shared';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  SHIPPING_PROVIDER,
+  type ShippingProvider,
+} from './shipping-provider.interface';
+
+@Injectable()
+export class ShippingService {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(SHIPPING_PROVIDER) private readonly provider: ShippingProvider,
+  ) {}
+
+  /** Orders (paid onward) that contain this seller's items, with fulfil state. */
+  async listSales(sellerId: string): Promise<SellerSale[]> {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        status: { in: ['PAID', 'SHIPPED', 'DELIVERED'] },
+        items: { some: { sellerId } },
+      },
+      include: {
+        items: true,
+        shipments: { where: { sellerId } },
+        // What this sale actually pays out, after commission — the seller
+        // should never be shown the gross as if it were their money.
+        payouts: { where: { sellerId } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return orders.map((order) => {
+      const addr = order.shippingAddress as unknown as ShippingAddress;
+      const shipment = order.shipments[0];
+      const payout = order.payouts[0];
+      return {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        createdAt: order.createdAt.toISOString(),
+        shipmentStatus: shipment?.status ?? 'PENDING',
+        courier: shipment?.courier ?? null,
+        trackingId: shipment?.trackingId ?? null,
+        shipToCity: addr.city,
+        shipToState: addr.state,
+        items: order.items
+          .filter((i) => i.sellerId === sellerId)
+          .map((i) => ({
+            title: i.listingTitle,
+            unitPriceInPaise: i.unitPriceInPaise,
+            image: i.image,
+          })),
+        payout: payout
+          ? {
+              status: payout.status,
+              grossInPaise: payout.grossInPaise,
+              commissionInPaise: payout.commissionInPaise,
+              netInPaise: payout.netInPaise,
+              paidAt: payout.paidAt?.toISOString() ?? null,
+            }
+          : null,
+      };
+    });
+  }
+
+  /** Generate (or re-generate) this seller's shipping label for an order. */
+  async generateLabel(
+    sellerId: string,
+    orderId: string,
+  ): Promise<GenerateLabelResponse> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true, buyer: { select: { name: true } } },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const sellerItems = order.items.filter((i) => i.sellerId === sellerId);
+    if (sellerItems.length === 0) {
+      throw new ForbiddenException('You have no items in this order');
+    }
+    if (order.status === 'PENDING' || order.status === 'CANCELLED') {
+      throw new BadRequestException(
+        'A label can only be generated after payment is confirmed',
+      );
+    }
+
+    const seller = await this.prisma.user.findUnique({
+      where: { id: sellerId },
+      select: { name: true, city: true, whatsappNumber: true },
+    });
+
+    const existing = await this.prisma.shipment.findUnique({
+      where: { orderId_sellerId: { orderId, sellerId } },
+      select: {
+        id: true,
+        status: true,
+        courier: true,
+        trackingId: true,
+        labelUrl: true,
+      },
+    });
+
+    // A courier-booked shipment is already real: an AWB exists and the label
+    // is hosted at a URL. Re-printing must hand back that same label rather
+    // than book a second consignment — the seller would otherwise end up with
+    // two AWBs for one parcel, and the aggregator rejects a duplicate
+    // reference anyway. The manual provider stores no labelUrl, so it falls
+    // through and simply re-renders its HTML, which is free and correct.
+    if (existing?.labelUrl && existing.trackingId) {
+      return {
+        shipmentId: existing.id,
+        status: existing.status,
+        courier: existing.courier ?? this.provider.name,
+        trackingId: existing.trackingId,
+        labelUrl: existing.labelUrl,
+        labelHtml: null,
+      };
+    }
+
+    const label = await this.provider.createLabel(
+      {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        // Unique per (order, seller) — an order can span sellers, and each
+        // seller's parcel is its own consignment. Sending the bare order
+        // number would make two sellers collide on one courier reference.
+        reference: `${order.orderNumber}-${sellerId.slice(-6)}`,
+        createdAt: order.createdAt,
+        buyerName: order.buyer.name,
+        shippingAddress: order.shippingAddress as unknown as ShippingAddress,
+        items: sellerItems.map((i) => ({
+          title: i.listingTitle,
+          unitPriceInPaise: i.unitPriceInPaise,
+        })),
+      },
+      {
+        name: seller?.name ?? 'Seller',
+        city: seller?.city ?? null,
+        whatsappNumber: seller?.whatsappNumber ?? null,
+      },
+    );
+
+    // Don't downgrade an already-shipped shipment back to LABEL_GENERATED.
+    const status =
+      existing?.status === 'SHIPPED' || existing?.status === 'DELIVERED'
+        ? existing.status
+        : 'LABEL_GENERATED';
+
+    const shipment = await this.prisma.shipment.upsert({
+      where: { orderId_sellerId: { orderId, sellerId } },
+      create: {
+        orderId,
+        sellerId,
+        status: 'LABEL_GENERATED',
+        courier: label.courier,
+        trackingId: label.trackingId,
+        labelUrl: label.labelUrl,
+        labelGeneratedAt: new Date(),
+      },
+      update: {
+        status,
+        courier: label.courier,
+        trackingId: label.trackingId,
+        labelUrl: label.labelUrl,
+        labelGeneratedAt: new Date(),
+      },
+    });
+
+    return {
+      shipmentId: shipment.id,
+      status: shipment.status,
+      courier: label.courier,
+      trackingId: label.trackingId,
+      labelUrl: label.labelUrl,
+      labelHtml: label.labelHtml,
+    };
+  }
+
+  /**
+   * Mark this seller's shipment handed to the courier. Two sellers on the
+   * same multi-seller order can call this within moments of each other —
+   * without serializing them, each could read the *other's* shipment as
+   * still unshipped (their own update not yet committed) and neither would
+   * ever advance the order to SHIPPED. A per-order advisory lock forces the
+   * second caller's "has everyone shipped" check to run after the first's
+   * update has committed, so whichever seller finishes last always sees an
+   * accurate picture.
+   */
+  async markShipped(sellerId: string, orderId: string): Promise<SellerSale> {
+    await this.prisma.$transaction(async (tx) => {
+      // Same order of checks as generateLabel. Reading only the Shipment (as
+      // this used to) collapsed three different situations into one wrong
+      // answer: a missing order, an order the seller has no part in, and a
+      // genuinely label-less one all returned 400 "Generate the shipping
+      // label first" — telling a seller to make a label for an order that
+      // isn't theirs or doesn't exist.
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { items: { select: { sellerId: true } } },
+      });
+      if (!order) throw new NotFoundException('Order not found');
+      if (!order.items.some((i) => i.sellerId === sellerId)) {
+        throw new ForbiddenException('You have no items in this order');
+      }
+
+      const shipment = await tx.shipment.findUnique({
+        where: { orderId_sellerId: { orderId, sellerId } },
+      });
+      if (!shipment || shipment.status === 'PENDING') {
+        throw new BadRequestException('Generate the shipping label first');
+      }
+      if (shipment.status !== 'LABEL_GENERATED') return;
+
+      await tx.shipment.update({
+        where: { id: shipment.id },
+        data: { status: 'SHIPPED', shippedAt: new Date() },
+      });
+
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${orderId}))`;
+      await this.maybeMarkOrderShipped(tx, orderId);
+    });
+
+    const sales = await this.listSales(sellerId);
+    const row = sales.find((s) => s.orderId === orderId);
+    if (!row) throw new NotFoundException('Sale not found');
+    return row;
+  }
+
+  // When every seller in an order has shipped, advance the order to SHIPPED.
+  private async maybeMarkOrderShipped(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ) {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true, shipments: true },
+    });
+    if (!order || order.status !== 'PAID') return;
+    const sellerIds = new Set(order.items.map((i) => i.sellerId));
+    const shippedSellers = new Set(
+      order.shipments
+        .filter((s) => s.status === 'SHIPPED' || s.status === 'DELIVERED')
+        .map((s) => s.sellerId),
+    );
+    const allShipped = [...sellerIds].every((id) => shippedSellers.has(id));
+    if (allShipped) {
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'SHIPPED' },
+      });
+    }
+  }
+}

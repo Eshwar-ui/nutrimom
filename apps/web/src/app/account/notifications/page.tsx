@@ -1,0 +1,133 @@
+"use client";
+
+import Link from "next/link";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw, UserCheck, CalendarClock } from "lucide-react";
+import type { Notification, NotificationType } from "@nutrimom/shared";
+import { authedRequest } from "@/lib/api";
+import { useRequireAuth } from "@/lib/use-auth";
+import { Card } from "@/components/ui/primitives";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { PageSkeleton, StatePanel } from "@/components/ui/states";
+
+const icons: Record<NotificationType, typeof Tag> = {
+  LISTING_APPROVED: PackageCheck,
+  LISTING_REJECTED: XCircle,
+  ITEM_SOLD: Tag,
+  ORDER_PLACED: ShoppingBag,
+  ORDER_CANCELLED: XCircle,
+  PAYMENT_REFUNDED: RotateCcw,
+  SELLER_REGISTERED: UserCheck,
+  MEMBERSHIP_EXPIRING: CalendarClock,
+  MEMBERSHIP_EXPIRED: CalendarClock,
+};
+
+export default function NotificationsPage() {
+  const { ready, user } = useRequireAuth();
+  const qc = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => authedRequest<Notification[]>("/notifications"),
+    enabled: ready,
+  });
+
+  const readAll = useMutation({
+    mutationFn: () => authedRequest("/notifications/read-all", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const readOne = useMutation({
+    mutationFn: (id: string) => authedRequest(`/notifications/${id}/read`, { method: "PATCH" }),
+    onMutate: (id: string) => {
+      qc.setQueryData<Notification[]>(["notifications"], (old) =>
+        old?.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      );
+    },
+  });
+
+  if (!ready) return <PageSkeleton rows={4} />;
+
+  const unread = (data ?? []).filter((n) => !n.read).length;
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        title="Notifications"
+        description="Updates on your orders, listings and seller activity."
+        actions={unread > 0 && (
+          <Button variant="outline" size="sm" onClick={() => readAll.mutate()} className="gap-1.5">
+            <CheckCheck className="h-4 w-4" /> Mark all read
+          </Button>
+        )}
+      />
+
+      {isLoading ? (
+        <PageSkeleton rows={4} />
+      ) : isError ? (
+        <StatePanel tone="error" title="Couldn't load notifications" description="Something went wrong reaching the marketplace. Check your connection and try again." action={<Button variant="outline" onClick={() => refetch()}>Try again</Button>} />
+      ) : !data || data.length === 0 ? (
+        <StatePanel title="Nothing new" description="Updates about your orders, listings and seller activity will appear here." />
+      ) : (
+        <div className="space-y-2">
+          {data.map((n) => {
+            const Icon = icons[n.type];
+            const body = (
+              <Card
+                className={cn(
+                  "flex items-start gap-3 p-4 transition-colors",
+                  !n.read && "border-accent/40 bg-accent/5",
+                )}
+              >
+                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground">{n.message}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {new Date(n.createdAt).toLocaleString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />}
+              </Card>
+            );
+            // A rejected listing isn't publicly viewable — send the seller
+            // to their own edit page instead of a link that would 404. Order
+            // notifications (refunds, admin's "new order" alert) carry no
+            // listingId, so fall back to the order itself. An admin's
+            // SELLER_REGISTERED alert carries neither — it points at the
+            // seller's profile via relatedUserId instead.
+            const href = n.listingId
+              ? n.type === "LISTING_REJECTED"
+                ? `/account/listings/${n.listingId}/edit`
+                : `/listings/${n.listingId}`
+              : n.orderId
+                ? user?.role === "ADMIN"
+                  ? `/admin/orders/${n.orderId}`
+                  : `/orders/${n.orderId}`
+                : n.relatedUserId && user?.role === "ADMIN"
+                  ? `/admin/users/${n.relatedUserId}`
+                  : // Membership notices carry no listing/order/user id — the
+                    // action they want is always "go renew".
+                    n.type === "MEMBERSHIP_EXPIRING" || n.type === "MEMBERSHIP_EXPIRED"
+                    ? "/account/membership"
+                    : null;
+            const onOpen = () => { if (!n.read) readOne.mutate(n.id); };
+            return href ? (
+              <Link key={n.id} href={href} onClick={onOpen}>{body}</Link>
+            ) : (
+              <div key={n.id} onClick={onOpen} className={n.read ? undefined : "cursor-pointer"}>{body}</div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
