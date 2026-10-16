@@ -16,6 +16,7 @@ import {
 import type { SellerPaymentType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -28,6 +29,7 @@ export class SellerBillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
 
@@ -211,11 +213,11 @@ export class SellerBillingService {
    * flag; MEMBERSHIP opens (or stacks onto) an access window.
    */
   private async settle(gatewayOrderId: string, paymentId: string) {
-    await this.prisma.$transaction(async (tx) => {
+    const outcome = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.sellerPayment.findUnique({
         where: { gatewayOrderId },
       });
-      if (!payment) return;
+      if (!payment) return null;
 
       const transitioned = await tx.sellerPayment.updateMany({
         where: { id: payment.id, status: 'PENDING' },
@@ -236,7 +238,7 @@ export class SellerBillingService {
           tx,
           seller.id,
         );
-        return;
+        return { kind: 'registration' as const, userId: payment.userId };
       }
 
       if (payment.type === 'MEMBERSHIP' && payment.plan) {
@@ -259,7 +261,7 @@ export class SellerBillingService {
         const expiresAt = new Date(
           startsAt.getTime() + info.durationDays * DAY_MS,
         );
-        await tx.sellerMembership.create({
+        const membership = await tx.sellerMembership.create({
           data: {
             userId: payment.userId,
             plan: payment.plan,
@@ -267,7 +269,26 @@ export class SellerBillingService {
             expiresAt,
           },
         });
+        return {
+          kind: 'membership' as const,
+          userId: payment.userId,
+          membershipId: membership.id,
+          amountInPaise: payment.amountInPaise,
+        };
       }
+      return null;
     });
+
+    // External I/O happens only after the billing transaction commits. A
+    // mail-provider outage must not roll back a captured payment.
+    if (outcome?.kind === 'registration') {
+      await this.mail.sendSellerWelcome(outcome.userId);
+    } else if (outcome?.kind === 'membership') {
+      await this.mail.sendSubscriptionConfirmed(
+        outcome.userId,
+        outcome.membershipId,
+        outcome.amountInPaise,
+      );
+    }
   }
 }

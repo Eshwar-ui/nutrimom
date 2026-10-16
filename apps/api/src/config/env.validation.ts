@@ -42,8 +42,8 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().optional(),
 
-  // Transactional email (password reset). Get a key at resend.com; FROM_EMAIL
-  // must be on a domain verified in that Resend account.
+  // Transactional account, seller, order and password-reset email. Get a key
+  // at resend.com; MAIL_FROM_EMAIL must be on a verified sender domain.
   // Optional while transactional email is paused. MailService becomes a
   // no-op when this is unset, so the API can still boot and password-reset
   // requests keep their non-enumerating response.

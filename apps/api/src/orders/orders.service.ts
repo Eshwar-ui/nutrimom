@@ -19,6 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
 import { PayoutsService } from '../payouts/payouts.service';
+import { MailService } from '../mail/mail.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -55,6 +56,7 @@ export class OrdersService {
     private readonly notifications: NotificationsService,
     private readonly settings: SettingsService,
     private readonly payouts: PayoutsService,
+    private readonly mail: MailService,
     @Inject(PAYMENT_PROVIDER) private readonly paymentProvider: PaymentProvider,
   ) {}
 
@@ -301,6 +303,7 @@ export class OrdersService {
       });
     });
 
+    await this.mail.sendOrderDelivered(id);
     return toOrderDto(updated);
   }
 
@@ -614,6 +617,15 @@ export class OrdersService {
       });
       return { updated, wasPaid: false };
     });
+
+    // These are the two lifecycle events with customer-facing mail. Keeping
+    // the sends here makes the admin recovery path behave like gateway and
+    // buyer-driven transitions, but only after the transaction commits.
+    if (dto.status === 'PAID') {
+      await this.mail.sendOrderPaidEmails(id);
+    } else if (dto.status === 'DELIVERED') {
+      await this.mail.sendOrderDelivered(id);
+    }
 
     return this.finishStatusChange(
       result,

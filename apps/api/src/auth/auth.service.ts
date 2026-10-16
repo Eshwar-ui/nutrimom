@@ -44,6 +44,7 @@ export class AuthService {
       email: dto.email,
       passwordHash,
     });
+    await this.mail.sendBuyerWelcome(user.email, user.name);
     return this.buildResponse(user);
   }
 

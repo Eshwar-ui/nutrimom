@@ -51,11 +51,16 @@ function makeService() {
     cancelForOrder: jest.fn(),
     markPayableForOrder: jest.fn(),
   };
+  const mail = {
+    sendOrderPaidEmails: jest.fn(),
+    sendOrderDelivered: jest.fn(),
+  };
   const svc = new OrdersService(
     prisma as any,
     notifications as any,
     settings as any,
     payouts as any,
+    mail as any,
     provider,
   );
   return {
@@ -67,6 +72,7 @@ function makeService() {
     refund,
     settings,
     payouts,
+    mail,
   };
 }
 
@@ -413,7 +419,7 @@ describe('OrdersService — buyer confirms delivery', () => {
   };
 
   it('releases the seller payout from hold and notifies them', async () => {
-    const { svc, tx, payouts, notifications } = makeService();
+    const { svc, tx, payouts, notifications, mail } = makeService();
     tx.order.findUnique.mockResolvedValue(shippedOrder);
     tx.order.findUniqueOrThrow.mockResolvedValue({
       ...shippedOrder,
@@ -437,6 +443,7 @@ describe('OrdersService — buyer confirms delivery', () => {
       'o1',
       tx,
     );
+    expect(mail.sendOrderDelivered).toHaveBeenCalledWith('o1');
   });
 
   it("rejects confirming someone else's order", async () => {
@@ -459,7 +466,7 @@ describe('OrdersService — buyer confirms delivery', () => {
   });
 
   it('sends nothing when a concurrent confirmation won the transition', async () => {
-    const { svc, tx, payouts, notifications } = makeService();
+    const { svc, tx, payouts, notifications, mail } = makeService();
     tx.order.findUnique.mockResolvedValue(shippedOrder);
     // Both callers read SHIPPED; this one loses the conditional update. Without
     // the claim, each seller would get a duplicate "delivery confirmed" notice.
@@ -470,6 +477,7 @@ describe('OrdersService — buyer confirms delivery', () => {
     );
     expect(notifications.create).not.toHaveBeenCalled();
     expect(payouts.markPayableForOrder).not.toHaveBeenCalled();
+    expect(mail.sendOrderDelivered).not.toHaveBeenCalled();
   });
 
   it('is not a way to re-trigger a payout on an already-delivered order', async () => {

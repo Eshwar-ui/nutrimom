@@ -16,7 +16,7 @@ function makeService() {
       }),
       create: jest.fn().mockImplementation((args: { data: unknown }) => {
         calls.push('create');
-        return args.data;
+        return { id: 'm1', ...(args.data as object) };
       }),
     },
     $executeRaw: jest.fn().mockImplementation(() => {
@@ -40,12 +40,17 @@ function makeService() {
     refund: jest.fn(),
   };
   const notifications = { notifyAdmins: jest.fn() };
+  const mail = {
+    sendSellerWelcome: jest.fn(),
+    sendSubscriptionConfirmed: jest.fn(),
+  };
   const svc = new SellerBillingService(
     prisma as any,
     notifications as any,
+    mail as any,
     provider,
   );
-  return { svc, tx, calls, notifications };
+  return { svc, tx, calls, notifications, mail };
 }
 
 describe('SellerBillingService — membership stacking', () => {
@@ -58,6 +63,7 @@ describe('SellerBillingService — membership stacking', () => {
       status: 'PENDING',
       type: 'MEMBERSHIP',
       plan: 'MONTHLY',
+      amountInPaise: 9900,
     });
     tx.sellerPayment.updateMany.mockResolvedValue({ count: 1 });
 
@@ -68,7 +74,7 @@ describe('SellerBillingService — membership stacking', () => {
   });
 
   it('stacks the new window onto the current expiry', async () => {
-    const { svc, tx } = makeService();
+    const { svc, tx, mail } = makeService();
     const currentExpiry = new Date(Date.now() + 5 * DAY_MS);
     tx.sellerMembership.findFirst.mockResolvedValue({
       expiresAt: currentExpiry,
@@ -80,6 +86,7 @@ describe('SellerBillingService — membership stacking', () => {
       status: 'PENDING',
       type: 'MEMBERSHIP',
       plan: 'MONTHLY',
+      amountInPaise: 9900,
     });
     tx.sellerPayment.updateMany.mockResolvedValue({ count: 1 });
 
@@ -96,10 +103,15 @@ describe('SellerBillingService — membership stacking', () => {
         ),
       },
     });
+    expect(mail.sendSubscriptionConfirmed).toHaveBeenCalledWith(
+      'u1',
+      'm1',
+      9900,
+    );
   });
 
   it('is idempotent — a second settle does not stack again', async () => {
-    const { svc, tx } = makeService();
+    const { svc, tx, mail } = makeService();
     tx.sellerPayment.findUnique.mockResolvedValue({
       id: 'sp1',
       userId: 'u1',
@@ -107,6 +119,7 @@ describe('SellerBillingService — membership stacking', () => {
       status: 'PAID',
       type: 'MEMBERSHIP',
       plan: 'MONTHLY',
+      amountInPaise: 9900,
     });
     tx.sellerPayment.updateMany.mockResolvedValue({ count: 0 });
 
@@ -114,12 +127,13 @@ describe('SellerBillingService — membership stacking', () => {
 
     expect(tx.$executeRaw).not.toHaveBeenCalled();
     expect(tx.sellerMembership.create).not.toHaveBeenCalled();
+    expect(mail.sendSubscriptionConfirmed).not.toHaveBeenCalled();
   });
 });
 
 describe('SellerBillingService — registration notifies admins', () => {
   it('notifies admins with the seller id once registration settles', async () => {
-    const { svc, tx, notifications } = makeService();
+    const { svc, tx, notifications, mail } = makeService();
     tx.sellerPayment.findUnique.mockResolvedValue({
       id: 'sp1',
       userId: 'u1',
@@ -141,10 +155,11 @@ describe('SellerBillingService — registration notifies admins', () => {
       tx,
       'u1',
     );
+    expect(mail.sendSellerWelcome).toHaveBeenCalledWith('u1');
   });
 
   it('does not notify again on an already-settled registration', async () => {
-    const { svc, tx, notifications } = makeService();
+    const { svc, tx, notifications, mail } = makeService();
     tx.sellerPayment.findUnique.mockResolvedValue({
       id: 'sp1',
       userId: 'u1',
@@ -158,5 +173,6 @@ describe('SellerBillingService — registration notifies admins', () => {
     await svc.handleWebhook(Buffer.from('{}'), 'sig');
 
     expect(notifications.notifyAdmins).not.toHaveBeenCalled();
+    expect(mail.sendSellerWelcome).not.toHaveBeenCalled();
   });
 });

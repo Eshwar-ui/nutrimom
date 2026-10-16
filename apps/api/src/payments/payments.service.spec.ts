@@ -45,14 +45,26 @@ function makeService() {
     .spyOn(provider, 'refund')
     .mockResolvedValue({ refundId: 'rfnd_1' });
   const payouts = { createForOrder: jest.fn() };
+  const mail = { sendOrderPaidEmails: jest.fn() };
   const svc = new PaymentsService(
     prisma as any,
     orders as any,
     notifications as any,
     payouts as any,
+    mail as any,
     provider,
   );
-  return { svc, prisma, tx, orders, notifications, provider, refund, payouts };
+  return {
+    svc,
+    prisma,
+    tx,
+    orders,
+    notifications,
+    provider,
+    refund,
+    payouts,
+    mail,
+  };
 }
 
 describe('PaymentsService — money path', () => {
@@ -75,7 +87,7 @@ describe('PaymentsService — money path', () => {
   });
 
   it('marks listings SOLD and notifies on a valid signature', async () => {
-    const { svc, prisma, tx, notifications } = makeService();
+    const { svc, prisma, tx, notifications, mail } = makeService();
     prisma.order.findUnique.mockResolvedValue({
       id: 'o1',
       buyerId: 'b1',
@@ -102,6 +114,7 @@ describe('PaymentsService — money path', () => {
       data: { status: 'SOLD', reservedUntil: null },
     });
     expect(notifications.create).toHaveBeenCalled();
+    expect(mail.sendOrderPaidEmails).toHaveBeenCalledWith('o1');
     expect(res.status).toBe('PAID');
   });
 
@@ -157,7 +170,7 @@ describe('PaymentsService — money path', () => {
   });
 
   it('is idempotent — a second settle does not re-sell listings', async () => {
-    const { svc, tx } = makeService();
+    const { svc, tx, mail } = makeService();
     tx.order.findUnique.mockResolvedValue({
       id: 'o1',
       status: 'PAID',
@@ -177,6 +190,7 @@ describe('PaymentsService — money path', () => {
 
     await svc.handleWebhook(body, webhookSig);
     expect(tx.listing.updateMany).not.toHaveBeenCalled();
+    expect(mail.sendOrderPaidEmails).not.toHaveBeenCalled();
   });
 
   it('refunds a payment captured against an order the buyer already cancelled', async () => {

@@ -3,6 +3,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SellerBillingModule } from '../seller-billing/seller-billing.module';
 import { PayoutsModule } from '../payouts/payouts.module';
+import { MailModule } from '../mail/mail.module';
 import { PaymentProviderModule } from './payment-provider.module';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
@@ -16,6 +17,7 @@ import { PaymentsController } from './payments.controller';
     // payments.
     SellerBillingModule,
     PayoutsModule,
+    MailModule,
   ],
   providers: [PaymentsService],
   controllers: [PaymentsController],

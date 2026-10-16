@@ -74,8 +74,8 @@ services:
         sync: false # optional — for the seeded admin login
       - key: ADMIN_PASSWORD
         sync: false # optional
-      # Web origin used to build links sent in emails (password reset) — your
-      # Vercel production URL, no trailing slash.
+      # Web origin used to build links in transactional emails — your Vercel
+      # production URL, no trailing slash.
       - key: WEB_URL
         sync: false
       - key: RESEND_API_KEY

@@ -15,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PayoutsService } from '../payouts/payouts.service';
+import { MailService } from '../mail/mail.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -29,6 +30,7 @@ export class PaymentsService {
     private readonly orders: OrdersService,
     private readonly notifications: NotificationsService,
     private readonly payouts: PayoutsService,
+    private readonly mail: MailService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
 
@@ -240,10 +242,14 @@ export class PaymentsService {
         order.id,
         tx,
       );
-      return { kind: 'paid' as const };
+      return { kind: 'paid' as const, orderId: order.id };
     });
 
-    if (outcome?.kind === 'refund') {
+    if (outcome?.kind === 'paid') {
+      // The transaction above is the idempotency boundary. Only the caller
+      // that actually moved PENDING -> PAID reaches this send.
+      await this.mail.sendOrderPaidEmails(outcome.orderId);
+    } else if (outcome?.kind === 'refund') {
       await this.issueRefund(
         outcome.orderId,
         outcome.orderNumber,

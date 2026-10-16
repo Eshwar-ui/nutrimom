@@ -3,6 +3,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PaymentProviderModule } from '../payments/payment-provider.module';
 import { SettingsModule } from '../settings/settings.module';
 import { PayoutsModule } from '../payouts/payouts.module';
+import { MailModule } from '../mail/mail.module';
 import { OrdersService } from './orders.service';
 import { OrdersController, AdminOrdersController } from './orders.controller';
 
@@ -12,6 +13,7 @@ import { OrdersController, AdminOrdersController } from './orders.controller';
     PaymentProviderModule,
     SettingsModule,
     PayoutsModule,
+    MailModule,
   ],
   providers: [OrdersService],
   controllers: [OrdersController, AdminOrdersController],

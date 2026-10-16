@@ -115,6 +115,7 @@ function makeService() {
     { create: jest.fn() } as any,
     { getCancellationPolicy: jest.fn() } as any,
     { createForOrder: jest.fn() } as any,
+    { sendOrderPaidEmails: jest.fn(), sendOrderDelivered: jest.fn() } as any,
     provider,
   );
   return { svc, prisma, tx };
