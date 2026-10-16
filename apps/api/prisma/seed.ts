@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 const categoryImages: Record<string, string[]> = {
   "baby-clothes": ["category-baby-clothes.png", "category-baby-clothes-source.png"],
   toys: ["category-toys.png", "category-toys-source.png"],
-  books: ["category-toys-source.png", "category-toys.png"],
+  books: ["category-toys.png", "category-toys-source.png"],
   "feeding-essentials": ["category-baby-nutrition.png", "category-baby-nutrition-source.png"],
   strollers: ["category-strollers.png", "category-strollers-source.png"],
   walkers: ["category-toys.png", "category-toys-source.png"],

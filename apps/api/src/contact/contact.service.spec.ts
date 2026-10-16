@@ -40,7 +40,7 @@ const input = (
 /** The row `submit` asked Prisma to create. */
 function created(prisma: ReturnType<typeof makeService>['prisma']) {
   return (
-    prisma.contactMessage.create.mock.calls[0][0] as {
+    (prisma.contactMessage.create.mock.calls as unknown[][])[0][0] as {
       data: { service: string | null; phone: string | null };
     }
   ).data;
