@@ -93,11 +93,24 @@ const List<Pillar> kPillars = [
 /// Phrased in the visitor's words rather than ours: someone arriving from a
 /// reel knows they are six weeks postpartum, not that they want "Nourish".
 class Stage {
-  const Stage({required this.label, required this.covers, required this.route});
+  const Stage({
+    required this.label,
+    required this.covers,
+    required this.route,
+    required this.art,
+  });
 
   final String label;
+
+  /// What the stage leads to, as the brief lists it. Stored with the brief's
+  /// middle dots; the tile renders them as commas (see `StageSelector`).
   final String covers;
   final String route;
+
+  /// Each stage gets its own picture, deliberately not the pillar art: the
+  /// pillar grid sits directly below, and the same drawing twice in one
+  /// screen makes both sections look like one.
+  final String art;
 }
 
 const List<Stage> kStages = [
@@ -105,31 +118,37 @@ const List<Stage> kStages = [
     label: "I'm pregnant",
     covers: 'Yoga · Garbhasanskar · Nutrition',
     route: '/yoga',
+    art: 'assets/images/category-prenatal.png',
   ),
   Stage(
     label: "I'm postpartum",
     covers: 'Recovery · Yoga · Nutrition · Support',
     route: '/nutrition',
+    art: 'assets/images/category-postnatal.png',
   ),
   Stage(
     label: 'My baby is starting solids',
     covers: 'Solids session · Baby nutrition · Meal ideas',
     route: '/nutrition/starting-solids',
+    art: 'assets/images/category-baby-nutrition.png',
   ),
   Stage(
     label: "I'm navigating toddlerhood",
     covers: 'Nutrition · Activities · Resources',
     route: '/nutrition',
+    art: 'assets/images/category-toys.png',
   ),
   Stage(
     label: 'I need mom support',
     covers: 'Community · Events · Expert sessions',
     route: '/community',
+    art: 'assets/images/category-wellness.png',
   ),
   Stage(
     label: 'I want preloved',
     covers: 'Buy · Sell · Donate',
     route: '/preloved',
+    art: 'assets/images/category-baby-clothes.png',
   ),
 ];
 

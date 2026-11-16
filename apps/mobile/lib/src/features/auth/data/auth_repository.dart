@@ -85,6 +85,10 @@ class AuthRepository {
   Future<void> logoutEverywhere() async {
     await _api.post<Map<String, dynamic>>('/auth/logout-all');
   }
+
+  Future<void> deleteAccount() async {
+    await _api.delete<Map<String, dynamic>>('/users/me');
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

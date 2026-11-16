@@ -56,11 +56,13 @@ enum Role {
   static Role? tryParse(String? v) => _tryParse(v, values, (e) => e.wire);
 }
 
+/// Labels mirror `conditionLabels` in shared: plain words a buyer understands
+/// at a glance. The wire values are unchanged.
 enum Condition {
-  isNew('NEW', 'New with tags'),
+  isNew('NEW', 'New'),
   likeNew('LIKE_NEW', 'Like new'),
-  good('GOOD', 'Good'),
-  fair('FAIR', 'Fair');
+  good('GOOD', 'Gently used'),
+  fair('FAIR', 'Well used');
 
   const Condition(this.wire, this.label);
   final String wire;
@@ -231,7 +233,8 @@ enum NotificationType {
   paymentRefunded('PAYMENT_REFUNDED'),
   sellerRegistered('SELLER_REGISTERED'),
   membershipExpiring('MEMBERSHIP_EXPIRING'),
-  membershipExpired('MEMBERSHIP_EXPIRED');
+  membershipExpired('MEMBERSHIP_EXPIRED'),
+  donationOffered('DONATION_OFFERED');
 
   const NotificationType(this.wire);
   final String wire;
@@ -313,6 +316,96 @@ enum BlogCategory {
 
   static BlogCategory? fromSlug(String? slug) =>
       _tryParse(slug, values, (e) => e.slug);
+}
+
+/// Which pricing block a service package belongs to, mirroring `ServiceGroup`
+/// and `SERVICE_GROUP_LABELS` in shared.
+enum ServiceGroup {
+  prenatalYoga('PRENATAL_YOGA', 'Prenatal Yoga'),
+  garbhasanskar('GARBHASANSKAR', 'Garbhasanskar'),
+  combo('COMBO', 'Prenatal Yoga + Garbhasanskar'),
+  oneToOneYoga('ONE_TO_ONE_YOGA', 'Personalised 1:1 Yoga'),
+  nutrition('NUTRITION', 'Nutrition'),
+  startingSolids('STARTING_SOLIDS', 'Starting Solids');
+
+  const ServiceGroup(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static ServiceGroup parse(String v) =>
+      _parse('ServiceGroup', v, values, (e) => e.wire);
+  static ServiceGroup? tryParse(String? v) =>
+      _tryParse(v, values, (e) => e.wire);
+}
+
+/// Mirrors `SessionFormat` and `SESSION_FORMAT_LABELS` in shared.
+enum SessionFormat {
+  liveGroup('LIVE_GROUP', 'Live group'),
+  oneToOne('ONE_TO_ONE', '1:1'),
+  recorded('RECORDED', 'Recorded');
+
+  const SessionFormat(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static SessionFormat parse(String v) =>
+      _parse('SessionFormat', v, values, (e) => e.wire);
+  static SessionFormat? tryParse(String? v) =>
+      _tryParse(v, values, (e) => e.wire);
+}
+
+/// Mirrors `FaqSection` and `FAQ_SECTION_LABELS` in shared.
+enum FaqSection {
+  general('GENERAL', 'General'),
+  sessions('SESSIONS', 'Sessions & booking'),
+  nutrition('NUTRITION', 'Nutrition'),
+  marketplace('MARKETPLACE', 'Buying & selling preloved'),
+  payments('PAYMENTS', 'Payments'),
+  donations('DONATIONS', 'Donations');
+
+  const FaqSection(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static FaqSection parse(String v) =>
+      _parse('FaqSection', v, values, (e) => e.wire);
+  static FaqSection? tryParse(String? v) =>
+      _tryParse(v, values, (e) => e.wire);
+}
+
+/// Where an admin-matched donation offer stands, mirroring `DonationStatus`
+/// and `DONATION_STATUS_LABELS` in shared.
+enum DonationStatus {
+  isNew('NEW', 'New'),
+  contacted('CONTACTED', 'Contacted'),
+  matched('MATCHED', 'Matched'),
+  completed('COMPLETED', 'Completed'),
+  declined('DECLINED', 'Declined');
+
+  const DonationStatus(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static DonationStatus parse(String v) =>
+      _parse('DonationStatus', v, values, (e) => e.wire);
+  static DonationStatus? tryParse(String? v) =>
+      _tryParse(v, values, (e) => e.wire);
+}
+
+/// Mirrors `HandoverPreference` and `HANDOVER_PREFERENCE_LABELS` in shared.
+enum HandoverPreference {
+  pickup('PICKUP', 'Pick up from me'),
+  dropOff('DROP_OFF', "I'll drop it off"),
+  either('EITHER', 'Either works');
+
+  const HandoverPreference(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static HandoverPreference parse(String v) =>
+      _parse('HandoverPreference', v, values, (e) => e.wire);
+  static HandoverPreference? tryParse(String? v) =>
+      _tryParse(v, values, (e) => e.wire);
 }
 
 /// Mirrors `orderStatusLabel()` in shared, including the COD special case —

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,11 +16,8 @@ import '../../catalog/presentation/widgets/listing_card.dart';
 import '../../pillars/presentation/widgets/home_pillars.dart';
 
 /// The app's front door, built from the same pictures and tokens as the web
-/// home page so the two read as one product.
-///
-/// The four-pillar grid and the stage selector are not here yet: they belong
-/// with the pillar screens (yoga, nutrition, community), which land in P3. A
-/// pillar card that goes nowhere would be worse than no pillar card.
+/// home page so the two read as one product: the stage selector and the four
+/// pillars first, then the marketplace as the fourth of them.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -31,121 +29,207 @@ class HomeScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(latestListingsProvider);
-          ref.invalidate(categoriesProvider);
-          await ref.read(latestListingsProvider.future);
-        },
-        child: CustomScrollView(
-          slivers: [
-            const SliverToBoxAdapter(child: _Hero()),
-            // The ecosystem first (brief §3): stage, pillars, then price.
-            // The marketplace follows as the fourth pillar, not the identity.
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 28, 20, 0),
-                child: StageSelector(),
-              ),
-            ),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 36, 20, 0),
-                child: PillarGrid(),
-              ),
-            ),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 22, 20, 0),
-                child: AffordableSupport(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Preloved marketplace',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 14),
-                    _SearchBar(onTap: () => context.goTab(AppTab.shop)),
-                  ],
+      body: _StatusBarScrim(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(latestListingsProvider);
+            ref.invalidate(categoriesProvider);
+            await ref.read(latestListingsProvider.future);
+          },
+          child: CustomScrollView(
+            slivers: [
+              const SliverToBoxAdapter(child: _Hero()),
+              // The ecosystem first (brief §3): stage, pillars, then price.
+              // The marketplace follows as the fourth pillar, not the identity.
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 28, 20, 0),
+                  child: StageSelector(),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 26, 20, 14),
-                child: Text(
-                  'Shop by category',
-                  style: theme.textTheme.headlineSmall,
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 36, 20, 0),
+                  child: PillarGrid(),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: categories.when(
-                loading: () => const SizedBox(height: 152),
-                error: (_, _) => const SizedBox.shrink(),
-                data: (items) => CategoryRail(categories: items),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 22, 20, 0),
+                  child: AffordableSupport(),
+                ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 34, 20, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Latest listings',
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Preloved marketplace',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 14),
+                      _SearchBar(onTap: () => context.goTab(AppTab.shop)),
+                    ],
+                  ),
+                ),
+              ),
+              // On failure the rail collapses to nothing, and the heading goes
+              // with it rather than announcing an empty section.
+              if (!categories.hasError)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 26, 20, 14),
+                    child: Text(
+                      'Shop by category',
                       style: theme.textTheme.headlineSmall,
                     ),
-                    TextButton(
-                      onPressed: () {
-                        ref.read(browseQueryProvider.notifier).reset();
-                        context.goTab(AppTab.shop);
-                      },
-                      child: const Text('Shop all'),
+                  ),
+                ),
+              SliverToBoxAdapter(
+                child: categories.when(
+                  loading: () => const SizedBox(height: 152),
+                  error: (_, _) => const SizedBox.shrink(),
+                  data: (items) => CategoryRail(categories: items),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 34, 20, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Latest listings',
+                        style: theme.textTheme.headlineSmall,
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          ref.read(browseQueryProvider.notifier).reset();
+                          context.goTab(AppTab.shop);
+                        },
+                        child: const Text('Shop all'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: AsyncView(
+                  value: latest,
+                  onRetry: () => ref.invalidate(latestListingsProvider),
+                  data: (items) => items.isEmpty
+                      ? const EmptyView(
+                          title: 'No items yet',
+                          body: 'New listings appear here as soon as they are approved.',
+                          icon: Icons.inventory_2_outlined,
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: ListingGrid(
+                            listings: items,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                          ),
+                        ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _WhyPreloved(signedIn: auth.isSignedIn),
+              ),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 34, 20, 0),
+                  child: VillageBand(),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.paddingOf(context).bottom + 32,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Height of the hero's drawn band below the status bar. The scrim waits for
+/// exactly this much scroll, so it appears as the art leaves, not before.
+const _heroArtHeight = 96.0;
+
+/// Backs the status bar once the hero art has scrolled away.
+///
+/// Home has no app bar, so the hero's art runs up behind the clock, which is
+/// the look. But with nothing taking over once it scrolls off, every heading
+/// and card on the page slid under the clock and the battery and collided
+/// with them. The scrim fades in at the point the art leaves.
+class _StatusBarScrim extends StatefulWidget {
+  const _StatusBarScrim({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_StatusBarScrim> createState() => _StatusBarScrimState();
+}
+
+class _StatusBarScrimState extends State<_StatusBarScrim> {
+  final _covered = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _covered.dispose();
+    super.dispose();
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    // Only the page itself: the category rail and other horizontal lists
+    // report their own offsets, which say nothing about what is under the
+    // status bar.
+    if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
+      _covered.value = n.metrics.pixels > _heroArtHeight;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Home has no app bar to set this, so it is pinned here, per brightness,
+      // as the theme's app bar does for every other screen.
+      value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Stack(
+        children: [
+          NotificationListener<ScrollNotification>(
+            onNotification: _onScroll,
+            child: widget.child,
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.paddingOf(context).top,
+            child: IgnorePointer(
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _covered,
+                builder: (context, covered, _) => AnimatedOpacity(
+                  opacity: covered ? 1 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: t.background,
+                      border: Border(bottom: BorderSide(color: t.border)),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: AsyncView(
-                value: latest,
-                onRetry: () => ref.invalidate(latestListingsProvider),
-                data: (items) => items.isEmpty
-                    ? const EmptyView(
-                        title: 'No items yet',
-                        body: 'New listings appear here as soon as they are approved.',
-                        icon: Icons.inventory_2_outlined,
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: ListingGrid(
-                          listings: items,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                      ),
-              ),
-            ),
-            SliverToBoxAdapter(child: _WhyPreloved(signedIn: auth.isSignedIn)),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 34, 20, 0),
-                child: VillageBand(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.paddingOf(context).bottom + 32,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -173,7 +257,7 @@ class _Hero extends StatelessWidget {
         Stack(
           children: [
             SizedBox(
-              height: topInset + 96,
+              height: topInset + _heroArtHeight,
               width: double.infinity,
               child: Image.asset(
                 'assets/images/bg-mobile.png',
@@ -183,9 +267,11 @@ class _Hero extends StatelessWidget {
               ),
             ),
             // Home has no app bar, so the bag sits on the art band, on its own
-            // ground so it reads against the drawing.
+            // ground so it reads against the drawing. Centred in the band: set
+            // 6pt under the status bar it hid all of a small heart in the art
+            // but its tip, which hung off the button like a speech-bubble tail.
             Positioned(
-              top: topInset + 6,
+              top: topInset + (_heroArtHeight - 48) / 2,
               right: 14,
               child: const BagButton(onDark: true),
             ),

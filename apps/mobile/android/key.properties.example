@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties and fill in the Play upload key.
+# Never commit key.properties or the keystore file.
+storePassword=<keystore-password>
+keyPassword=<key-password>
+keyAlias=nurture-moms-upload
+storeFile=/absolute/path/to/nurture-moms-upload.jks

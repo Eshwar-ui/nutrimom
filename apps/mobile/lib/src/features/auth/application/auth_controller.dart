@@ -131,6 +131,12 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthState(status: AuthStatus.signedOut);
   }
 
+  Future<void> deleteAccount() async {
+    await _repo.deleteAccount();
+    await _tokens.clear();
+    state = const AuthState(status: AuthStatus.signedOut);
+  }
+
   Future<void> refreshUser() async {
     if (!state.isSignedIn) return;
     try {

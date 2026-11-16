@@ -33,6 +33,33 @@ class StageSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
     final theme = Theme.of(context);
+    final rows = <Widget>[];
+    for (var i = 0; i < kStages.length; i += 2) {
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: i + 2 < kStages.length ? 12 : 0),
+          // IntrinsicHeight makes both tiles in a row as tall as the taller
+          // one. Without it each tile sized to its own text: the rows had
+          // ragged bottoms, and a minimum height left the short tiles half
+          // empty.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _StageTile(stage: kStages[i])),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: i + 1 < kStages.length
+                      ? _StageTile(stage: kStages[i + 1])
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -43,24 +70,7 @@ class StageSelector extends StatelessWidget {
           style: theme.textTheme.bodyMedium?.copyWith(color: t.mutedForeground),
         ),
         const SizedBox(height: 18),
-        // Two columns: six stages stacked one per row push the pillars below
-        // the second screen, and the labels are short enough to share a row.
-        LayoutBuilder(
-          builder: (context, c) {
-            final w = (c.maxWidth - 12) / 2;
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final stage in kStages)
-                  SizedBox(
-                    width: w,
-                    child: _StageTile(stage: stage),
-                  ),
-              ],
-            );
-          },
-        ),
+        ...rows,
       ],
     );
   }
@@ -75,36 +85,83 @@ class _StageTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: () => _open(context, stage.route),
-      borderRadius: BorderRadius.circular(NmTokens.radiusXl),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 128),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: t.surface,
-          borderRadius: BorderRadius.circular(NmTokens.radiusXl),
-          border: Border.all(color: t.border, width: 2),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              stage.label,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFamily: 'Fraunces',
-                fontWeight: FontWeight.w600,
-                height: 1.2,
+    // The brief lists what each stage covers with middle dots. In a tile two
+    // columns wide those wrap, and a line ending on a bare "·" reads as a
+    // rendering fault. A comma at a line end reads as ordinary punctuation.
+    final covers = stage.covers.replaceAll(' · ', ', ');
+
+    return Semantics(
+      button: true,
+      label: '${stage.label}. $covers',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => _open(context, stage.route),
+        borderRadius: BorderRadius.circular(NmTokens.radiusXl),
+        child: Container(
+          decoration: BoxDecoration(
+            color: t.surface,
+            borderRadius: BorderRadius.circular(NmTokens.radiusXl),
+            border: Border.all(color: t.border, width: 2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // The art sits on its own panel, so the tile reads as a picture
+              // first and a label second, which is the order a person scanning
+              // for their stage looks at it. The panel is one neutral cream:
+              // each drawing already stands on a pastel blob of its own, and a
+              // second colour behind it (a pink blob on sage, a blue one on
+              // blush) made two colour fields per tile fight, six times over.
+              Container(
+                height: 104,
+                color: t.cream,
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
+                child: Image.asset(
+                  stage.art,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              stage.covers,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: t.mutedForeground,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stage.label,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontFamily: 'Fraunces',
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        covers,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: t.mutedForeground,
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 8),
+                      // The web tile says "Take me there". At two columns
+                      // wide the arrow carries the same meaning in less room.
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(
+                          Icons.arrow_forward,
+                          size: 18,
+                          color: t.accentText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -149,6 +206,15 @@ class _PillarCard extends StatelessWidget {
 
   final Pillar pillar;
 
+  static const _pad = 20.0;
+  static const _washSize = 200.0;
+  static const _washOverhang = 40.0;
+
+  /// How far the blurb stops short of the text column's right edge: clear of
+  /// the wash circle's widest point, plus a gap. It was a flat 110, which left
+  /// the longest line of every blurb running 30pt over the circle.
+  static const _blurbInset = _washSize - _washOverhang - _pad + 10;
+
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
@@ -163,7 +229,6 @@ class _PillarCard extends StatelessWidget {
       onTap: () => _open(context, pillar.route),
       borderRadius: BorderRadius.circular(NmTokens.radius2xl),
       child: Container(
-        height: 262,
         decoration: BoxDecoration(
           color: t.surface,
           borderRadius: BorderRadius.circular(NmTokens.radius2xl),
@@ -175,11 +240,11 @@ class _PillarCard extends StatelessWidget {
             // A soft wash in the art's corner gives each card its own
             // temperature without colouring the text side.
             Positioned(
-              right: -40,
-              bottom: -40,
+              right: -_washOverhang,
+              bottom: -_washOverhang,
               child: Container(
-                width: 200,
-                height: 200,
+                width: _washSize,
+                height: _washSize,
                 decoration: BoxDecoration(
                   color: wash.withValues(alpha: 0.35),
                   shape: BoxShape.circle,
@@ -198,49 +263,65 @@ class _PillarCard extends StatelessWidget {
                 excludeFromSemantics: true,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(pillar.eyebrow, style: theme.textTheme.displayMedium),
-                  const SizedBox(height: 2),
-                  Text(
-                    pillar.title.toUpperCase(),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: t.accentText,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Kept clear of the art, which owns the right-hand corner.
-                  Padding(
-                    padding: const EdgeInsets.only(right: 110),
-                    child: Text(
-                      pillar.blurb,
-                      maxLines: 5,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: t.mutedForeground,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+            // The card grows with its text rather than cutting it off: the
+            // narrower blurb column wraps the longest blurb to five lines, and
+            // larger accessibility text sizes need more still. IntrinsicHeight
+            // resolves that height first, so the Spacer can still pin the call
+            // to action to the bottom of shorter cards.
+            IntrinsicHeight(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 262),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(_pad, 18, _pad, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        pillar.cta,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: t.foreground,
+                        pillar.eyebrow,
+                        style: theme.textTheme.displayMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        pillar.title.toUpperCase(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: t.accentText,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Icon(Icons.arrow_forward, size: 18, color: t.foreground),
+                      const SizedBox(height: 10),
+                      // Kept clear of the art, which owns the right-hand corner.
+                      Padding(
+                        padding: const EdgeInsets.only(right: _blurbInset),
+                        child: Text(
+                          pillar.blurb,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: t.mutedForeground,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            pillar.cta,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: t.foreground,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 18,
+                            color: t.foreground,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ],

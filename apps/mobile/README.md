@@ -18,7 +18,16 @@ flutter run --dart-define=API_BASE_URL=http://localhost:1133 \
 
 Both defines are optional in development: `AppConfig` falls back to the local
 stack, and swaps `localhost` for `10.0.2.2` on Android so an emulator can
-actually reach the host. Point them at staging or production for a real build.
+actually reach the host. Release builds default to the production API and web
+origins, so a direct physical-device install cannot accidentally call the
+phone's own `localhost`. Pass the defines explicitly to target staging or a
+different environment.
+
+```bash
+flutter run --release -d <device-id> \
+  --dart-define=API_BASE_URL=https://nutrimom-api.onrender.com \
+  --dart-define=WEB_BASE_URL=https://www.thenurturemoms.com
+```
 
 The API must be running (`pnpm dev` from the repo root, or
 `pnpm --filter api dev`).

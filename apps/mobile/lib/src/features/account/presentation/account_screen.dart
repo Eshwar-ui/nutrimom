@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../auth/application/auth_controller.dart';
 import 'edit_profile_screen.dart';
@@ -156,6 +157,13 @@ class AccountScreen extends ConsumerWidget {
               ),
               child: const Text('Sign out on all devices'),
             ),
+            TextButton(
+              onPressed: () => _confirmDeleteAccount(context, ref),
+              style: TextButton.styleFrom(
+                foregroundColor: context.tokens.danger,
+              ),
+              child: const Text('Delete account'),
+            ),
           ],
         ),
       ),
@@ -189,6 +197,44 @@ class AccountScreen extends ConsumerWidget {
     if (confirmed != true) return;
     await ref.read(authControllerProvider.notifier).signOutEverywhere();
     if (context.mounted) context.go('/');
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'This permanently removes your profile, sign-in, and personal contact details. '
+          'Order and payment records are retained in an anonymised form where required. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete account'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(authControllerProvider.notifier).deleteAccount();
+      if (context.mounted) context.go('/');
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 }
 

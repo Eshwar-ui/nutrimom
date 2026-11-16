@@ -16,7 +16,7 @@ void main() {
 
     test('Condition', () {
       expect(Condition.values.map((e) => e.wire), ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR']);
-      expect(Condition.isNew.label, 'New with tags');
+      expect(Condition.values.map((e) => e.label), ['New', 'Like new', 'Gently used', 'Well used']);
     });
 
     test('DeliveryOption', () {
@@ -71,7 +71,7 @@ void main() {
       expect(PayoutStatus.pending.label, 'On hold');
     });
 
-    test('NotificationType covers all nine events', () {
+    test('NotificationType covers all ten events', () {
       expect(NotificationType.values.map((e) => e.wire), [
         'LISTING_APPROVED',
         'LISTING_REJECTED',
@@ -82,7 +82,45 @@ void main() {
         'SELLER_REGISTERED',
         'MEMBERSHIP_EXPIRING',
         'MEMBERSHIP_EXPIRED',
+        'DONATION_OFFERED',
       ]);
+    });
+
+    test('ServiceGroup', () {
+      expect(ServiceGroup.values.map((e) => e.wire), [
+        'PRENATAL_YOGA', 'GARBHASANSKAR', 'COMBO', 'ONE_TO_ONE_YOGA',
+        'NUTRITION', 'STARTING_SOLIDS',
+      ]);
+      expect(ServiceGroup.combo.label, 'Prenatal Yoga + Garbhasanskar');
+    });
+
+    test('SessionFormat', () {
+      expect(
+        SessionFormat.values.map((e) => e.wire),
+        ['LIVE_GROUP', 'ONE_TO_ONE', 'RECORDED'],
+      );
+    });
+
+    test('FaqSection', () {
+      expect(FaqSection.values.map((e) => e.wire), [
+        'GENERAL', 'SESSIONS', 'NUTRITION', 'MARKETPLACE', 'PAYMENTS', 'DONATIONS',
+      ]);
+      expect(FaqSection.sessions.label, 'Sessions & booking');
+    });
+
+    test('DonationStatus', () {
+      expect(
+        DonationStatus.values.map((e) => e.wire),
+        ['NEW', 'CONTACTED', 'MATCHED', 'COMPLETED', 'DECLINED'],
+      );
+    });
+
+    test('HandoverPreference', () {
+      expect(
+        HandoverPreference.values.map((e) => e.wire),
+        ['PICKUP', 'DROP_OFF', 'EITHER'],
+      );
+      expect(HandoverPreference.dropOff.label, "I'll drop it off");
     });
 
     test('BlogCategory carries value, slug and label', () {
