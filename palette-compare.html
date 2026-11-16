@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palette Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Page chrome (neutral, so it doesn't bias either palette) ---------- */
+  :root {
+    --page-bg: #f4f4f2;
+    --page-fg: #1d1d1b;
+    --page-muted: #66665f;
+    --page-line: #dcdcd6;
+    --page-card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: "Outfit", system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.3rem); margin: 0 0 6px; }
+  h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.35rem; margin: 48px 0 6px; }
+  .lede { color: var(--page-muted); margin: 0 0 8px; max-width: 70ch; }
+  .note { color: var(--page-muted); font-size: .9rem; margin: 0 0 18px; max-width: 75ch; }
+  code { font-size: .85em; background: #ebebe6; padding: 1px 5px; border-radius: 4px; }
+
+  /* ---------- Two palettes as scoped tokens ---------- */
+  .theme-current {
+    --bg: #fdf6ee; --fg: #241c18; --surface: #ffffff; --surface-2: #f6ece0;
+    --primary: #456f50; --primary-fg: #fdf6ee;
+    --accent: #ef8377; --accent-fg: #3a2318; --accent-text: #a94740;
+    --sage: #a8c3a0; --beige: #efdcc8; --gold: #d8a84c;
+    --muted-fg: #75645a; --border: #ecdecd;
+  }
+  .theme-new {
+    --bg: #F7F3EA; --fg: #333D29; --surface: #FFFDF8; --surface-2: #EFE6D6;
+    --primary: #55704D; --primary-fg: #F7F3EA;
+    --accent: #D08A6C; --accent-fg: #2B2119; --accent-text: #A0512E;
+    --sage: #A8BFA0; --beige: #E6D7BF; --gold: #C9A55A;
+    --muted-fg: #66684F; --border: #E4DACA;
+  }
+
+  /* ---------- Swatch table ---------- */
+  .table { background: var(--page-card); border: 1px solid var(--page-line); border-radius: 14px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: minmax(130px, 1.1fr) 1fr 1fr; border-top: 1px solid var(--page-line); }
+  .row:first-child { border-top: 0; }
+  .row.head { background: #f9f9f6; font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: var(--page-muted); }
+  .cell { padding: 12px 14px; display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .role { font-weight: 500; }
+  .role small { display: block; color: var(--page-muted); font-weight: 400; font-size: .8rem; }
+  .chip { width: 44px; height: 44px; border-radius: 10px; flex: none; border: 1px solid rgba(0,0,0,.08); }
+  .hex { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
+  .src { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 99px; margin-top: 2px; }
+  .src.brief { background: #e3efe0; color: #2f5130; }
+  .src.prop { background: #f6e8dc; color: #7a3f20; }
+  .src.same { background: #ececec; color: #555; }
+
+  /* ---------- Side-by-side mocks ---------- */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .panel-label { font-weight: 600; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .panel-label span { color: var(--page-muted); font-weight: 400; font-size: .85rem; }
+  .panel {
+    background: var(--bg); color: var(--fg);
+    border-radius: 18px; padding: 18px; border: 1px solid var(--page-line);
+    display: grid; gap: 16px;
+  }
+  .nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: .82rem; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .nav a { color: var(--fg); text-decoration: none; }
+  .nav a.active { color: var(--primary); font-weight: 600; }
+  .nav .cta { margin-left: auto; background: var(--primary); color: var(--primary-fg); padding: 6px 12px; border-radius: 99px; font-weight: 600; }
+
+  .hero { background: var(--surface-2); border-radius: 14px; padding: 22px 18px; }
+  .hero h3 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.45rem; line-height: 1.15; margin: 0 0 8px; }
+  .hero p { margin: 0 0 14px; color: var(--muted-fg); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { border: 0; font: inherit; font-weight: 600; font-size: .9rem; padding: 10px 16px; border-radius: 99px; cursor: default; }
+  .btn.primary { background: var(--primary); color: var(--primary-fg); }
+  .btn.outline { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1.5px var(--fg); }
+  .btn.accent { background: var(--accent); color: var(--accent-fg); }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .card.best { box-shadow: inset 0 0 0 2px var(--primary); }
+  .tag { display: inline-block; font-size: .7rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; padding: 3px 8px; border-radius: 99px; }
+  .tag.best { background: var(--primary); color: var(--primary-fg); }
+  .tag.offer { background: var(--accent); color: var(--accent-fg); }
+  .tag.intro { background: var(--sage); color: var(--fg); }
+  .card h4 { margin: 10px 0 2px; font-size: 1rem; }
+  .card .meta { color: var(--muted-fg); font-size: .8rem; margin: 0 0 10px; }
+  .price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .price .now { font-family: "Fraunces", Georgia, serif; font-size: 1.6rem; font-weight: 600; }
+  .price .now.offer { color: var(--accent-text); }
+  .price .was { text-decoration: line-through; color: var(--muted-fg); font-size: .9rem; }
+  .save { font-size: .78rem; color: var(--accent-text); font-weight: 600; margin: 0 0 10px; }
+  .card .btn { width: 100%; }
+
+  .listing { display: grid; grid-template-columns: 88px 1fr; gap: 12px; align-items: center; }
+  .thumb { aspect-ratio: 1; border-radius: 10px; background: linear-gradient(135deg, var(--sage), var(--beige)); }
+  .listing h4 { margin: 0 0 2px; font-size: .95rem; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .pill { font-size: .72rem; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--fg); border: 1px solid var(--border); }
+  .loc { color: var(--muted-fg); font-size: .8rem; }
+
+  .strip { display: grid; grid-template-columns: repeat(6, 1fr); border-radius: 10px; overflow: hidden; height: 34px; }
+
+  /* ---------- Contrast table ---------- */
+  .contrast td, .contrast th { padding: 9px 12px; text-align: left; border-top: 1px solid var(--page-line); font-size: .9rem; }
+  .contrast { width: 100%; border-collapse: collapse; background: var(--page-card); border: 1px solid var(--page-line); border-radius: 14px; overflow: hidden; }
+  .contrast th { background: #f9f9f6; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--page-muted); border-top: 0; }
+  .pair { display: inline-flex; align-items: center; justify-content: center; min-width: 54px; height: 26px; border-radius: 6px; font-weight: 600; font-size: .85rem; padding: 0 8px; border: 1px solid rgba(0,0,0,.08); }
+  .pass { color: #2f6b34; font-weight: 600; }
+  .fail { color: #a3332b; font-weight: 600; }
+  .scroll { overflow-x: auto; }
+
+  @media (max-width: 820px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 460px) {
+    .cards { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 1fr 1fr; }
+    .row .cell.role-cell { grid-column: 1 / -1; padding-bottom: 0; }
+    .row.head .cell.role-cell { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Current palette vs the brief's palette</h1>
+  <p class="lede">Left: the colours the live site uses today (from <code>apps/web/src/app/globals.css</code>). Right: the client brief's palette. The same components are drawn in both so you can compare them in context, not only as swatches.</p>
+  <p class="note">The brief gives exact hex codes only for <b>sage #A8BFA0</b> and <b>cream #F7F3EA</b>. "Warm beige", "soft terracotta" and "dark olive green" are named without codes, so the values on the right are my proposals (marked <span class="src prop">proposed</span>). Fonts are the site's current Fraunces + Outfit in both columns, so you're only comparing colour.</p>
+
+  <!-- ================= Swatches ================= -->
+  <h2>Swatches by role</h2>
+  <p class="note">"Role" is the job the colour does on the site. Changing the palette means changing these values in one place.</p>
+  <div class="table" id="swatches">
+    <div class="row head">
+      <div class="cell role-cell">Role</div>
+      <div class="cell">Current</div>
+      <div class="cell">Brief / proposed</div>
+    </div>
+  </div>
+
+  <!-- ================= Side by side ================= -->
+  <h2>Same page, both palettes</h2>
+  <p class="note">The header, home hero, pricing cards (including the brief's Best-Value, Special Offer and Introductory Price labels) and a marketplace listing card.</p>
+  <div class="compare">
+    <div>
+      <p class="panel-label">Current <span>forest green · coral · cream</span></p>
+      <div class="panel theme-current" data-mock></div>
+    </div>
+    <div>
+      <p class="panel-label">Brief <span>sage · cream · beige · terracotta · dark olive</span></p>
+      <div class="panel theme-new" data-mock></div>
+    </div>
+  </div>
+
+  <!-- ================= Contrast ================= -->
+  <h2>Readability check (WCAG contrast)</h2>
+  <p class="note">Normal text needs a ratio of at least <b>4.5</b> and large text or icons at least <b>3.0</b>. The brief's sage #A8BFA0 can't take white button text (about 2:1). That's why the proposal uses a deeper sage, <b>#55704D</b>, for buttons and keeps #A8BFA0 for backgrounds and accents.</p>
+  <div class="scroll">
+    <table class="contrast" id="contrast">
+      <thead><tr><th>Pairing</th><th>Current</th><th>Ratio</th><th>Brief / proposed</th><th>Ratio</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const CURRENT = {
+    bg: "#fdf6ee", fg: "#241c18", surface: "#ffffff", surface2: "#f6ece0",
+    primary: "#456f50", primaryFg: "#fdf6ee", accent: "#ef8377", accentFg: "#3a2318",
+    accentText: "#a94740", sage: "#a8c3a0", beige: "#efdcc8", gold: "#d8a84c",
+    mutedFg: "#75645a", border: "#ecdecd",
+  };
+  const NEW = {
+    bg: "#F7F3EA", fg: "#333D29", surface: "#FFFDF8", surface2: "#EFE6D6",
+    primary: "#55704D", primaryFg: "#F7F3EA", accent: "#D08A6C", accentFg: "#2B2119",
+    accentText: "#A0512E", sage: "#A8BFA0", beige: "#E6D7BF", gold: "#C9A55A",
+    mutedFg: "#66684F", border: "#E4DACA",
+  };
+
+  // [key, role, description, source on the new side: brief | prop]
+  const ROLES = [
+    ["bg", "Page background", "behind everything", "brief"],
+    ["fg", "Text", "headings and body", "prop"],
+    ["surface", "Card", "cards, header bar", "prop"],
+    ["surface2", "Soft section", "hero band, chips", "prop"],
+    ["beige", "Warm beige", "decorative fills", "prop"],
+    ["sage", "Sage", "accents, tags, fills", "brief"],
+    ["primary", "Button / brand", "main buttons, links", "prop"],
+    ["accent", "Terracotta / accent", "offer labels, highlights", "prop"],
+    ["accentText", "Offer price text", "terracotta readable on cream", "prop"],
+    ["mutedFg", "Secondary text", "captions, meta", "prop"],
+    ["border", "Border", "card and input edges", "prop"],
+    ["gold", "Gold", "small decorative touches", "prop"],
+  ];
+
+  const table = document.getElementById("swatches");
+  for (const [key, role, desc, src] of ROLES) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="cell role-cell"><div class="role">${role}<small>${desc}</small></div></div>
+      <div class="cell"><span class="chip" style="background:${CURRENT[key]}"></span><span class="hex">${CURRENT[key].toUpperCase()}</span></div>
+      <div class="cell"><span class="chip" style="background:${NEW[key]}"></span><span><span class="hex">${NEW[key].toUpperCase()}</span><br><span class="src ${src}">${src === "brief" ? "from brief" : "proposed"}</span></span></div>`;
+    table.appendChild(row);
+  }
+
+  const MOCK = `
+    <nav class="nav" aria-label="Sample header">
+      <a class="active">Home</a><a>Yoga &amp; Garbhasanskar</a><a>Nutrition</a><a>Community</a>
+      <a>Preloved</a><a>Blog</a><a>Offers</a><a>About</a>
+      <span class="cta">Book a Session</span>
+    </nav>
+
+    <section class="hero">
+      <h3>From pregnancy to toddlerhood, you're not alone.</h3>
+      <p>A nurturing space for every mother, every journey, and every stage.</p>
+      <div class="btns">
+        <button class="btn primary">Explore Services</button>
+        <button class="btn outline">Shop Preloved</button>
+      </div>
+    </section>
+
+    <div class="cards">
+      <article class="card best">
+        <span class="tag best">Best value</span>
+        <h4>Prenatal Yoga + Garbhasanskar</h4>
+        <p class="meta">8 yoga classes + 4 sessions · valid 30 days</p>
+        <div class="price"><span class="now">₹1,499</span></div>
+        <p class="save">&nbsp;</p>
+        <button class="btn primary">Book Now</button>
+      </article>
+      <article class="card">
+        <span class="tag offer">Special offer</span>
+        <h4>4-Class Package</h4>
+        <p class="meta">4 live group classes · 60 min</p>
+        <div class="price"><span class="now offer">₹499</span><span class="was">₹599</span></div>
+        <p class="save">Save ₹100 (17%) · ends 30 Nov</p>
+        <button class="btn primary">Book Now</button>
+      </article>
+      <article class="card">
+        <span class="tag intro">Introductory price</span>
+        <h4>Trial Class</h4>
+        <p class="meta">1 live group class · 45 min</p>
+        <div class="price"><span class="now">₹99</span></div>
+        <p class="save">&nbsp;</p>
+        <button class="btn outline">Enquire</button>
+      </article>
+      <article class="card">
+        <div class="listing">
+          <div class="thumb" aria-hidden="true"></div>
+          <div>
+            <h4>Wooden stacking toy set</h4>
+            <div class="price"><span class="now" style="font-size:1.2rem">₹450</span></div>
+            <div class="loc">Hyderabad · Kondapur</div>
+          </div>
+        </div>
+        <div class="chips"><span class="pill">Like new</span><span class="pill">Delivery</span><span class="pill">Available</span></div>
+      </article>
+    </div>
+
+    <div class="strip" aria-hidden="true">
+      <span style="background:var(--primary)"></span><span style="background:var(--sage)"></span>
+      <span style="background:var(--beige)"></span><span style="background:var(--accent)"></span>
+      <span style="background:var(--gold)"></span><span style="background:var(--fg)"></span>
+    </div>`;
+  document.querySelectorAll("[data-mock]").forEach((el) => (el.innerHTML = MOCK));
+
+  // ---- WCAG contrast ----
+  const lum = (hex) => {
+    const n = hex.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+
+  // [label, fgKey, bgKey, minimum]
+  const PAIRS = [
+    ["Body text on page", "fg", "bg", 4.5],
+    ["Secondary text on page", "mutedFg", "bg", 4.5],
+    ["Button text on button", "primaryFg", "primary", 4.5],
+    ["Link / brand colour on page", "primary", "bg", 4.5],
+    ["Offer price on card", "accentText", "surface", 4.5],
+    ["Text on accent label", "accentFg", "accent", 4.5],
+    ["Text on sage tag", "fg", "sage", 4.5],
+  ];
+  const tbody = document.querySelector("#contrast tbody");
+  const cell = (pal, f, b, min) => {
+    const r = ratio(pal[f], pal[b]);
+    return `<td><span class="pair" style="color:${pal[f]};background:${pal[b]}">Aa</span></td>
+            <td class="${r >= min ? "pass" : "fail"}">${r.toFixed(2)} ${r >= min ? "✓" : "✗"}</td>`;
+  };
+  for (const [label, f, b, min] of PAIRS) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${label}</td>${cell(CURRENT, f, b, min)}${cell(NEW, f, b, min)}`;
+    tbody.appendChild(tr);
+  }
+  // The brief's raw sage as a button colour, to show why it isn't used for buttons.
+  const raw = ratio("#FFFFFF", "#A8BFA0");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>White text on raw sage #A8BFA0 <small style="color:var(--page-muted)">(why sage isn't the button colour)</small></td>
+    <td>—</td><td>—</td>
+    <td><span class="pair" style="color:#fff;background:#A8BFA0">Aa</span></td>
+    <td class="${raw >= 4.5 ? "pass" : "fail"}">${raw.toFixed(2)} ${raw >= 4.5 ? "✓" : "✗"}</td>`;
+  tbody.appendChild(tr);
+</script>
+</body>
+</html>
