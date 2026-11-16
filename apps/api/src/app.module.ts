@@ -21,6 +21,8 @@ import { SettingsModule } from './settings/settings.module';
 import { PayoutsModule } from './payouts/payouts.module';
 import { BlogModule } from './blog/blog.module';
 import { ContactModule } from './contact/contact.module';
+import { DonationsModule } from './donations/donations.module';
+import { ContentModule } from './content/content.module';
 import { ErrorReporter } from './common/errors/error-reporter';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 import { AppController } from './app.controller';
@@ -50,6 +52,8 @@ import { AppService } from './app.service';
     PayoutsModule,
     BlogModule,
     ContactModule,
+    DonationsModule,
+    ContentModule,
   ],
   controllers: [AppController],
   providers: [

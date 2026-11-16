@@ -17,6 +17,11 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const POLICY_ID = 'global';
 
+/** What the public `GET /payout-policy` returns — the rate and nothing else. */
+export interface PublicPayoutPolicy {
+  commissionBps: number;
+}
+
 @Injectable()
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,6 +56,16 @@ export class SettingsService {
       where: { id: POLICY_ID },
     });
     return toPayoutDto(row);
+  }
+
+  /**
+   * The commission rate as published to buyers and sellers (/preloved, /faq).
+   * Only the rate itself: the row's `updatedAt` is an admin detail with no
+   * meaning on a public page.
+   */
+  async getPublicPayoutPolicy(): Promise<PublicPayoutPolicy> {
+    const { commissionBps } = await this.getPayoutPolicy();
+    return { commissionBps };
   }
 
   async updatePayoutPolicy(input: PayoutPolicyInput): Promise<PayoutPolicy> {

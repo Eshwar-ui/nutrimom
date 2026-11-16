@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Patch,
@@ -35,6 +36,12 @@ export class UsersController {
   ) {
     const updated = await this.users.updateProfile(user.id, dto);
     return this.users.toAuthUser(updated);
+  }
+
+  @Delete('me')
+  async deleteMe(@CurrentUser() user: RequestUser) {
+    await this.users.deleteAccount(user.id);
+    return { ok: true };
   }
 
   @Post('me/request-seller-verification')

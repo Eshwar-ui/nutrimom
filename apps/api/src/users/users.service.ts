@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import type {
   Role,
   AuthUser,
@@ -42,8 +43,69 @@ export class UsersService {
         whatsappNumber: dto.whatsappNumber || null,
         city: dto.city || null,
         bio: dto.bio || null,
+        // Only when sent: a client that doesn't know these fields (the
+        // mobile app's profile screen) must not wipe the seller's defaults.
+        ...(dto.locality !== undefined
+          ? { locality: dto.locality || null }
+          : {}),
+        ...(dto.pincode !== undefined ? { pincode: dto.pincode || null } : {}),
       },
     });
+  }
+
+  /**
+   * Fulfil an authenticated account-deletion request without breaking order,
+   * payout, or listing foreign keys. Personal fields are removed, the login
+   * identity is replaced with a unique tombstone address, and all refresh
+   * tokens are revoked through tokenVersion.
+   */
+  async deleteAccount(id: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true, isSystemSeller: true, deletedAt: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === 'ADMIN' || user.isSystemSeller) {
+      throw new BadRequestException(
+        'This account cannot be deleted from the customer app.',
+      );
+    }
+    if (user.deletedAt) return;
+
+    const tombstoneEmail = `deleted-${id}@deleted.invalid`;
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: {
+          email: tombstoneEmail,
+          passwordHash: randomBytes(48).toString('hex'),
+          name: 'Deleted account',
+          whatsappNumber: null,
+          city: null,
+          locality: null,
+          pincode: null,
+          bio: null,
+          isSellerVerified: false,
+          sellerVerificationRequestedAt: null,
+          registrationPaidAt: null,
+          tokenVersion: { increment: 1 },
+          deletedAt: new Date(),
+        },
+      }),
+      // Donation offers keep a snapshot of the contact details the donor
+      // typed, separate from the user row — scrub those too, or the account
+      // is "deleted" while her name, email and phone sit in the admin queue.
+      // The offer itself stays (the admin may be mid-match); the columns are
+      // required, so they get the same tombstone values rather than null.
+      this.prisma.donationOffer.updateMany({
+        where: { donorId: id },
+        data: {
+          contactName: 'Deleted account',
+          contactEmail: tombstoneEmail,
+          contactPhone: '',
+        },
+      }),
+    ]);
   }
 
   async adminList(): Promise<AdminUser[]> {
@@ -233,6 +295,8 @@ export class UsersService {
       sellerVerificationRequestedAt:
         user.sellerVerificationRequestedAt?.toISOString() ?? null,
       registrationPaidAt: user.registrationPaidAt?.toISOString() ?? null,
+      locality: user.locality,
+      pincode: user.pincode,
     };
   }
 }

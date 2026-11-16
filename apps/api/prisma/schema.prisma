@@ -92,6 +92,7 @@ enum NotificationType {
   SELLER_REGISTERED // to the admin, on the ₹100 registration payment
   MEMBERSHIP_EXPIRING // to the seller, before their listing window lapses
   MEMBERSHIP_EXPIRED // to the seller, once it has lapsed
+  DONATION_OFFERED // to the admin, when a mother submits a DonationOffer
 }
 
 model User {
@@ -103,6 +104,11 @@ model User {
   // Seller profile
   whatsappNumber                String?
   city                          String?
+  // Seller defaults prefilled into every new listing's location fields. Same
+  // privacy rule as Listing: locality is an area, never a house address, and
+  // pincode is never shown publicly.
+  locality                      String?
+  pincode                       String?
   bio                           String?
   isSellerVerified              Boolean        @default(false)
   sellerVerificationRequestedAt DateTime?
@@ -118,6 +124,9 @@ model User {
   // mismatch. Access tokens are not checked against it (that would mean a DB
   // read per request); their 15-minute TTL is what bounds the window.
   tokenVersion                  Int            @default(0)
+  // Personal data is anonymised on account deletion while financial/order
+  // records remain referentially intact.
+  deletedAt                     DateTime?
   listings                      Listing[]
   orders                        Order[]
   wishlist                      WishlistItem[]
@@ -128,6 +137,7 @@ model User {
   memberships                   SellerMembership[]
   payouts                       SellerPayout[]
   passwordResetTokens           PasswordResetToken[]
+  donationOffers                DonationOffer[]
   createdAt                     DateTime       @default(now())
 }
 
@@ -146,10 +156,11 @@ model PasswordResetToken {
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String
-  slug     String    @unique
-  listings Listing[]
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  listings       Listing[]
+  donationOffers DonationOffer[]
 }
 
 model Listing {
@@ -167,6 +178,16 @@ model Listing {
   usageDuration        String? // free text, e.g. "6 months"
   reasonForSelling     String?
   city                 String
+  // Area or neighbourhood ("Koramangala"), shown publicly as "City · Locality".
+  // Never a house address — the seller form says so, and buyers only need it
+  // to judge whether a pickup is realistic.
+  locality             String?
+  // 6-digit Indian PIN, format-checked only (no PIN-to-city lookup). Used for
+  // filtering, and NEVER displayed publicly or sent in the public Listing DTO:
+  // a PIN plus a locality narrows a seller's home down further than a buyer
+  // needs before they've even made contact. Nullable — listings predating the
+  // redesign, and anything posted by the mobile app, have none.
+  pincode              String?
   deliveryOption       DeliveryOption @default(PICKUP)
   images               String[] // up to 10, enforced in app
   status               ListingStatus  @default(PENDING)
@@ -194,6 +215,10 @@ model Listing {
   @@index([status])
   @@index([isFeatured])
   @@index([holdOrderId])
+  // Browse filters by city (case-insensitive exact match) within live
+  // listings, and GET /listings/locations groups live listings by city.
+  @@index([status, city])
+  @@index([pincode])
 }
 
 model WishlistItem {
@@ -513,19 +538,224 @@ enum EnquiryService {
 }
 
 model ContactMessage {
-  id        String               @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  subject   String
-  message   String
-  status    ContactMessageStatus @default(NEW)
+  id               String               @id @default(cuid())
+  name             String
+  email            String
+  phone            String?
+  subject          String
+  message          String
+  status           ContactMessageStatus @default(NEW)
   // Which service page sent this enquiry. Nullable: the footer contact link
   // belongs to no service, and every message predating this column has none
   // — backfilling a guess would invent an attribution nobody recorded.
-  service   EnquiryService?
-  createdAt DateTime             @default(now())
+  service          EnquiryService?
+  // The package and price the mother was shown when she enquired, snapshotted
+  // server-side at submit time from ServicePackage via resolvePackagePrice —
+  // the client sends only packageId, never a price. packageId is a plain
+  // column, not a foreign key: a package can be edited or deleted later, and
+  // the record of what was quoted has to survive that unchanged.
+  packageId        String?
+  packageName      String?
+  quotedPricePaise Int?
+  createdAt        DateTime             @default(now())
 
   @@index([status])
   @@index([service, createdAt])
+}
+
+// ------------------------------------------------------------------
+// Redesign content (REDESIGN-PLAN.md phases 1b, 3, 6)
+// ------------------------------------------------------------------
+
+// Which pricing block a ServicePackage belongs to on the service pages. A
+// fixed enum rather than free text because each group is a section of a
+// page in code — a typo in the admin form would create a group nobody renders.
+enum ServiceGroup {
+  PRENATAL_YOGA
+  GARBHASANSKAR
+  COMBO // Prenatal Yoga + Garbhasanskar bundled
+  ONE_TO_ONE_YOGA
+  NUTRITION
+  STARTING_SOLIDS
+}
+
+enum SessionFormat {
+  LIVE_GROUP
+  ONE_TO_ONE
+  RECORDED
+}
+
+// A bookable session package with an admin-editable price. Sessions are not
+// paid online: "Book Now" opens WhatsApp / the enquiry form with the package
+// and its current price prefilled, and the quoted price is snapshotted onto
+// the ContactMessage. What a card shows is always resolvePackagePrice() in
+// shared — never these columns read directly — so the card, the WhatsApp
+// message and the enquiry snapshot cannot disagree.
+model ServicePackage {
+  id              String        @id @default(cuid())
+  group           ServiceGroup
+  name            String // "Monthly Combo"
+  summary         String
+  includes        String[] // bullet list on the card
+  sessionCount    Int?
+  // Null until the client confirms durations; the card omits what it lacks.
+  sessionMinutes  Int?
+  validityDays    Int?
+  format          SessionFormat
+  pricePaise      Int // the regular price
+  // When pricePaise last changed. The service must bump it whenever the
+  // regular price changes. Advertising a struck-through "regular" price that
+  // was never genuinely charged is forbidden by the brief (§9); software can't
+  // prove what was charged, so this date drives a soft admin warning
+  // (offerSavingsWarning in shared) instead.
+  priceSince      DateTime      @default(now())
+  offerPricePaise Int? // must be < pricePaise (validated in shared)
+  offerLabel      String? // null → "Special Offer"
+  // Past → the offer disappears by itself; null with an offer price set →
+  // open-ended offer.
+  offerEndsAt     DateTime?
+  // "Introductory Price" label, never a strikethrough. Mutually exclusive
+  // with an offer (validated in shared and re-checked in the service).
+  isIntroductory  Boolean       @default(false)
+  isBestValue     Boolean       @default(false)
+  isActive        Boolean       @default(true)
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([group, isActive, sortOrder])
+}
+
+// A partner brand discount on the /offers page. Expired rows are filtered out
+// by the public API so an expired code can never show by accident.
+model PartnerOffer {
+  id          String    @id @default(cuid())
+  brandName   String
+  logoUrl     String?
+  description String
+  benefit     String // the verified discount, e.g. "15% off your first order"
+  couponCode  String?
+  url         String // https only (validated in shared)
+  // Affiliate links render with rel="sponsored" and an "Affiliate link" chip.
+  isAffiliate Boolean   @default(false)
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum FaqSection {
+  GENERAL
+  SESSIONS
+  NUTRITION
+  MARKETPLACE
+  PAYMENTS
+  DONATIONS
+}
+
+// Static FAQ answers. Answers that quote live values (the cancellation window,
+// membership prices) are deliberately NOT stored here — the /faq page renders
+// those from code, so a stored copy can never contradict what is enforced.
+model Faq {
+  id          String     @id @default(cuid())
+  section     FaqSection
+  question    String
+  answer      String // markdown
+  sortOrder   Int        @default(0)
+  isPublished Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([section, isPublished, sortOrder])
+}
+
+model Testimonial {
+  id               String   @id @default(cuid())
+  name             String
+  context          String? // "Prenatal yoga · Hyderabad"
+  quote            String
+  photoUrl         String?
+  // The brief forbids publishing a testimonial without the mother's
+  // permission. Publishing requires this to be true (validated in shared and
+  // re-checked in the service); the public read also filters on it.
+  consentConfirmed Boolean  @default(false)
+  isPublished      Boolean  @default(false)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isPublished, sortOrder])
+}
+
+// Single global row (id is always "global"), like BusinessProfile — the
+// admin-editable copy and links the layout reads. A section whose field is
+// null/empty stays hidden, so a placeholder never goes live.
+model SiteContent {
+  id                   String   @id @default("global")
+  heroHeadline         String
+  heroSubline          String
+  heroMessage          String
+  heroImageUrl         String?
+  heroImageAlt         String?
+  aboutMission         String?
+  // [{ name, role, photoUrl?, bio, qualifications: string[] }] — shape
+  // validated by siteContentInputSchema in shared. Qualifications must be
+  // verified before they are entered; the About page prints them as fact.
+  founders             Json     @default("[]")
+  // [{ url, alt, caption? }]
+  galleryImages        Json     @default("[]")
+  instagramUrl         String?
+  youtubeUrl           String?
+  whatsappCommunityUrl String?
+  whatsappPrelovedUrl  String?
+  // Markdown: cancellation, rescheduling and refunds for sessions (§10).
+  sessionPolicy        String?
+  updatedAt            DateTime @updatedAt
+}
+
+enum DonationStatus {
+  NEW
+  CONTACTED
+  MATCHED
+  COMPLETED
+  DECLINED
+}
+
+enum HandoverPreference {
+  PICKUP
+  DROP_OFF
+  EITHER
+}
+
+// An item a mother offers to donate. Donations are matched by hand by the
+// admin — they never appear in the listing grid and are not searchable.
+model DonationOffer {
+  id               String             @id @default(cuid())
+  donor            User               @relation(fields: [donorId], references: [id])
+  donorId          String
+  // Contact snapshot at submit time — the donor may edit their profile later,
+  // and the admin needs the details she actually gave for this offer.
+  contactName      String
+  contactEmail     String
+  contactPhone     String
+  city             String
+  locality         String?
+  pincode          String // never displayed publicly
+  // SetNull: deleting a category must not delete the offer behind it.
+  category         Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId       String?
+  itemsDescription String
+  condition        Condition
+  images           String[]
+  handover         HandoverPreference
+  status           DonationStatus     @default(NEW)
+  adminNote        String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([status, createdAt])
+  @@index([donorId])
 }

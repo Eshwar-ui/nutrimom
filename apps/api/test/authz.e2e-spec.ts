@@ -18,7 +18,7 @@ import { createTestApp, type TestApp } from './test-app';
  * subject, not this one's.
  */
 
-type Method = 'get' | 'post' | 'patch' | 'delete';
+type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 interface Route {
   method: Method;
   path: string;
@@ -43,11 +43,18 @@ const PUBLIC_ROUTES: Route[] = [
   r('get', '/blog/some-slug'),
   r('get', '/categories'),
   r('get', '/listings'),
+  r('get', '/listings/locations'),
   r('get', '/listings/l1'),
   r('get', '/sellers/s1'),
   r('get', '/sellers/s1/reviews'),
   r('get', '/cancellation-policy'),
+  r('get', '/payout-policy'),
   r('get', '/business-profile'),
+  r('get', '/services/packages'),
+  r('get', '/offers'),
+  r('get', '/faqs'),
+  r('get', '/testimonials'),
+  r('get', '/site-content'),
 
   // Unauthenticated by necessity — these are how a caller *becomes*
   // authenticated, or how an outside system reaches us.
@@ -107,6 +114,9 @@ const AUTHENTICATED_ROUTES: Route[] = [
   r('get', '/wishlist'),
   r('get', '/wishlist/ids'),
   r('post', '/wishlist/toggle', { listingId: 'l1' }),
+
+  r('post', '/donations'),
+  r('get', '/donations/mine'),
 ];
 
 /** Admins only — a customer token must be refused with 403. */
@@ -124,6 +134,10 @@ const ADMIN_ROUTES: Route[] = [
 
   r('get', '/admin/contact-messages'),
   r('patch', '/admin/contact-messages/m1/status'),
+
+  r('get', '/admin/donations'),
+  r('get', '/admin/donations/d1'),
+  r('patch', '/admin/donations/d1'),
 
   r('get', '/admin/listings'),
   r('post', '/admin/listings'),
@@ -146,6 +160,25 @@ const ADMIN_ROUTES: Route[] = [
   r('patch', '/admin/business-profile'),
   r('get', '/admin/payout-policy'),
   r('patch', '/admin/payout-policy'),
+
+  r('get', '/admin/services/packages'),
+  r('post', '/admin/services/packages'),
+  r('put', '/admin/services/packages/p1'),
+  r('delete', '/admin/services/packages/p1'),
+  r('get', '/admin/offers'),
+  r('post', '/admin/offers'),
+  r('put', '/admin/offers/o1'),
+  r('delete', '/admin/offers/o1'),
+  r('get', '/admin/faqs'),
+  r('post', '/admin/faqs'),
+  r('put', '/admin/faqs/f1'),
+  r('delete', '/admin/faqs/f1'),
+  r('get', '/admin/testimonials'),
+  r('post', '/admin/testimonials'),
+  r('put', '/admin/testimonials/t1'),
+  r('delete', '/admin/testimonials/t1'),
+  r('put', '/admin/site-content'),
+  r('post', '/admin/uploads'),
 ];
 
 describe('Route authorization', () => {
@@ -315,9 +348,9 @@ describe('Route authorization', () => {
       // A tripwire: if these counts drift the table has gone stale relative
       // to the controllers, which is exactly when a new route slips in
       // unguarded.
-      expect(PUBLIC_ROUTES.length).toBe(17);
-      expect(AUTHENTICATED_ROUTES.length).toBe(35);
-      expect(ADMIN_ROUTES.length).toBe(28);
+      expect(PUBLIC_ROUTES.length).toBe(24);
+      expect(AUTHENTICATED_ROUTES.length).toBe(37);
+      expect(ADMIN_ROUTES.length).toBe(49);
     });
 
     it('lists no route twice', () => {

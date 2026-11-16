@@ -21,6 +21,14 @@ export class ListingsController {
     return this.listings.browse(query);
   }
 
+  // Declared before ':id' so "locations" isn't read as a listing id.
+  @Get('locations')
+  locations(@Query('city') city?: string) {
+    return this.listings.locations(
+      typeof city === 'string' ? city.slice(0, 80) : undefined,
+    );
+  }
+
   // Public, but token-aware: an admin reviewing a PENDING listing and a seller
   // previewing their own must both be able to open it, while everyone else
   // still gets a 404 for anything not live.

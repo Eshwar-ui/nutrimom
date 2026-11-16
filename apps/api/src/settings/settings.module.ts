@@ -4,6 +4,7 @@ import {
   SettingsController,
   AdminSettingsController,
   AdminPayoutPolicyController,
+  PayoutPolicyController,
   BusinessProfileController,
   AdminBusinessProfileController,
 } from './settings.controller';
@@ -14,6 +15,7 @@ import {
     SettingsController,
     AdminSettingsController,
     AdminPayoutPolicyController,
+    PayoutPolicyController,
     BusinessProfileController,
     AdminBusinessProfileController,
   ],

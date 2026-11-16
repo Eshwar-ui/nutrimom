@@ -232,6 +232,44 @@ describe("listingInputSchema", () => {
     }
   });
 
+  it("asks for a price in rupees when the box is empty or not a number", () => {
+    // The web form sends NaN for an empty field; the raw Zod text for that is
+    // "Expected number, received nan".
+    for (const sellingPriceInPaise of [Number.NaN, undefined, "abc"]) {
+      const result = listingInputSchema.safeParse({
+        ...valid,
+        sellingPriceInPaise,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path).toEqual(["sellingPriceInPaise"]);
+        expect(result.error.issues[0].message).toBe("Enter a price in rupees");
+      }
+    }
+  });
+
+  it("explains a zero price instead of quoting the raw bound", () => {
+    const result = listingInputSchema.safeParse({
+      ...valid,
+      sellingPriceInPaise: 0,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("Enter a price above ₹0");
+    }
+  });
+
+  it("gives the optional original price a friendly message too", () => {
+    const result = listingInputSchema.safeParse({
+      ...valid,
+      originalPriceInPaise: Number.NaN,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toMatch(/original price in rupees/);
+    }
+  });
+
   it("rejects a fractional paise price", () => {
     expect(
       listingInputSchema.safeParse({ ...valid, sellingPriceInPaise: 120000.5 })

@@ -71,8 +71,23 @@ export class AdminBusinessProfileController {
   }
 }
 
-// Admin-only: the commission rate is the marketplace's own margin, never
-// exposed to buyers or sellers as an editable value.
+// Public and unauthenticated, read-only. The commission is published policy:
+// /preloved and /faq tell sellers what share of a sale they keep, and they
+// quote it from this row so an admin edit can't leave the page promising a
+// rate the payout ledger no longer snapshots. Only `commissionBps` is exposed —
+// mirrors the public `GET /cancellation-policy` above.
+@Controller('payout-policy')
+export class PayoutPolicyController {
+  constructor(private readonly settings: SettingsService) {}
+
+  @Get()
+  get() {
+    return this.settings.getPublicPayoutPolicy();
+  }
+}
+
+// Admin-only writes: the rate is readable by anyone (above) but only an admin
+// can change it.
 @Controller('admin/payout-policy')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)

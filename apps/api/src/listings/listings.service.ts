@@ -5,13 +5,16 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Listing as ListingRecord } from '@prisma/client';
+import { normaliseCity } from '@nutrimom/shared';
 import type {
   Listing,
   ListingInput,
+  ListingLocations,
   ListingQuery,
   ListingUpdateInput,
   ModerateListingInput,
+  OwnerListing,
   Paginated,
   SellerContact,
   SellerProfile,
@@ -38,6 +41,21 @@ type ListingRow = Prisma.ListingGetPayload<{ include: typeof withRefs }>;
 // Statuses a buyer is allowed to see on a detail page.
 const PUBLIC_STATUSES = ['APPROVED', 'RESERVED', 'SOLD'] as const;
 
+// Statuses that count as "has listings here" for GET /listings/locations: on
+// the market now, or held for a buyer and likely back on it if they don't pay.
+const LIVE_STATUSES = ['APPROVED', 'RESERVED'] as const;
+
+/**
+ * Fields a seller may change on a live listing without sending it back to
+ * moderation — see update().
+ */
+const LOCATION_FIELDS: ReadonlySet<string> = new Set([
+  'city',
+  'locality',
+  'pincode',
+  'deliveryOption',
+]);
+
 @Injectable()
 export class ListingsService {
   constructor(
@@ -52,7 +70,14 @@ export class ListingsService {
     if (query.condition) where.condition = query.condition;
     if (query.delivery) where.deliveryOption = query.delivery;
     if (query.featured) where.isFeatured = true;
-    if (query.city) where.city = { contains: query.city, mode: 'insensitive' };
+    // Exact (case-insensitive) rather than contains: "Delhi" must not also
+    // return "New Delhi". Matches both the spelling given and its canonical
+    // form, so "Bangalore" finds listings saved as "Bengaluru" and any legacy
+    // rows saved before city names were normalised.
+    if (query.city?.trim()) Object.assign(where, cityWhere(query.city));
+    if (query.locality?.trim())
+      where.locality = { contains: query.locality.trim(), mode: 'insensitive' };
+    if (query.pincode) where.pincode = query.pincode;
     if (query.search)
       where.title = { contains: query.search, mode: 'insensitive' };
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
@@ -87,6 +112,36 @@ export class ListingsService {
       total,
       totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
     };
+  }
+
+  /**
+   * Where live listings are, to feed the city picker (cities with listings
+   * first, with counts) and, for a chosen city, locality suggestions.
+   * Grouped case-insensitively — "Koramangala" and "koramangala " are one
+   * place — and shown in their most common spelling.
+   */
+  async locations(city?: string): Promise<ListingLocations> {
+    const live = { status: { in: [...LIVE_STATUSES] } };
+    const cityRows = await this.prisma.listing.groupBy({
+      by: ['city'],
+      where: live,
+      _count: { _all: true },
+    });
+    const cities = foldCounts(
+      cityRows.map((r) => [r.city, r._count._all] as const),
+    );
+
+    if (!city?.trim()) return { cities, localities: [] };
+
+    const localityRows = await this.prisma.listing.groupBy({
+      by: ['locality'],
+      where: { ...live, ...cityWhere(city), locality: { not: null } },
+      _count: { _all: true },
+    });
+    const localities = foldCounts(
+      localityRows.map((r) => [r.locality, r._count._all] as const),
+    );
+    return { cities, localities };
   }
 
   /**
@@ -161,13 +216,14 @@ export class ListingsService {
 
   // ---- Seller (owner) ----
 
-  async listMine(userId: string): Promise<Listing[]> {
+  /** The seller's own listings — the owner DTO, so the edit form gets the PIN. */
+  async listMine(userId: string): Promise<OwnerListing[]> {
     const rows = await this.prisma.listing.findMany({
       where: { sellerId: userId },
       include: withRefs,
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map(toListingDto);
+    return rows.map(toOwnerListingDto);
   }
 
   /** Lightweight seller dashboard numbers — built from data that already exists. */
@@ -208,15 +264,24 @@ export class ListingsService {
     };
   }
 
-  async create(userId: string, input: ListingInput): Promise<Listing> {
+  async create(userId: string, input: ListingInput): Promise<OwnerListing> {
     await this.assertCanList(userId);
     await this.assertCategory(input.categoryId);
-    // A seller's contact travels with their profile; capture it on first sell.
+    const city = normaliseCity(input.city);
+    const locality = input.locality || null;
+    const pincode = input.pincode || null;
+    // A seller's contact and location travel with their profile: capture
+    // them on each sell so the next listing form is prefilled. The location
+    // is taken as a unit, keyed on the PIN (the web form requires it; the
+    // mobile app sends none, and must not wipe the web-entered defaults).
+    const defaults: Prisma.UserUpdateInput = {};
     if (input.whatsappNumber) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { whatsappNumber: input.whatsappNumber, city: input.city },
-      });
+      defaults.whatsappNumber = input.whatsappNumber;
+      defaults.city = city;
+    }
+    if (pincode) Object.assign(defaults, { city, locality, pincode });
+    if (Object.keys(defaults).length > 0) {
+      await this.prisma.user.update({ where: { id: userId }, data: defaults });
     }
     const row = await this.prisma.listing.create({
       data: {
@@ -230,45 +295,67 @@ export class ListingsService {
         purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : null,
         usageDuration: input.usageDuration || null,
         reasonForSelling: input.reasonForSelling || null,
-        city: input.city,
+        city,
+        locality,
+        pincode,
         deliveryOption: input.deliveryOption,
         images: input.images,
         status: 'PENDING',
       },
       include: withRefs,
     });
-    return toListingDto(row);
+    return toOwnerListingDto(row);
   }
 
   async update(
     userId: string,
     id: string,
     input: ListingUpdateInput,
-  ): Promise<Listing> {
+  ): Promise<OwnerListing> {
     const existing = await this.owned(userId, id);
     if (existing.status === 'SOLD') {
       throw new BadRequestException('Sold listings cannot be edited');
     }
     if (input.categoryId) await this.assertCategory(input.categoryId);
+
+    // Any edit to a listing that's already been reviewed sends it back into
+    // the queue — otherwise a seller could get a listing approved once and
+    // then freely swap in different photos/price/description with no further
+    // review. The one exception: a live listing whose edit touches only where
+    // it is and how it's handed over (city, locality, PIN, delivery). None of
+    // that is what moderation checks, and sending it back to PENDING would
+    // take a seller's live listing off the market for a day just for fixing
+    // a PIN — which is exactly the edit we're asking sellers to make.
+    const locationOnly =
+      existing.status === 'APPROVED' && !changesBeyondLocation(existing, input);
+    const status =
+      !locationOnly &&
+      (existing.status === 'REJECTED' || existing.status === 'APPROVED')
+        ? 'PENDING'
+        : existing.status;
+
     const row = await this.prisma.listing.update({
       where: { id },
       data: {
         ...input,
+        ...(input.city !== undefined
+          ? { city: normaliseCity(input.city) }
+          : {}),
+        // "" is a cleared field: store null, never an empty string.
+        ...(input.locality !== undefined
+          ? { locality: input.locality || null }
+          : {}),
+        ...(input.pincode !== undefined
+          ? { pincode: input.pincode || null }
+          : {}),
         usageDuration: input.usageDuration ?? undefined,
         reasonForSelling: input.reasonForSelling ?? undefined,
-        // Any edit to a listing that's already been reviewed sends it back
-        // into the queue — otherwise a seller could get a listing approved
-        // once and then freely swap in different photos/price/description
-        // with no further review.
-        status:
-          existing.status === 'REJECTED' || existing.status === 'APPROVED'
-            ? 'PENDING'
-            : existing.status,
+        status,
         rejectionReason: null,
       },
       include: withRefs,
     });
-    return toListingDto(row);
+    return toOwnerListingDto(row);
   }
 
   async remove(userId: string, id: string): Promise<{ id: string }> {
@@ -472,6 +559,80 @@ export class ListingsService {
   }
 }
 
+/** Same where-clause for browse and locations: see browse(). */
+function cityWhere(raw: string): Prisma.ListingWhereInput {
+  const spellings = [...new Set([raw.trim(), normaliseCity(raw)])];
+  if (spellings.length === 1) {
+    return { city: { equals: spellings[0], mode: 'insensitive' } };
+  }
+  return {
+    OR: spellings.map((c) => ({
+      city: { equals: c, mode: 'insensitive' as const },
+    })),
+  };
+}
+
+/**
+ * Sum counts for values that differ only by case or spacing, name each group
+ * by its most common spelling, and sort by count (desc) then name. Null and
+ * blank values are dropped.
+ */
+export function foldCounts(
+  rows: readonly (readonly [string | null, number])[],
+): { name: string; count: number }[] {
+  const groups = new Map<
+    string,
+    { total: number; spellings: Map<string, number> }
+  >();
+  for (const [value, count] of rows) {
+    const name = value?.trim().replace(/\s+/g, ' ');
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const group = groups.get(key) ?? { total: 0, spellings: new Map() };
+    group.total += count;
+    group.spellings.set(name, (group.spellings.get(name) ?? 0) + count);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map(({ total, spellings }) => ({
+      name: [...spellings.entries()].sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'en'),
+      )[0][0],
+      count: total,
+    }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
+}
+
+/**
+ * True when an edit changes anything other than LOCATION_FIELDS. The web
+ * form PATCHes every field, so this compares values, not which keys arrived.
+ * A cleared optional text field ("") and a stored null count as equal.
+ */
+export function changesBeyondLocation(
+  existing: ListingRecord,
+  input: ListingUpdateInput,
+): boolean {
+  const current = existing as unknown as Record<string, unknown>;
+  return Object.entries(input).some(([key, value]) => {
+    if (value === undefined || LOCATION_FIELDS.has(key)) return false;
+    const before = current[key];
+    if (Array.isArray(value)) {
+      return !(
+        Array.isArray(before) &&
+        before.length === value.length &&
+        value.every((v, i) => v === before[i])
+      );
+    }
+    const blank = (v: unknown) => (v === '' || v === undefined ? null : v);
+    return blank(value) !== blank(before);
+  });
+}
+
+/** The seller's own view of a listing: the public DTO plus the PIN. */
+export function toOwnerListingDto(row: ListingRow): OwnerListing {
+  return { ...toListingDto(row), pincode: row.pincode };
+}
+
 export function toListingDto(row: ListingRow): Listing {
   return {
     id: row.id,
@@ -484,6 +645,8 @@ export function toListingDto(row: ListingRow): Listing {
     usageDuration: row.usageDuration,
     reasonForSelling: row.reasonForSelling,
     city: row.city,
+    // row.pincode is deliberately not mapped: this DTO is public.
+    locality: row.locality,
     deliveryOption: row.deliveryOption,
     images: row.images,
     status: row.status,
