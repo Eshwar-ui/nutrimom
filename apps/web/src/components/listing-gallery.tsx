@@ -18,12 +18,14 @@ export function ListingGallery({
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-square overflow-hidden rounded-[2rem] border-2 border-border bg-muted">
+      <div className="relative aspect-square overflow-hidden rounded-panel border-2 border-border bg-muted">
         <Image
           src={main}
           alt={alt}
           fill
-          priority
+          // The listing photo is the page's LCP. `preload` replaces the
+          // `priority` prop deprecated in Next 16.
+          preload
           sizes="(min-width: 1024px) 40vw, 100vw"
           className="object-cover"
         />

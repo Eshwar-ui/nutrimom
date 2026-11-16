@@ -16,9 +16,9 @@ const crops = [
 const badges = [
   { label: "White", cls: "bg-surface ring-accent/30" },
   { label: "Cream", cls: "bg-cream ring-accent/30" },
-  { label: "Blush", cls: "bg-blush ring-white/60" },
+  { label: "Terracotta tint", cls: "bg-blush ring-white/60" },
   { label: "Sage", cls: "bg-sage ring-white/60" },
-  { label: "Coral", cls: "bg-accent ring-white/60" },
+  { label: "Terracotta", cls: "bg-accent ring-white/60" },
 ];
 
 export default function BrandPage() {

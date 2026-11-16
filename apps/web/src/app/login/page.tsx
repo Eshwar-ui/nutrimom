@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type AuthResponse, type LoginInput } from "@nutrimom/shared";
 import { request, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { postAuthDestination, readAuthReturn, registerHref, type AuthIntent } from "@/lib/auth-redirect";
 import { Container, Card, Input, Label, PasswordInput } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +16,9 @@ export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
-  const [next, setNext] = useState<string | null>(null);
+  // Both validated: `next` is a same-origin path or null, `intent` is
+  // allowlisted or null. Never read the raw query string for navigation.
+  const [authReturn, setAuthReturn] = useState<{ next: string | null; intent: AuthIntent | null }>({ next: null, intent: null });
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
   useEffect(() => {
@@ -24,7 +27,7 @@ export default function LoginPage() {
     // state post-mount, matching SSR's null on the first paint, is the
     // tradeoff — this only ever affects an href, never a flash of content.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNext(new URLSearchParams(window.location.search).get("next"));
+    setAuthReturn(readAuthReturn(window.location.search));
   }, []);
 
   const onSubmit = async (data: LoginInput) => {
@@ -32,14 +35,15 @@ export default function LoginPage() {
     try {
       const response = await request<AuthResponse>("/auth/login", { method: "POST", body: data });
       setAuth(response.user, response.tokens);
-      const next = new URLSearchParams(window.location.search).get("next");
-      router.push(next ?? (response.user.role === "ADMIN" ? "/admin" : "/account"));
+      // Re-read rather than trusting state: a fast submit can beat the effect.
+      const { next, intent } = readAuthReturn(window.location.search);
+      router.push(postAuthDestination(next, intent, response.user.role === "ADMIN" ? "/admin" : "/account"));
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Something went wrong");
     }
   };
 
-  const registerHref = next ? `/register?next=${encodeURIComponent(next)}` : "/register";
+  const createAccountHref = registerHref(authReturn.next, authReturn.intent);
 
   return (
     <Container className="grid min-h-[calc(100dvh-8rem)] items-center gap-10 py-12 lg:grid-cols-[0.9fr_1.1fr]">
@@ -68,7 +72,7 @@ export default function LoginPage() {
           {error && <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
           <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>{isSubmitting ? "Signing in…" : "Sign in"}</Button>
         </form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">New here? <Link href={registerHref} className="font-semibold text-accent-text hover:underline">Create an account</Link></p>
+        <p className="mt-6 text-center text-sm text-muted-foreground">New here? <Link href={createAccountHref} className="font-semibold text-accent-text hover:underline">Create an account</Link></p>
       </Card>
     </Container>
   );

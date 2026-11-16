@@ -1,520 +1,366 @@
+import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Tag,
-  Gift,
-  ShoppingBag,
-  Users,
-} from "lucide-react";
-import { MEMBERSHIP_PLANS, formatPaise, type BusinessProfile, type Category, type Listing } from "@nutrimom/shared";
+import { ArrowRight, CalendarHeart } from "lucide-react";
+import type { Category, Listing, SiteContent } from "@nutrimom/shared";
 import { getCategories, getListings } from "@/lib/listings";
 import { getBusinessProfile } from "@/lib/business-profile";
+import { getServicePackages, getSiteContent, getTestimonials } from "@/lib/content";
+import { isOptimizableImage } from "@/lib/content-image";
 import { pageMetadata } from "@/lib/seo";
-import { TRUST_LINE } from "@/lib/site-nav";
+import { BOOK_SESSION_HREF, TRUST_LINE } from "@/lib/site-nav";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import { JsonLd } from "@/components/json-ld";
 import { Container } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
-import { Playful } from "@/components/ui/playful";
 import { Reveal } from "@/components/reveal";
 import { HeroWave } from "@/components/section-wave";
 import { ListingCard } from "@/components/listing-card";
-import {
-  TrustSafety,
-  Testimonials,
-} from "@/components/home-sections";
-import {
-  StageSelector,
-  PillarGrid,
-  AffordableSupport,
-  FindYourVillage,
-} from "@/components/home-pillars";
-import { Newsletter } from "@/components/newsletter";
-import { JourneyLine } from "@/components/journey-line";
+import { StageSelector, FindYourVillage } from "@/components/home-pillars";
+import { ServiceShowcase, BestValueTeaser } from "@/components/service-showcase";
+import { TestimonialsSection } from "@/components/testimonials";
 import { DecorativeElement } from "@/components/decorative-element";
-import { PlayfulBackground } from "@/components/playful-background";
+import { TrackedLink } from "@/components/tracked-link";
 import { cn } from "@/lib/utils";
+import { ArtDirectedImage } from "@/components/art-directed-image";
 
-const chipTints = [
-  "bg-blush/70 text-[#7a2447]",
-  "bg-sage/70 text-[#2f5236]",
-  "bg-sky/70 text-[#215172]",
-  "bg-lavender/70 text-[#4a3170]",
-  "bg-beige text-[#6b4a2a]",
-];
-
-// Punchy leading dots for the category rail — cycle warm/brand tones.
-const dotColors = ["bg-accent", "bg-gold", "bg-primary"];
-
-const categoryArt: Record<string, string> = {
-  "baby-clothes": "/images/category-baby-clothes.png",
-  toys: "/images/category-toys.png",
-  strollers: "/images/category-strollers.png",
-  "car-seats": "/images/category-car-seats.png",
-  "high-chairs": "/images/category-high-chairs.png",
+/**
+ * The brief's hero copy, word for word (§1). SiteContent carries the same text
+ * as its defaults; these only show when the API can't be reached, so the home
+ * page never falls back to placeholder words.
+ */
+const HERO_FALLBACK = {
+  headline: "From pregnancy to toddlerhood, you’re not alone.",
+  subline: "A nurturing space for every mother, every journey, and every stage.",
+  message:
+    "Move, nourish, connect and grow together. Find the support, guidance and community you need at every stage of motherhood.",
 };
 
-const steps = [
-  {
-    icon: ShoppingBag,
-    tint: "bg-blush/60",
-    title: "Shop preloved",
-    body: "Browse gently used pieces from local families at a fraction of retail.",
-    offset: "md:-translate-y-3",
-  },
-  {
-    icon: Tag,
-    tint: "bg-sage/60",
-    title: "Sell your outgrown",
-    body: "Snap a few photos, set your price, and give your baby gear a second home.",
-    offset: "md:translate-y-5",
-  },
-  {
-    icon: Gift,
-    tint: "bg-sky/60",
-    title: "Or pass it on",
-    body: "Donate what you no longer need to another mom who'll treasure it.",
-    offset: "md:-translate-y-3",
-  },
-];
+/** The section the hero's "Explore Services" button scrolls to. */
+const SERVICES_ID = "services";
+
+/**
+ * The anchor of the price grid on /yoga (PackagePricing's default id). If the
+ * yoga page renames it, the teaser still lands on the right page.
+ */
+const YOGA_PRICING_HREF = "/yoga#packages";
+
+/** Small thumbnails for the category chips — the seeded category art. */
+const categoryArt: Record<string, string> = {
+  "baby-clothes": "/images/category-baby-clothes.webp",
+  toys: "/images/category-toys.webp",
+  strollers: "/images/category-strollers.webp",
+  "car-seats": "/images/category-car-seats.webp",
+  "high-chairs": "/images/category-high-chairs.webp",
+};
 
 export const metadata = pageMetadata({
   path: "/",
   absoluteTitle:
     "The Nurture Moms — Yoga, Nutrition, Community & Preloved for Indian Moms",
   description:
-    "Support for every stage of motherhood: prenatal and postnatal yoga, Garbhasanskar, pregnancy and baby nutrition, starting solids, a free mom community, and a preloved baby and maternity marketplace.",
+    "From pregnancy to toddlerhood, you’re not alone. Prenatal yoga & Garbhasanskar, mom & baby nutrition, a free mom community and a preloved marketplace.",
 });
 
 export default async function HomePage() {
-  let featured: Listing[] = [];
-  let latest: Listing[] = [];
-  let categories: Category[] = [];
-  // Read separately from the block below: the marketplace's own identity is
-  // structured data that should still render if the listings API is down.
-  const businessProfile: BusinessProfile | null = await getBusinessProfile();
-  try {
-    const [f, latestRes, cats] = await Promise.all([
-      getListings({ featured: true, pageSize: 8 }),
-      getListings({ pageSize: 8 }), // newest approved first (default sort)
-      getCategories(),
+  // Each read fails soft on its own, so one unreachable endpoint hides only
+  // its own section rather than the page.
+  const [businessProfile, content, testimonials, comboPackages, latest, categories] =
+    await Promise.all([
+      getBusinessProfile(),
+      getSiteContent(),
+      getTestimonials(),
+      getServicePackages("COMBO"),
+      // Newest approved first (the default sort) — every newly approved item
+      // shows up here (roadmap #3).
+      getListings({ pageSize: 4 })
+        .then((r) => r.items)
+        .catch((): Listing[] => []),
+      getCategories().catch((): Category[] => []),
     ]);
-    featured = f.items;
-    latest = latestRes.items;
-    if (featured.length === 0) featured = latest;
-    categories = cats;
-  } catch {
-    // API/DB not running yet — render the shell.
-  }
 
-  const visualCategories = categories
-    .filter((c) => categoryArt[c.slug])
-    .slice(0, 5);
-  const extraCategories = categories
-    .filter((c) => !categoryArt[c.slug])
-    .slice(0, 12);
+  const hero = {
+    headline: content?.heroHeadline?.trim() || HERO_FALLBACK.headline,
+    subline: content?.heroSubline?.trim() || HERO_FALLBACK.subline,
+    message: content?.heroMessage?.trim() || HERO_FALLBACK.message,
+  };
 
   return (
     <>
       <JsonLd data={[organizationJsonLd(businessProfile), websiteJsonLd()]} />
 
-      {/* Hero — full image; pulled up so the transparent nav floats over it. */}
-      <Reveal className="-mt-16">
-        <section className="relative">
-        <picture>
-          <source media="(min-width: 1024px)" srcSet="/images/nutrimom-playful-mama-banner-extended.png" />
-          <source media="(min-width: 768px)" srcSet="/hero-images/bg-tablet.png" />
-          <img
-            src="/hero-images/bg-mobile.png"
-            alt="Moms sharing preloved baby essentials"
-            className="block w-full"
-          />
-        </picture>
-        {/* Soft top fade — background colour bleeding into the image so the
-            transparent nav has a legible, seamless backdrop. */}
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent" />
-        {/* Copy sits in each image's empty space — top on the tall mobile
-            crop, left column on tablet/desktop's wide crops. Desktop is
-            top-anchored (not centered) since the wide banner's empty
-            column runs the full height — centering pushed it below the
-            fold on tall/wide viewports. */}
-        <div className="absolute inset-0 mx-auto flex w-full max-w-7xl items-start px-5 pt-20 sm:px-8 sm:pt-24 md:items-center md:pt-0 lg:items-start lg:pl-24 lg:pr-10 lg:pt-[max(112px,11vw)]">
-          <HeroCopy />
-        </div>
-        {/* Wavy base — turns the image's hard bottom into a soft edge. */}
-        <DecorativeElement
-          src="/images/bg-element-sun-doodle.png"
-          className="left-8 top-28 hidden w-20 opacity-80 lg:block"
-        />
-        <DecorativeElement
-          src="/images/bg-element-doodle-cluster.png"
-          className="bottom-16 left-[28%] hidden w-28 -rotate-12 opacity-65 xl:block"
-        />
-          <HeroWave />
-        </section>
-      </Reveal>
-
-      {/* Stage selector + four pillars — the ecosystem entrance. These sit
-          above every marketplace block because the brief asks for the four
-          pillars to be obvious within the first screen; a visitor who came for
-          prenatal yoga should not scroll past a product grid to find it. */}
-      <div id="explore" className="scroll-mt-24">
-        <Reveal delay={0.08}><StageSelector /></Reveal>
-        <Reveal delay={0.12}><PillarGrid /></Reveal>
-        <Reveal delay={0.16}><AffordableSupport /></Reveal>
-      </div>
-
-      {/* --- Preloved pillar: the marketplace, unchanged below this line --- */}
-
-      {/* Category tiles — plain shared cream, tucked up under the banner so the
-          seam is cream-on-cream and disappears. */}
-      {categories.length > 0 && (
-        <Reveal delay={0.08} className="w-full">
-          <section className="relative isolate overflow-hidden bg-background pt-8">
-          <PlayfulBackground variant="market" />
-          <DecorativeElement
-            src="/images/bg-element-leaf-sprig.png"
-            className="-left-16 top-16 hidden w-48 -rotate-12 opacity-35 sm:block"
-          />
-          <DecorativeElement
-            src="/images/bg-element-toy-accent.png"
-            className="-right-10 top-20 hidden w-32 rotate-6 opacity-40 md:block"
-          />
-          <DecorativeElement
-            src="/images/bg-element-peach-onesie.png"
-            className="bottom-8 right-[9%] hidden w-28 -rotate-6 opacity-35 lg:block"
-          />
-          <Container className="relative z-[1] pb-16 pt-10">
-            <CategoryTiles visual={visualCategories} extra={extraCategories} />
-          </Container>
-          </section>
-        </Reveal>
+      {content?.heroImageUrl ? (
+        <PhotoHero hero={hero} content={content} />
+      ) : (
+        <IllustratedHero hero={hero} />
       )}
 
-
-      {/* Featured */}
-      <Reveal delay={0.08} className="w-full">
-        <section className="relative isolate overflow-hidden">
-          <PlayfulBackground variant="fresh" />
-        <DecorativeElement
-          src="/images/bg-element-blush-swash.png"
-          className="-left-44 top-2 hidden w-[38rem] opacity-25 lg:block"
-        />
-        <DecorativeElement
-          src="/images/bg-element-dotted-trail.png"
-          className="-right-24 bottom-4 hidden w-[28rem] opacity-35 xl:block"
-        />
-        <DecorativeElement
-          src="/images/bg-element-folded-clothes.png"
-          className="right-[5%] top-8 hidden w-32 rotate-3 opacity-30 lg:block"
-        />
-        <Container className="relative z-[1] py-14">
-          {categories.length > 0 && (
-            <nav
-              aria-label="Browse by category"
-              className="mb-8 -mt-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)]"
+      {/* The four services, equal weight — the first thing under the hero, so
+          what The Nurture Moms offers is clear before any product grid. */}
+      <section id={SERVICES_ID} aria-labelledby="services-heading" className="scroll-mt-28">
+        <Container className="pb-14 pt-10 sm:pt-14">
+          <div className="max-w-2xl">
+            <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
+              Our services
+            </p>
+            <h2
+              id="services-heading"
+              className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl"
             >
-              <ul className="flex w-max animate-[marquee_30s_linear_infinite] gap-3 hover:[animation-play-state:paused]">
-                {[...categories, ...categories].map((c, i) => {
-                  const dupe = i >= categories.length;
-                  return (
-                    <li key={i} aria-hidden={dupe || undefined}>
+              Support for every stage of motherhood
+            </h2>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              Four ways we&apos;re here for you — choose what you need today,
+              and come back for the rest whenever you&apos;re ready.
+            </p>
+          </div>
+          <div className="mt-10">
+            <ServiceShowcase />
+          </div>
+          <BestValueTeaser packages={comboPackages} href={YOGA_PRICING_HREF} />
+        </Container>
+      </section>
+
+      <Reveal className="w-full">
+        <StageSelector />
+      </Reveal>
+
+      <TestimonialsSection testimonials={testimonials} className="bg-surface-2" />
+
+      {/* The marketplace, kept compact so it's one service among four:
+          newest listings (roadmap #3) and the category shortcuts. */}
+      {(latest.length > 0 || categories.length > 0) && (
+        <section aria-labelledby="latest-heading" className="relative">
+          <Container className="py-14">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-2xl">
+                <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
+                  Preloved Marketplace
+                </p>
+                <h2
+                  id="latest-heading"
+                  className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl"
+                >
+                  Latest listings
+                </h2>
+                <p className="mt-3 leading-relaxed text-muted-foreground">
+                  Gently used baby, kids and maternity items from other
+                  mothers. We check every listing before it goes live.
+                </p>
+              </div>
+              <TrackedLink
+                event="preloved_click"
+                eventProps={{ action: "shop", placement: "home_latest" }}
+                href="/listings"
+                className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
+              >
+                Shop Preloved <ArrowRight className="h-4 w-4" aria-hidden />
+              </TrackedLink>
+            </div>
+
+            {categories.length > 0 && (
+              <nav aria-label="Shop by category" className="mt-8">
+                <ul className="flex flex-wrap gap-2">
+                  {categories.slice(0, 10).map((c) => (
+                    <li key={c.id}>
                       <Link
-                        href={`/listings?category=${c.slug}`}
-                        tabIndex={dupe ? -1 : undefined}
-                        className="group inline-flex items-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-surface/70 px-4 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground transition-[transform,color,border-color,background-color] duration-300 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-surface hover:text-foreground"
+                        href={`/categories/${c.slug}`}
+                        className={cn(
+                          "inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-surface text-sm font-semibold text-foreground transition-colors hover:border-primary/45 hover:bg-muted",
+                          categoryArt[c.slug] ? "py-1 pl-1 pr-4" : "px-4",
+                        )}
                       >
-                        <span className={cn("h-1.5 w-1.5 rounded-full transition-transform duration-300 group-hover:scale-150", dotColors[i % dotColors.length])} />
+                        {categoryArt[c.slug] && (
+                          <Image
+                            src={categoryArt[c.slug]}
+                            alt=""
+                            width={64}
+                            height={64}
+                            className="h-9 w-9 rounded-full bg-cream object-contain p-0.5"
+                          />
+                        )}
                         {c.name}
                       </Link>
                     </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          )}
+                  ))}
+                </ul>
+              </nav>
+            )}
 
-          <div className="mb-9 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
-                Fresh finds
-              </p>
-              <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
-                Just dropped by our moms
-              </h2>
-            </div>
-            <Playful className="shrink-0">
-              <Link
-                href="/listings"
-                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background sm:px-5 sm:py-2.5 sm:text-sm"
-              >
-                See everything <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Playful>
-          </div>
-
-          {featured.length > 0 ? (
-            <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-              {featured.map((l, i) => (
-                <Reveal key={l.id} delay={(i % 4) * 0.06}>
-                  <ListingCard listing={l} />
-                </Reveal>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-3xl border-2 border-dashed border-border p-14 text-center text-muted-foreground">
-              New treasures are on their way — check back soon.
-            </div>
-          )}
-        </Container>
-      </section>
-      </Reveal>
-
-      {/* Latest listings — every newly approved item shows up here */}
-      {latest.length > 0 && (
-        <Reveal delay={0.08} className="w-full">
-          <section className="relative">
-          <Container className="py-14">
-            <div className="mb-9 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
-                  Latest listings
-                </p>
-                <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
-                  New this week
-                </h2>
+            {latest.length > 0 && (
+              <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+                {latest.map((l, i) => (
+                  <Reveal key={l.id} delay={(i % 4) * 0.05}>
+                    <ListingCard listing={l} />
+                  </Reveal>
+                ))}
               </div>
-              <Playful className="shrink-0">
-                <Link
-                  href="/listings"
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background sm:px-5 sm:py-2.5 sm:text-sm"
-                >
-                  See everything <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Playful>
-            </div>
-            <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-              {latest.map((l, i) => (
-                <Reveal key={l.id} delay={(i % 4) * 0.06}>
-                  <ListingCard listing={l} />
-                </Reveal>
-              ))}
-            </div>
+            )}
+
+            <p className="mt-8 text-sm text-muted-foreground">
+              New to preloved?{" "}
+              <Link
+                href="/preloved#how-it-works"
+                className="font-bold text-accent-text underline-offset-4 hover:underline"
+              >
+                See how buying, selling and donating work
+              </Link>
+              .
+            </p>
           </Container>
-          </section>
-        </Reveal>
+        </section>
       )}
 
-      {/* How it works */}
-      <Reveal delay={0.08} className="w-full">
-        <section className="relative overflow-hidden">
-          <DecorativeElement
-          src="/images/bg-element-dotted-trail.png"
-          className="left-[8%] top-28 hidden w-[30rem] -rotate-6 opacity-30 lg:block"
-        />
-        <DecorativeElement
-          src="/images/bg-element-leaf-sprig.png"
-          className="-right-12 bottom-0 hidden w-52 rotate-12 opacity-30 md:block"
-        />
-        <DecorativeElement
-          src="/images/bg-element-sage-pram.png"
-          className="-left-8 bottom-10 hidden w-40 -rotate-3 opacity-25 xl:block"
-        />
-        <Container className="relative py-14">
-          <div className="mb-8 overflow-hidden rounded-[2rem] border-2 border-border bg-surface card-shadow">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/marketplace-benefits-banner.png"
-              alt="Benefits of buying and selling preloved baby items"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="relative grid gap-10 md:grid-cols-3 md:gap-6">
-            {/* Hand-drawn route threads the three steps into one journey —
-                draws itself in on scroll instead of a stiff straight rule. */}
-            <JourneyLine />
-            {steps.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.08} className={s.offset}>
-                <div className="relative flex flex-col items-center px-2 text-center md:items-start md:text-left">
-                  <span
-                    className={`relative z-10 grid h-14 w-14 place-items-center rounded-2xl ring-8 ring-background ${s.tint}`}
-                  >
-                    <s.icon className="h-6 w-6 text-foreground/70" strokeWidth={1.6} />
-                    <span className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                      {i + 1}
-                    </span>
-                  </span>
-                  <h3 className="mt-5 font-display text-xl font-semibold text-foreground">
-                    {s.title}
-                  </h3>
-                  <p className="mt-2 max-w-xs leading-relaxed text-muted-foreground">
-                    {s.body}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {/* Closing band — the page ends on the whole community, not on the
+          marketplace above it. */}
+      <Reveal className="w-full">
+        <FindYourVillage />
       </Reveal>
-
-      {/* Trust & safety — buyer protection */}
-      <Reveal delay={0.08} className="w-full"><TrustSafety /></Reveal>
-
-      {/* Social proof */}
-      <Reveal delay={0.08} className="w-full"><Testimonials /></Reveal>
-
-      {/* CTA band */}
-      <Reveal delay={0.08} className="w-full">
-        <section className="relative isolate overflow-hidden bg-primary text-primary-foreground">
-          <PlayfulBackground variant="cta" />
-        <DecorativeElement
-          src="/images/bg-element-blush-swash.png"
-          className="-left-40 -top-20 w-[34rem] opacity-20"
-        />
-        <DecorativeElement
-          src="/images/bg-element-toy-accent.png"
-          className="right-8 top-5 hidden w-24 opacity-60 sm:block"
-        />
-        <DecorativeElement
-          src="/images/bg-element-gift-box.png"
-          className="bottom-3 right-[22%] hidden w-28 rotate-6 opacity-25 lg:block"
-        />
-        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
-        <Container className="relative z-[1] grid gap-8 py-16 md:grid-cols-[2fr_auto_1fr] md:items-center">
-          <h2 className="font-display text-3xl font-semibold leading-tight text-primary-foreground md:text-4xl">
-            Got outgrown gear gathering dust? Turn it into someone&apos;s
-            treasure.
-          </h2>
-          {/* Ticket-stub perforation between the pitch and the CTA. */}
-          <div
-            aria-hidden
-            className="hidden h-24 border-l-2 border-dashed border-primary-foreground/25 md:block"
-          />
-          <div className="relative md:justify-self-end">
-            <span className="absolute -right-3 -top-6 -rotate-6 rounded-full bg-gold px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#5c4410] shadow-md">
-              Membership from {formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}/mo
-            </span>
-            <Playful>
-              <Link href="/sell" className={buttonVariants({ variant: "gold", size: "lg" })}>
-                Start selling <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Playful>
-          </div>
-        </Container>
-      </section>
-      </Reveal>
-
-      {/* Closing band — the page ends on the whole ecosystem, not on the
-          marketplace's seller pitch above it. */}
-      <Reveal delay={0.08} className="w-full"><FindYourVillage /></Reveal>
-
-      {/* Newsletter — first-order offer */}
-      <Reveal delay={0.08} className="w-full"><Newsletter /></Reveal>
     </>
   );
 }
 
-function CategoryTiles({
-  visual,
-  extra,
-}: {
-  visual: Category[];
-  extra: Category[];
-}) {
+type HeroText = { headline: string; subline: string; message: string };
+
+/**
+ * Today's illustrated banner — used until the admin uploads a genuine photo
+ * (SiteContent.heroImageUrl). The copy sits in the artwork's empty column:
+ * the top band on the tall phone crop, the left column on tablet/desktop.
+ * The longer supporting message only fits there from `xl`, so below that it
+ * runs directly under the banner instead.
+ */
+function IllustratedHero({ hero }: { hero: HeroText }) {
   return (
     <>
-      {visual.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          {visual.map((c, i) => (
-            <Reveal key={c.id} delay={i * 0.04}>
-              <Link
-                href={`/listings?category=${c.slug}`}
-                className="group relative flex h-full flex-col items-center overflow-hidden rounded-[2rem] border-2 border-border bg-surface p-4 text-center card-shadow transition-transform hover:-translate-y-1"
-              >
-                <span
-                  aria-hidden
-                  className="absolute left-4 top-4 h-5 w-10 -rotate-6 rounded-[4px] border border-white/60 bg-background/60 shadow-sm backdrop-blur-sm"
-                />
-                <span
-                  aria-hidden
-                  className="absolute right-5 top-5 h-3 w-3 rounded-full bg-gold/75 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-125"
-                />
-                <span className="grid aspect-square w-full place-items-center overflow-hidden rounded-[1.5rem] bg-cream">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={categoryArt[c.slug]}
-                    alt=""
-                    style={{ animationDelay: `${i * 0.35}s` }}
-                    className="h-full w-full animate-[float_4s_ease-in-out_infinite] object-contain p-2"
-                  />
-                </span>
-                <span className="mt-3 text-sm font-bold text-foreground">
-                  {c.name}
-                </span>
-              </Link>
-            </Reveal>
-          ))}
+      {/* Pulled up so the transparent nav floats over the artwork. */}
+      <section className="relative -mt-16">
+        <ArtDirectedImage
+          alt="Illustration of a smiling mother holding her baby"
+          desktop={{ src: "/images/nutrimom-playful-mama-banner-extended.webp", width: 1536, height: 1024 }}
+          tablet={{ src: "/hero-images/bg-tablet.webp", width: 1448, height: 1086 }}
+          mobile={{ src: "/hero-images/bg-mobile.webp", width: 863, height: 1823 }}
+          eager
+          className="block h-auto w-full"
+        />
+        {/* Soft top fade so the transparent nav has a legible backdrop. */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent" />
+        <div className="absolute inset-0 mx-auto flex w-full max-w-7xl items-start px-5 pt-20 sm:px-8 sm:pt-24 md:items-center md:pt-0 lg:items-start lg:pl-24 lg:pr-10 lg:pt-[max(112px,9vw)]">
+          <HeroCopy hero={hero} variant="overlay" />
         </div>
-      )}
-
-      {extra.length > 0 && (
-        <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-          {extra.map((c, i) => (
-            <Link
-              key={c.id}
-              href={`/listings?category=${c.slug}`}
-              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-bold transition-transform hover:-translate-y-0.5 ${chipTints[i % chipTints.length]}`}
-            >
-              {c.name}
-            </Link>
-          ))}
-        </div>
-      )}
+        <HeroWave />
+      </section>
+      <Container className="pt-6 xl:hidden">
+        <p className="max-w-2xl text-lg leading-relaxed text-foreground">
+          {hero.message}
+        </p>
+        <p className="mt-3 text-sm font-semibold text-muted-foreground">{TRUST_LINE}</p>
+      </Container>
     </>
   );
 }
 
 /**
- * The hero copy sits over the photo's empty top band, so on a phone it has a
- * fixed height budget: the buttons shed their icons and padding to stay on one
- * line at 375px rather than wrapping down onto the photo. Below that they wrap
- * instead of running off the screen.
+ * The genuine photo the brief asks for, once the admin has uploaded one.
+ * An uploaded photo has no reserved empty column for text, so the copy sits
+ * beside it rather than on top — it stays readable whatever the picture.
  */
-const HERO_BUTTON =
-  "h-10 px-4 text-[13px] sm:h-11 sm:px-6 sm:text-sm lg:h-14 lg:px-8 lg:text-base";
-
-function HeroCopy() {
+function PhotoHero({ hero, content }: { hero: HeroText; content: SiteContent }) {
+  const src = content.heroImageUrl!;
   return (
-    <div className="w-full min-w-0 max-w-sm md:max-w-[19rem] lg:max-w-xl">
-      {/* Font sizes scale continuously with viewport width (clamp) within
-          each image's zone, instead of jumping between fixed steps. Zones
-          reset at md/lg because the tablet/desktop crops swap to a
-          differently-shaped empty column, not a smooth continuation. */}
-      <h1 className="mt-3 font-display text-[clamp(1.5rem,0.6rem_+_4.4vw,2.75rem)] font-semibold leading-[1.05] tracking-tight text-foreground sm:mt-6 md:text-[clamp(1.5rem,1rem_+_2vw,2rem)] lg:text-[clamp(2.25rem,1rem_+_2.5vw,3.75rem)]">
-        Motherhood is a journey.
-        <br />
-        You don&apos;t have to{" "}
-        <span className="ink-underline whitespace-nowrap">do it alone</span>.
+    <section className="relative -mt-16 overflow-hidden bg-surface-2/70 pt-16">
+      <DecorativeElement
+        src="/images/bg-element-leaf-sprig.webp"
+        className="-left-10 bottom-10 hidden w-40 -rotate-12 opacity-40 lg:block"
+      />
+      <Container className="relative grid items-center gap-6 pb-20 pt-6 sm:gap-8 sm:pt-12 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pb-24 lg:pt-16">
+        <HeroCopy hero={hero} variant="split" />
+        {/* First on a phone, so the photo is in the opening screen. */}
+        <div className="relative order-first aspect-[4/3] overflow-hidden rounded-panel bg-surface shadow-pop lg:order-none lg:aspect-square">
+          <Image
+            src={src}
+            alt={content.heroImageAlt?.trim() || "A mother with her little one"}
+            fill
+            preload
+            unoptimized={!isOptimizableImage(src)}
+            sizes="(min-width: 1024px) 45vw, 100vw"
+            className="object-cover"
+          />
+        </div>
+      </Container>
+      <HeroWave />
+    </section>
+  );
+}
+
+/**
+ * On the illustrated banner the copy has a fixed height budget on a phone, so
+ * the buttons shed their icons and padding to stay on one line at 375px.
+ */
+const OVERLAY_BUTTON =
+  "h-10 px-4 text-[13px] sm:h-11 sm:px-6 sm:text-sm xl:h-14 xl:px-8 xl:text-base";
+
+/** Beside a photo there's room, but two lg buttons still don't fit at 375px. */
+const SPLIT_BUTTON = "h-11 px-5 text-sm sm:h-14 sm:px-8 sm:text-base";
+
+function HeroCopy({
+  hero,
+  variant,
+}: {
+  hero: HeroText;
+  variant: "overlay" | "split";
+}) {
+  const overlay = variant === "overlay";
+  return (
+    // On the banner the copy must stay inside the artwork's empty left
+    // column, which is ~45% of the viewport minus the left inset.
+    <div className={cn("w-full min-w-0", overlay ? "max-w-sm md:max-w-[20rem] lg:max-w-[calc(45vw-6rem)] xl:max-w-[min(36rem,calc(48vw-6rem))]" : "max-w-xl")}>
+      <h1
+        className={cn(
+          "font-display font-semibold tracking-tight text-foreground",
+          overlay
+            ? "text-[clamp(1.6rem,0.7rem_+_4.4vw,2.75rem)] md:text-[clamp(1.6rem,1rem_+_2vw,2.1rem)] lg:text-[clamp(2rem,0.5rem_+_2.6vw,3.4rem)]"
+            : "text-[2.4rem] sm:text-5xl lg:text-[3.5rem]",
+          // After the sizes: tailwind-merge drops a leading-* that precedes a text-* size.
+          "leading-[1.08]",
+        )}
+      >
+        {hero.headline}
       </h1>
-      <p className="mt-3 text-[clamp(0.875rem,0.75rem_+_0.6vw,1.125rem)] leading-relaxed text-muted-foreground sm:mt-6 sm:max-w-md md:text-sm lg:text-lg">
-        Yoga, nutrition, mom support and preloved essentials — thoughtfully
-        brought together for moms from pregnancy to toddlerhood.
+      <p
+        className={cn(
+          "font-semibold text-foreground/85",
+          overlay
+            ? "mt-3 text-[clamp(0.95rem,0.8rem_+_0.6vw,1.2rem)] leading-snug sm:mt-5 md:text-base lg:text-lg xl:text-xl"
+            : "mt-5 text-xl leading-snug",
+        )}
+      >
+        {hero.subline}
       </p>
-      <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-3">
-        <Playful>
-          <Link href="#explore" className={cn(buttonVariants({ size: "md" }), HERO_BUTTON)}>
-            Explore our services <ArrowRight className="hidden h-4 w-4 sm:block" />
-          </Link>
-        </Playful>
-        <Playful>
-          <Link href="/community" className={cn(buttonVariants({ size: "md", variant: "outline" }), HERO_BUTTON)}>
-            <Users className="hidden h-4 w-4 sm:block" /> Join our community
-          </Link>
-        </Playful>
+      <p
+        className={cn(
+          "text-muted-foreground",
+          overlay ? "mt-4 hidden max-w-lg text-lg xl:block" : "mt-4 text-lg",
+          "leading-relaxed",
+        )}
+      >
+        {hero.message}
+      </p>
+      <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", overlay ? "mt-5 sm:mt-7" : "mt-8")}>
+        <Link
+          href={`#${SERVICES_ID}`}
+          className={cn(buttonVariants({ size: overlay ? "md" : "lg" }), overlay ? OVERLAY_BUTTON : SPLIT_BUTTON)}
+        >
+          Explore Services <ArrowRight className="hidden h-4 w-4 sm:block" aria-hidden />
+        </Link>
+        <Link
+          href={BOOK_SESSION_HREF}
+          className={cn(buttonVariants({ size: overlay ? "md" : "lg", variant: "outline" }), overlay ? OVERLAY_BUTTON : SPLIT_BUTTON)}
+        >
+          <CalendarHeart className="hidden h-4 w-4 sm:block" aria-hidden /> Book a Session
+        </Link>
       </div>
-      {/* The brief's trust line, verbatim — the one claim every page repeats. */}
-      <p className="mt-6 hidden text-sm font-semibold text-muted-foreground sm:mt-10 sm:block">
+      {/* The brief's trust line. On the banner it only fits from `xl`; below
+          that it runs under the banner with the supporting message. */}
+      <p className={cn("text-sm font-semibold text-muted-foreground", overlay ? "mt-8 hidden xl:block" : "mt-8")}>
         {TRUST_LINE}
       </p>
     </div>

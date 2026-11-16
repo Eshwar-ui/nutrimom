@@ -30,11 +30,11 @@ export default async function ResourcesPage() {
       />
       <section className="relative overflow-hidden">
         <DecorativeElement
-          src="/images/bg-element-sun-doodle.png"
+          src="/images/bg-element-sun-doodle.webp"
           className="left-6 top-10 hidden w-20 opacity-80 sm:block"
         />
         <DecorativeElement
-          src="/images/bg-element-leaf-sprig.png"
+          src="/images/bg-element-leaf-sprig.webp"
           className="-right-16 bottom-0 hidden w-48 rotate-12 opacity-35 lg:block"
         />
         <Container className="relative py-14 text-center sm:py-20">

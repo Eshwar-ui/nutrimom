@@ -2,14 +2,15 @@ import { Container } from "@/components/ui/primitives";
 import {
   ServiceHero,
   IncludesList,
-  PricingTable,
   SafetyNote,
   BookingCta,
   ClosingCta,
 } from "@/components/service-sections";
 import { FreeGuideCallout } from "@/components/resource-cards";
-import { bookingWhatsappUrl } from "@/lib/booking";
-import { pageMetadata } from "@/lib/seo";
+import { PackagePricing } from "@/components/package-pricing";
+import { bookingPhone, bookingWhatsappUrl } from "@/lib/booking";
+import { getServicePackages } from "@/lib/content";
+import { SERVICE_OG_IMAGES, pageMetadata } from "@/lib/seo";
 import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
 import { JsonLd } from "@/components/json-ld";
 
@@ -24,6 +25,7 @@ export const metadata = pageMetadata({
   description:
     "A 60-minute Starting Solids session: readiness, first foods, textures, allergens, meal ideas and responsive feeding — personalised to your baby's stage.",
   path: "/nutrition/starting-solids",
+  images: [SERVICE_OG_IMAGES.nutrition],
 });
 
 const includes = [
@@ -37,7 +39,11 @@ const includes = [
 ];
 
 export default async function StartingSolidsPage() {
-  const whatsappUrl = await bookingWhatsappUrl("solids");
+  const [whatsappUrl, phone, packages] = await Promise.all([
+    bookingWhatsappUrl("solids"),
+    bookingPhone(),
+    getServicePackages("STARTING_SOLIDS"),
+  ]);
 
   return (
     <>
@@ -74,10 +80,12 @@ export default async function StartingSolidsPage() {
 
       <IncludesList heading="What the session includes" items={includes} />
 
-      <PricingTable
+      <PackagePricing
         heading="What it costs"
-        rows={[{ label: "60-minute 1:1 session", price: "₹799" }]}
-        note="A lower-cost group workshop is planned once there's enough demand — ask us if you'd prefer that."
+        packages={packages}
+        groups={["STARTING_SOLIDS"]}
+        phone={phone}
+        footnote="A lower-cost group workshop is planned once there's enough demand — ask us if you'd prefer that."
       />
 
       <FreeGuideCallout slugs={["baby-toddler-meal-ideas"]} source="starting-solids" />

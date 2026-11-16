@@ -22,7 +22,39 @@ const SCOPES = {
   // "pre-launch draft". The sitemap gates those three URLs on the same
   // condition, so it has to be purged with them or it would keep advertising
   // (or keep omitting) the wrong set.
-  legal: ["/terms", "/privacy", "/refunds", "/policies", "/sitemap.xml"],
+  // /faq and /preloved quote the live cancellation window, refund share and
+  // dispute window, and /about prints the BusinessProfile's support email and
+  // phone — all saved from /admin/settings under this scope.
+  legal: [
+    "/terms",
+    "/privacy",
+    "/refunds",
+    "/policies",
+    "/sitemap.xml",
+    "/faq",
+    "/preloved",
+    "/about",
+  ],
+  // Service packages and prices. The home page shows featured prices; /faq
+  // carries the session-policy answers that sit beside the price grid;
+  // /contact shows the price of the package an Enquire button sent you about.
+  services: [
+    "/",
+    "/yoga",
+    "/nutrition",
+    "/nutrition/starting-solids",
+    "/faq",
+    "/contact",
+  ],
+  // Partner offers. Expired ones are filtered by the API at read time, so a
+  // purge is only needed for admin edits, not for an offer lapsing.
+  offers: ["/offers", "/"],
+  // The service pages each render their own FAQ section beneath the prices.
+  faqs: ["/faq", "/yoga", "/nutrition"],
+  // SiteContent. The footer's social links come from it, so the root layout
+  // is purged too (below) — every page renders that footer. The pages are
+  // listed anyway so the scope documents what reads the content.
+  content: ["/", "/about", "/community", "/preloved", "/contact"],
 } as const;
 
 type Scope = keyof typeof SCOPES;
@@ -62,6 +94,9 @@ export async function POST(request: Request): Promise<Response> {
   for (const path of SCOPES[scope]) revalidatePath(path);
   // Dynamic segments need the route pattern plus an explicit type.
   if (scope === "blog") revalidatePath("/journal/[slug]", "page");
+  // The root layout and everything beneath it: the footer's social links are
+  // SiteContent, and they appear on every page.
+  if (scope === "content") revalidatePath("/", "layout");
 
   return Response.json({ revalidated: true, scope });
 }

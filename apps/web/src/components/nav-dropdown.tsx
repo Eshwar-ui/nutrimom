@@ -109,7 +109,7 @@ export function NavDropdown({
           onClick={closeNow}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "flex items-center gap-1 whitespace-nowrap py-1.5 pl-2.5 pr-1 text-sm font-semibold xl:pl-3",
+            "flex items-center gap-1 whitespace-nowrap py-1.5 pl-2 pr-0.5 text-[13px] font-semibold 2xl:pl-3 2xl:pr-1 2xl:text-sm",
           )}
         >
           {label}
@@ -120,11 +120,11 @@ export function NavDropdown({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="rounded-full py-1.5 pl-0.5 pr-2 xl:pr-2.5"
+          className="rounded-full py-1.5 pl-0.5 pr-1.5 2xl:pr-2.5"
         >
           <ChevronDown
             className={cn(
-              "h-4 w-4 transition-transform duration-200",
+              "h-3.5 w-3.5 transition-transform duration-200 2xl:h-4 2xl:w-4",
               open && "rotate-180",
             )}
           />
@@ -142,7 +142,7 @@ export function NavDropdown({
             style={{ transformOrigin: "top center" }}
             className="absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 pt-2"
           >
-            <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
+            <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-pop">
               {items.map((item) => (
                 <Link
                   key={item.href}

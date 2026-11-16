@@ -8,7 +8,7 @@ import { Check, X, Star, Plus, Ban, RotateCcw } from "lucide-react";
 import { formatPaise, type Listing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ListingStatusBadge } from "@/components/listing-status-badge";
 import { RejectListingDialog } from "@/components/reject-listing-dialog";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
@@ -54,7 +54,7 @@ export default function AdminListingsPage() {
     <div>
       <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">Moderation</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Listings</h1><p className="mt-2 text-muted-foreground">Review item details and decide what goes live.</p></div>
-        <Link href="/admin/listings/new" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground">
+        <Link href="/admin/listings/new" className={buttonVariants()}>
           <Plus className="h-4 w-4" /> New listing
         </Link>
       </header>
@@ -89,7 +89,7 @@ export default function AdminListingsPage() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <Link href={`/admin/listings/${l.id}`} className="truncate font-medium text-foreground hover:text-accent">
+                <Link href={`/admin/listings/${l.id}`} className="truncate font-medium text-foreground hover:text-accent-text">
                   {l.title}
                 </Link>
                 <p className="text-sm text-muted-foreground">

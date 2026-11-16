@@ -8,15 +8,16 @@ import {
 import { Reveal } from "@/components/reveal";
 import { DecorativeElement } from "@/components/decorative-element";
 import { bookingWhatsappUrl } from "@/lib/booking";
-import { pageMetadata } from "@/lib/seo";
+import { SERVICE_OG_IMAGES, pageMetadata } from "@/lib/seo";
 import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata = pageMetadata({
-  title: "Mom Support Community",
+  title: "Mom Community",
   description:
-    "A free community for Indian moms — pregnancy and postpartum support, baby and toddler talk, nutrition resources, mom wellness, mompreneur conversations and expert sessions.",
+    "A free community for Indian moms: pregnancy and postpartum support, baby and toddler talk, nutrition tips, mom wellness and expert sessions.",
   path: "/community",
+  images: [SERVICE_OG_IMAGES.community],
 });
 
 const areas = [
@@ -25,7 +26,7 @@ const areas = [
   "Baby and toddler discussions.",
   "Food, nutrition and practical resources.",
   "Mom wellness and self-care.",
-  "Mompreneur conversations and networking.",
+  "Conversations and connections for moms who run a business.",
   "Expert sessions, workshops and live events.",
 ];
 
@@ -37,9 +38,9 @@ export default async function CommunityPage() {
       <JsonLd
         data={[
           serviceJsonLd({
-            name: "Mom Support Community",
+            name: "Mom Community",
             description:
-              "A free community for Indian moms: pregnancy and postpartum support, baby and toddler talk, wellness, mompreneur conversations, expert sessions and events.",
+              "A free community for Indian moms: pregnancy and postpartum support, baby and toddler talk, wellness, conversations for moms in business, expert sessions and events.",
             path: "/community",
             serviceType: "Peer support community",
             offerings: areas,
@@ -52,19 +53,19 @@ export default async function CommunityPage() {
       />
       <section className="relative overflow-hidden">
         <DecorativeElement
-          src="/images/bg-element-sun-doodle.png"
+          src="/images/bg-element-sun-doodle.webp"
           className="left-6 top-10 hidden w-20 opacity-80 sm:block"
         />
         <DecorativeElement
-          src="/images/bg-element-leaf-sprig.png"
+          src="/images/bg-element-leaf-sprig.webp"
           className="-left-16 bottom-0 hidden w-48 -rotate-12 opacity-35 lg:block"
         />
         <DecorativeElement
-          src="/images/bg-element-doodle-cluster.png"
+          src="/images/bg-element-doodle-cluster.webp"
           className="right-6 top-16 hidden w-28 rotate-6 opacity-60 md:block"
         />
         <DecorativeElement
-          src="/images/bg-element-toy-accent.png"
+          src="/images/bg-element-toy-accent.webp"
           className="-right-8 bottom-2 hidden w-28 rotate-6 opacity-40 lg:block"
         />
         <Container className="relative py-14 text-center sm:py-20">
@@ -81,9 +82,9 @@ export default async function CommunityPage() {
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <BookingCta
           intent="community"
-                label="Join the community"
+                label="Join Our Community"
                 whatsappUrl={whatsappUrl}
-                secondary={{ href: "/journal", label: "Read the Journal" }}
+                secondary={{ href: "/journal", label: "Read the Blog" }}
               />
             </div>
           </Reveal>
@@ -111,8 +112,8 @@ export default async function CommunityPage() {
           schedule nobody has written is how a community loses its trust.
         */}
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          We&apos;re working on an optional paid layer with exclusive workshops, a
-          resource library and member events. It isn&apos;t open yet — when it is,
+          We&apos;re working on an optional paid membership with exclusive
+          workshops, a library of guides and member events. It isn&apos;t open yet — when it is,
           you&apos;ll hear about it inside the community first.
         </p>
       </section>
@@ -123,9 +124,9 @@ export default async function CommunityPage() {
       >
         <BookingCta
           intent="community"
-          label="Join the community"
+          label="Join Our Community"
           whatsappUrl={whatsappUrl}
-          secondary={{ href: "/about", label: "Meet the founders" }}
+          secondary={{ href: "/about", label: "Meet the Founders" }}
         />
       </ClosingCta>
       </Container>

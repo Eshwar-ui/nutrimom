@@ -29,12 +29,16 @@ const PILLAR_SERVICES = [
 /**
  * A `Service` node for one of the pillar pages.
  *
- * **No `offers` block, deliberately.** Every one of these pages prints its
- * fees under "Starting prices … we'll confirm before you book", and the
- * founders' brief flags them all as unconfirmed planning ranges. `Offer.price`
+ * **No prices, deliberately — do not add `price`/`priceSpecification` here.**
+ * The yoga and nutrition pages now read their fees from the ServicePackage
+ * table, but the client has not yet confirmed that the launch prices are
+ * final (REDESIGN-PLAN, "Needed from the client" #8) — the nutrition fees are
+ * still printed as "starting price … we'll confirm it before you book", and
+ * booking is confirmed by hand on WhatsApp, never charged here. `Offer.price`
  * asserts a firm price, so emitting one would publish a machine-readable
- * commitment the page itself declines to make. Name the services, price them
- * when the prices are real.
+ * commitment the business hasn't made yet. Once the client confirms, price
+ * these from the same ServicePackage rows the pages render.
+ * The `Offer` entries below only name the sessions (`itemOffered`).
  */
 export function serviceJsonLd({
   name,

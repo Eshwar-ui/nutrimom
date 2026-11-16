@@ -35,7 +35,10 @@ export default function SellPage() {
         Sell an item
       </h1>
       <p className="mt-2 text-muted-foreground">
-        Give your outgrown baby gear a joyful second home. It takes two minutes.
+        Give your outgrown baby gear a joyful second home. It takes two minutes.{" "}
+        <Link href="/preloved#selling" className="font-semibold text-accent-text underline-offset-4 hover:underline">
+          How selling works
+        </Link>
       </p>
 
       <div className="mt-8">
@@ -53,15 +56,15 @@ export default function SellPage() {
                 {!status?.registrationPaid
                   ? "Become a verified seller to list"
                   : !status?.sellerVerified
-                    ? "Awaiting admin approval"
-                    : "An active membership is required to list"}
+                    ? "Waiting for our team to approve your account"
+                    : "Choose a membership plan to start listing"}
               </h2>
               <p className="mt-1 max-w-prose text-sm text-muted-foreground">
                 {!status?.registrationPaid
-                  ? `A one-time ${formatPaise(REGISTRATION_FEE_PAISE)} seller registration, then a membership plan from ${formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}/mo, unlocks listing.`
+                  ? `To list items, register once for ${formatPaise(REGISTRATION_FEE_PAISE)}, then choose a membership plan from ${formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)} a month.`
                   : !status?.sellerVerified
-                    ? "Your registration is complete — an admin needs to approve your account before you can list. You can still choose a membership plan in the meantime."
-                    : "Your seller account is verified. Choose a membership plan to start listing items."}
+                    ? "Your registration is complete. Our team needs to approve your account before you can list — you can choose a membership plan in the meantime."
+                    : "Your seller account is approved. Choose a membership plan to start listing items."}
               </p>
             </div>
             <Link href="/account/membership" className={buttonVariants()}>

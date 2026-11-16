@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowRight, Building2, MessageCircleQuestion } from "lucide-react";
 import { isBusinessProfileComplete } from "@nutrimom/shared";
 import { Container } from "@/components/ui/primitives";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 import { getBusinessProfile } from "@/lib/business-profile";
 
@@ -143,7 +145,7 @@ export async function LegalDoc({
             </div>
             <Link
               href="/contact"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background transition-transform hover:-translate-y-0.5"
+              className={cn(buttonVariants(), "shrink-0")}
             >
               Contact us <ArrowRight className="h-4 w-4" />
             </Link>

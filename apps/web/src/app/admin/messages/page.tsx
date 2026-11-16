@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail, MailOpen, CheckCheck } from "lucide-react";
-import { enquiryServiceByValue } from "@nutrimom/shared";
+import { enquiryServiceByValue, formatPaise } from "@nutrimom/shared";
 import type { ContactMessage, ContactMessageStatus } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { Card } from "@/components/ui/primitives";
@@ -12,7 +12,7 @@ import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 
 const statusStyles: Record<ContactMessageStatus, string> = {
-  NEW: "bg-gold/20 text-gold",
+  NEW: "bg-gold/20 text-gold-ink",
   READ: "bg-muted text-muted-foreground",
   RESPONDED: "bg-primary/15 text-primary",
 };
@@ -79,6 +79,14 @@ export default function AdminMessagesPage() {
                     {enquiryServiceByValue(message.service) && (
                       <span className="shrink-0 rounded-full bg-sky/40 px-2 py-0.5 text-[10px] font-bold uppercase text-foreground">
                         {enquiryServiceByValue(message.service)!.label}
+                      </span>
+                    )}
+                    {/* The package and price she was shown, snapshotted by the
+                        API when she enquired — not the package's price today. */}
+                    {message.packageName && (
+                      <span className="shrink-0 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-text">
+                        {message.packageName}
+                        {message.quotedPricePaise != null && <> · {formatPaise(message.quotedPricePaise)} quoted</>}
                       </span>
                     )}
                   </p>

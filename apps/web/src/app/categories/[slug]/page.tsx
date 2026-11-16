@@ -11,7 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing-card";
 
 const describe = (name: string) =>
-  `Shop preloved ${name.toLowerCase()} in India — gently used, honestly graded and listed by verified moms. Buy secondhand ${name.toLowerCase()} at a fraction of retail on The Nurture Moms.`;
+  `Shop preloved ${name.toLowerCase()} in India — gently used, honestly graded and listed by verified moms, at a fraction of the price of new.`;
 
 export async function generateMetadata({
   params,

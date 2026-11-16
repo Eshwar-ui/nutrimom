@@ -4,7 +4,7 @@ import type {
   SellerCheckoutResponse,
 } from "@nutrimom/shared";
 import { authedRequest } from "./api";
-import { loadRazorpay, openRazorpay } from "./razorpay";
+import { loadRazorpay, openRazorpay, RAZORPAY_THEME_COLOR } from "./razorpay";
 import { toast } from "./toast-store";
 import {
   PaymentCancelledError,
@@ -41,7 +41,7 @@ async function payAndVerify(
       description,
       order_id: checkout.razorpayOrderId,
       prefill,
-      theme: { color: "#e8756a" },
+      theme: { color: RAZORPAY_THEME_COLOR },
       handler: (resp) => {
         onVerifyStart?.();
         authedRequest<SellerBillingStatus>("/seller/billing/verify", {

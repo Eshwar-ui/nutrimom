@@ -7,7 +7,7 @@ import type { Listing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
 import { AccountShell } from "@/components/account-shell";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ListingCard } from "@/components/listing-card";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
@@ -30,7 +30,7 @@ export default function WishlistPage() {
         ) : isError ? (
           <StatePanel tone="error" title="Couldn't load your wishlist" description="Something went wrong reaching the marketplace. Check your connection and try again." action={<Button variant="outline" onClick={() => refetch()}>Try again</Button>} />
         ) : !data || data.length === 0 ? (
-          <StatePanel icon={Heart} title="No saved treasures yet" description="Tap the heart on any listing to keep it here for later." action={<Link href="/listings" className="inline-flex h-14 items-center rounded-full bg-primary px-8 font-semibold text-primary-foreground">Browse listings</Link>} />
+          <StatePanel icon={Heart} title="No saved treasures yet" description="Tap the heart on any listing to keep it here for later." action={<Link href="/listings" className={buttonVariants({ size: "lg" })}>Browse listings</Link>} />
         ) : (
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-3">
             {data.map((l) => (

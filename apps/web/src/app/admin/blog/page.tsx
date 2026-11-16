@@ -10,7 +10,7 @@ import { authedRequest, ApiError } from "@/lib/api";
 import { revalidatePublicPages } from "@/lib/revalidate";
 import { toast } from "@/lib/toast-store";
 import { Card } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +69,7 @@ export default function AdminBlogPage() {
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Blog</h1>
           <p className="mt-2 text-muted-foreground">Write and publish posts for The Nurture Journal.</p>
         </div>
-        <Link href="/admin/blog/new" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground">
+        <Link href="/admin/blog/new" className={buttonVariants()}>
           <Plus className="h-4 w-4" /> New post
         </Link>
       </header>
@@ -84,7 +84,7 @@ export default function AdminBlogPage() {
             <div key={post.id} className="flex flex-wrap items-center gap-4 p-4">
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 font-medium text-foreground">
-                  <Link href={`/admin/blog/${post.id}/edit`} className="truncate hover:text-accent">{post.title}</Link>
+                  <Link href={`/admin/blog/${post.id}/edit`} className="truncate hover:text-accent-text">{post.title}</Link>
                   <span className={cn(
                     "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
                     post.published ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",

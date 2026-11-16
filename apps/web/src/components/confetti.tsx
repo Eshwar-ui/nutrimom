@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion";
 
-// Brand palette confetti — coral, forest, gold, blush, sky, sage.
-const COLORS = ["#ef8377", "#4f7c5a", "#d8a84c", "#f7c6d0", "#cfe8f9", "#a8c3a0"];
+// Brand palette confetti — terracotta, deep sage, gold, terracotta tint, pale
+// sage, sage. Literals because they go into inline styles, not class names.
+const COLORS = ["#d08a6c", "#55704d", "#c9a55a", "#edd3c4", "#d5dfcb", "#a8bfa0"];
 
 /** One-shot celebratory confetti. Render it (client-side) on a success moment. */
 export function Confetti({ count = 46 }: { count?: number }) {

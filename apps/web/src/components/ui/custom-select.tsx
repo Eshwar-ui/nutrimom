@@ -193,7 +193,7 @@ export function CustomSelect({
         transform: rect.flip ? "translateY(-100%)" : undefined,
         transformOrigin: rect.flip ? "bottom" : "top",
       }}
-      className="z-[90] overflow-auto rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]"
+      className="z-[90] overflow-auto rounded-2xl border border-border bg-surface p-1.5 shadow-pop"
     >
       {items.map((opt, i) => {
         const isSelected = opt.value === value;

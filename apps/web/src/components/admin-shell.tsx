@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardCheck, Users, ClipboardList, Tags, Settings, Newspaper, MessageSquare, Banknote } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Users, ClipboardList, Tags, Settings, Newspaper, MessageSquare, Banknote, HandHeart, IndianRupee, BadgePercent, CircleHelp, Quote, PanelsTopLeft } from "lucide-react";
 import { useRequireAuth } from "@/lib/use-auth";
 import { AdminHeader } from "@/components/admin-header";
 import { Container } from "@/components/ui/primitives";
@@ -16,6 +16,13 @@ const tabs = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   { href: "/admin/payouts", label: "Payouts", icon: Banknote },
+  { href: "/admin/donations", label: "Donations", icon: HandHeart },
+  // Site content (REDESIGN-PLAN 1d) — what the public pages render.
+  { href: "/admin/services", label: "Services & prices", icon: IndianRupee },
+  { href: "/admin/offers", label: "Offers", icon: BadgePercent },
+  { href: "/admin/faqs", label: "FAQs", icon: CircleHelp },
+  { href: "/admin/testimonials", label: "Testimonials", icon: Quote },
+  { href: "/admin/content", label: "Site content", icon: PanelsTopLeft },
   { href: "/admin/blog", label: "Blog", icon: Newspaper },
   { href: "/admin/messages", label: "Messages", icon: MessageSquare },
   { href: "/admin/settings", label: "Settings", icon: Settings },

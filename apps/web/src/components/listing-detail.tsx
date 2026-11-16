@@ -16,9 +16,13 @@ import {
   type Listing,
 } from "@nutrimom/shared";
 import { Container, Badge } from "@/components/ui/primitives";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ListingGallery } from "@/components/listing-gallery";
 import { ListingActions } from "@/components/listing-actions";
 import { ListingCard } from "@/components/listing-card";
+import { ListingStatusBadge } from "@/components/listing-status-badge";
+import { listingPlace } from "@/lib/listing-place";
 
 /**
  * The product page body, shared by the public listing route and the admin
@@ -54,8 +58,9 @@ export function ListingDetail({
   const facts = [
     { icon: Info, label: "Condition", value: conditionLabels[listing.condition] },
     listing.usageDuration && { icon: CalendarClock, label: "Used for", value: listing.usageDuration },
-    { icon: Truck, label: "Delivery", value: deliveryLabels[listing.deliveryOption] },
-    { icon: MapPin, label: "Location", value: listing.city },
+    { icon: Truck, label: "Delivery or pickup", value: deliveryLabels[listing.deliveryOption] },
+    // City and area only: the PIN is never part of the public listing.
+    { icon: MapPin, label: "Location", value: listingPlace(listing) },
   ].filter(Boolean) as { icon: typeof Info; label: string; value: string }[];
 
   return (
@@ -70,9 +75,10 @@ export function ListingDetail({
         <ListingGallery images={listing.images} alt={listing.title} />
 
         <div className="lg:py-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge className="bg-primary/12 text-primary">Preloved</Badge>
             <Badge className="bg-accent/12 text-accent-text">{listing.category.name}</Badge>
+            <ListingStatusBadge status={listing.status} />
           </div>
 
           <h1 className="mt-3 font-display text-4xl font-semibold leading-tight text-foreground">
@@ -122,10 +128,15 @@ export function ListingDetail({
             <div className="flex-1">
               <p className="flex items-center gap-1.5 font-semibold text-foreground">
                 {listing.seller.name}
-                {listing.seller.isSellerVerified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                {listing.seller.isSellerVerified && (
+                  <>
+                    <BadgeCheck className="h-4 w-4 text-primary" aria-hidden />
+                    <span className="sr-only">(verified seller)</span>
+                  </>
+                )}
               </p>
               <p className="text-sm text-muted-foreground">
-                {listing.seller.city ?? "Seller"} · View shop
+                {listing.seller.city ?? "Seller"} · See all their items
               </p>
             </div>
             <Store className="h-5 w-5 text-muted-foreground" />
@@ -150,7 +161,7 @@ export function ListingDetail({
             </div>
             <Link
               href={`/listings?category=${listing.category.slug}`}
-              className="hidden shrink-0 items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background transition-transform hover:-translate-y-0.5 sm:inline-flex"
+              className={cn(buttonVariants({ variant: "outline" }), "hidden shrink-0 sm:inline-flex")}
             >
               See all <ArrowRight className="h-4 w-4" />
             </Link>

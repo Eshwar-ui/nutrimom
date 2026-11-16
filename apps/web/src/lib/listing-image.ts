@@ -1,4 +1,4 @@
-export const LISTING_IMAGE_FALLBACK = "/images/category-bg.png";
+export const LISTING_IMAGE_FALLBACK = "/images/category-bg.webp";
 
 function isAllowedListingImage(src: string) {
   if (src.startsWith("/") && !src.startsWith("//")) return true;

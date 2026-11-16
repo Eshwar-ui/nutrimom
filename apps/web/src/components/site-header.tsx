@@ -28,16 +28,26 @@ import { useWishlistStore } from "@/lib/wishlist-store";
 import { authedRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthHydrated } from "@/lib/use-store-hydrated";
-import { isNavItemActive, isNavPathActive, PRIMARY_NAV } from "@/lib/site-nav";
+import {
+  BOOK_SESSION_HREF,
+  isNavItemActive,
+  isNavPathActive,
+  PRIMARY_NAV,
+} from "@/lib/site-nav";
 import { NavDropdown } from "./nav-dropdown";
 
 // The nav tree lives in lib/site-nav so the header, the footer and the sitemap
 // cannot drift apart. Items with `children` render as a dropdown; the parent
 // stays a real link, so "Preloved" is reachable without opening the menu.
+//
+// Eight links plus the "Book a Session" button fit on one line from `xl`
+// (1280px) up, at 13px with tight padding; they relax to 14px at `2xl`. Below
+// `xl` the hamburger menu takes over — squeezing eight links into a 1024px bar
+// meant either wrapping or shrinking them past comfortable reading size.
 
 const ticker = [
-  "Yoga, nutrition, community and preloved — in one place",
-  "Move. Nourish. Connect. Pass it on.",
+  "Yoga & Garbhasanskar, nutrition, mom community and preloved — in one place",
+  "Move, nourish, connect and grow together",
   "Mom-led, practical and affordable",
   "For every stage of motherhood",
 ];
@@ -48,6 +58,8 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Which dropdown's sub-pages are unfolded in the mobile menu.
+  const [mobileSection, setMobileSection] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const accountCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,7 +150,7 @@ export function SiteHeader() {
             size="icon"
             aria-label="Menu"
             aria-expanded={menuOpen}
-            className="shrink-0 lg:hidden"
+            className="shrink-0 xl:hidden"
             onClick={() => {
               setMenuOpen((o) => !o);
               setSearchOpen(false);
@@ -150,7 +162,10 @@ export function SiteHeader() {
           <Link href="/" aria-label="The Nurture Moms home" className="shrink-0 sm:hidden"><LogoEmblem badgeClassName="h-9 w-9" /></Link>
           <Logo className="hidden shrink-0 sm:inline-flex" />
 
-          <nav className="hidden flex-1 items-center justify-center gap-0.5 lg:flex xl:gap-1">
+          <nav
+            aria-label="Main"
+            className="hidden min-w-0 flex-1 items-center justify-center xl:flex 2xl:gap-0.5"
+          >
             {PRIMARY_NAV.map((item) =>
               item.children ? (
                 <NavDropdown
@@ -165,7 +180,7 @@ export function SiteHeader() {
                   href={item.href}
                   aria-current={isNavPathActive(pathname, item.href) ? "page" : undefined}
                   className={cn(
-                    "whitespace-nowrap rounded-full px-2.5 py-1.5 text-sm font-semibold transition-colors hover:bg-muted hover:text-foreground xl:px-3",
+                    "whitespace-nowrap rounded-full px-2 py-1.5 text-[13px] font-semibold transition-colors hover:bg-muted hover:text-foreground 2xl:px-3 2xl:text-sm",
                     isNavPathActive(pathname, item.href)
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground",
@@ -209,9 +224,9 @@ export function SiteHeader() {
                   )}
                 </Link>
 
-                {/* Primary platform CTA — books a session or joins the community */}
-                <Link href="/contact" className={cn(buttonVariants({ size: "sm" }), "ml-1 hidden gap-1.5 sm:inline-flex")}>
-                  <CalendarHeart className="h-4 w-4" /> Book / Join
+                {/* The brief's ninth menu item, as the highlighted button. */}
+                <Link href={BOOK_SESSION_HREF} className={cn(buttonVariants({ size: "sm" }), "ml-1 hidden gap-1.5 sm:inline-flex")}>
+                  <CalendarHeart className="h-4 w-4" /> Book a Session
                 </Link>
 
                 {/* Profile — avatar chip that reveals wishlist, notifications & sign out on hover/click */}
@@ -240,7 +255,9 @@ export function SiteHeader() {
                         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-background" />
                       )}
                     </span>
-                    <span className="hidden max-w-[7rem] truncate text-sm font-semibold text-foreground lg:inline">
+                    {/* First name hidden while the full menu shares the bar
+                        (1280–1535px); the chip still says whose account it is. */}
+                    <span className="hidden max-w-[7rem] truncate text-sm font-semibold text-foreground lg:inline xl:hidden 2xl:inline">
                       {user.name.split(" ")[0]}
                     </span>
                     <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-200", accountOpen && "rotate-180")} />
@@ -257,7 +274,7 @@ export function SiteHeader() {
                         style={{ transformOrigin: "top right" }}
                         className="absolute right-0 top-full z-50 w-60 pt-2"
                       >
-                       <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
+                       <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-pop">
                         <div className="flex items-center gap-3 border-b border-border px-3 py-3">
                           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/12 text-sm font-bold uppercase text-primary">
                             {user.name[0]}
@@ -299,12 +316,13 @@ export function SiteHeader() {
             ) : (
               <>
                 {/* Primary platform CTA */}
-                <Link href="/contact" className={cn(buttonVariants({ size: "sm" }), "hidden gap-1.5 sm:inline-flex")}>
-                  <CalendarHeart className="h-4 w-4" /> Book / Join
+                <Link href={BOOK_SESSION_HREF} className={cn(buttonVariants({ size: "sm" }), "hidden gap-1.5 sm:inline-flex")}>
+                  <CalendarHeart className="h-4 w-4" /> Book a Session
                 </Link>
-                {/* Primary CTA */}
-                <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-1 gap-1.5")}>
-                  <User className="h-4 w-4" /> Sign in
+                {/* Icon-only between 1280 and 1536px, where the full menu is
+                    on the same line; the label stays for screen readers. */}
+                <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-1 gap-1.5 xl:max-2xl:px-2.5")}>
+                  <User className="h-4 w-4" aria-hidden /> <span className="xl:max-2xl:sr-only">Sign in</span>
                 </Link>
               </>
             )}
@@ -320,48 +338,69 @@ export function SiteHeader() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-x-0 top-full overflow-hidden border-b border-border bg-background/95 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] lg:hidden"
+            className="absolute inset-x-0 top-full overflow-hidden border-b border-border bg-background/95 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] xl:hidden"
           >
             {/* The panel hangs below a sticky header, so it never scrolls with
                 the page. Capped at the viewport under the header (ticker 2rem +
                 bar 4rem) and scrollable on its own, or the account links and the
                 Book button fall off the bottom of a phone screen. */}
-            <nav className="mx-auto flex max-h-[calc(100dvh-6rem)] w-full max-w-7xl flex-col gap-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-8">
-              {PRIMARY_NAV.map((item) => (
-                <div key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    aria-current={isNavItemActive(pathname, item) ? "page" : undefined}
-                    className={cn(
-                      "block rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors hover:bg-muted",
-                      isNavItemActive(pathname, item) ? "bg-primary/10 text-primary" : "text-foreground",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                  {item.children && (
-                    <div className="mb-1 ml-3 border-l border-border pl-3">
-                      {item.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={() => setMenuOpen(false)}
-                          aria-current={isNavPathActive(pathname, child.href) ? "page" : undefined}
-                          className={cn(
-                            "block rounded-xl px-3 py-2 text-sm transition-colors hover:bg-muted hover:text-foreground",
-                            isNavPathActive(pathname, child.href)
-                              ? "bg-primary/10 font-semibold text-primary"
-                              : "text-muted-foreground",
-                          )}
+            <nav aria-label="Main" className="mx-auto flex max-h-[calc(100dvh-6rem)] w-full max-w-7xl flex-col gap-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-8">
+              {PRIMARY_NAV.map((item) => {
+                const active = isNavItemActive(pathname, item);
+                const expanded = mobileSection === item.href;
+                const panelId = `mobile-nav-${item.label.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+                return (
+                  <div key={item.href}>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex min-h-11 flex-1 items-center rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-muted",
+                          active ? "bg-primary/10 text-primary" : "text-foreground",
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                      {item.children && (
+                        // Sub-pages fold away so the whole menu fits a phone
+                        // screen; the parent stays a real link.
+                        <button
+                          type="button"
+                          aria-label={`${item.label} pages`}
+                          aria-expanded={expanded}
+                          aria-controls={panelId}
+                          onClick={() => setMobileSection(expanded ? null : item.href)}
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
-                          {child.label}
-                        </Link>
-                      ))}
+                          <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", expanded && "rotate-180")} />
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    {item.children && expanded && (
+                      <div id={panelId} className="mb-1 ml-3 border-l border-border pl-3">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setMenuOpen(false)}
+                            aria-current={isNavPathActive(pathname, child.href) ? "page" : undefined}
+                            className={cn(
+                              "flex min-h-10 items-center rounded-xl px-3 text-sm transition-colors hover:bg-muted hover:text-foreground",
+                              isNavPathActive(pathname, child.href)
+                                ? "bg-primary/10 font-semibold text-primary"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               <div className="my-2 border-t border-border" />
               {hydrated && user && (
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
@@ -371,8 +410,8 @@ export function SiteHeader() {
                   <button type="button" onClick={() => { logout(); setMenuOpen(false); }} className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger/10">Log out</button>
                 </div>
               )}
-              <Link href="/contact" onClick={() => setMenuOpen(false)} className={cn(buttonVariants(), "mt-2 w-full gap-1.5")}>
-                <CalendarHeart className="h-4 w-4" /> Book / Join
+              <Link href={BOOK_SESSION_HREF} onClick={() => setMenuOpen(false)} className={cn(buttonVariants(), "mt-2 w-full gap-1.5")}>
+                <CalendarHeart className="h-4 w-4" /> Book a Session
               </Link>
             </nav>
           </motion.div>

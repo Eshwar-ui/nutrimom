@@ -6,6 +6,8 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppChrome } from "@/components/app-chrome";
 import { Toaster } from "@/components/toaster";
+import { getSiteContent } from "@/lib/content";
+import { resolveSocialLinks } from "@/lib/site-nav";
 import {
   OG_IMAGE,
   SITE_DESCRIPTION,
@@ -81,15 +83,20 @@ export const viewport: Viewport = {
   // Matches the light/dark `--background` tokens in globals.css so the mobile
   // browser chrome blends with the page instead of banding against it.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdf6ee" },
-    { media: "(prefers-color-scheme: dark)", color: "#1b1613" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f3ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c2019" },
   ],
   colorScheme: "light dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // The footer's social links are admin-editable (SiteContent); the "content"
+  // revalidation scope purges this layout on save. Fails soft to the
+  // constants in site-nav, so the footer never loses its links.
+  const social = resolveSocialLinks(await getSiteContent());
+
   return (
     <html
       lang="en-IN"
@@ -98,7 +105,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <Providers>
-          <AppChrome>{children}</AppChrome>
+          <AppChrome social={social}>{children}</AppChrome>
           <Toaster />
         </Providers>
         <Analytics />

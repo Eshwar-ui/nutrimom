@@ -67,7 +67,7 @@ export default function MyListingsPage() {
       ) : isError ? (
         <StatePanel tone="error" title="Couldn't load your listings" description="Something went wrong reaching the marketplace. Check your connection and try again." action={<Button variant="outline" onClick={() => refetch()}>Try again</Button>} />
       ) : !data || data.length === 0 ? (
-        <StatePanel title="No listings yet" description="List the baby gear your family has outgrown and it will appear here for review." action={<Link href="/sell" className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground">Sell your first item</Link>} />
+        <StatePanel title="No listings yet" description="List the baby gear your family has outgrown and it will appear here for review." action={<Link href="/sell" className={buttonVariants()}>Sell your first item</Link>} />
       ) : (
         <div className="space-y-3">
           {data.map((l) => (

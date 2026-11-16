@@ -15,9 +15,16 @@ import { Playful } from "@/components/ui/playful";
 import { DecorativeElement } from "@/components/decorative-element";
 import { LegalPlaceholderBanner } from "@/components/legal-placeholder-banner";
 import { ContactForm } from "@/components/contact-form";
+import { PackageEnquirySummary } from "@/components/package-enquiry-summary";
 import { getBusinessProfile } from "@/lib/business-profile";
+import { GROUP_ENQUIRY_SERVICE } from "@/lib/booking";
+import { getServicePackages } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
-import { enquiryServiceBySlug, isBusinessProfileComplete } from "@nutrimom/shared";
+import {
+  enquiryServiceBySlug,
+  enquiryServiceByValue,
+  isBusinessProfileComplete,
+} from "@nutrimom/shared";
 
 // Not gated on the business profile the way /terms and /privacy are: this page
 // carries a working contact form regardless, and `sitemap.ts` has always
@@ -38,7 +45,7 @@ const baseDetails = [
     href: "/account/orders",
     cta: "Open My orders",
     paper: "bg-blush/45",
-    sticker: "bg-blush text-[#7a2447]",
+    sticker: "bg-blush text-blush-ink",
     rotate: "-rotate-2",
     tape: "left-8 -rotate-6",
     lift: "sm:mt-6",
@@ -48,7 +55,7 @@ const baseDetails = [
     label: "Listing questions",
     body: "Use the seller's WhatsApp action on the listing for item and handover questions.",
     paper: "bg-sky/50",
-    sticker: "bg-sky text-[#215172]",
+    sticker: "bg-sky text-sky-ink",
     rotate: "rotate-1",
     tape: "right-10 rotate-3",
     lift: "",
@@ -58,7 +65,7 @@ const baseDetails = [
     label: "Payment safety",
     body: "Use marketplace checkout for online payments. Never share card or OTP details with a seller.",
     paper: "bg-sage/45",
-    sticker: "bg-sage text-[#2f5236]",
+    sticker: "bg-sage text-sage-ink",
     rotate: "rotate-1",
     tape: "left-10 -rotate-3",
     lift: "sm:mt-6",
@@ -68,15 +75,27 @@ const baseDetails = [
 export default async function ContactPage({
   searchParams,
 }: {
-  searchParams: Promise<{ service?: string }>;
+  searchParams: Promise<{ service?: string | string[]; package?: string | string[] }>;
 }) {
   const [profile, sp] = await Promise.all([getBusinessProfile(), searchParams]);
   const published = isBusinessProfileComplete(profile);
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+  // `?package=` is set by a package card's Enquire button. The public list is
+  // active packages only, so an unknown, inactive or hand-edited id simply
+  // finds nothing and the page reads as an ordinary enquiry — never an error.
+  const packageId = one(sp.package)?.trim();
+  const pkg = packageId
+    ? (await getServicePackages()).find((p) => p.id === packageId) ?? null
+    : null;
 
   // Set by every service page's booking CTA while the operator has no WhatsApp
   // number. An unknown or hand-edited slug reads as no service rather than
   // 404ing — someone mid-enquiry should land on a working form, not an error.
-  const service = enquiryServiceBySlug(sp.service);
+  // A package names its own service, which beats a slug that disagrees with it.
+  const service = pkg
+    ? enquiryServiceByValue(GROUP_ENQUIRY_SERVICE[pkg.group])
+    : enquiryServiceBySlug(one(sp.service));
 
   // The business card carries the operator's real details once they exist,
   // and otherwise says plainly that they don't yet — never a stand-in address.
@@ -90,7 +109,7 @@ export default async function ContactPage({
           ? `${profile.legalEntityName}. ${profile.registeredAddress}. ${profile.supportEmail} · ${profile.supportPhone}`
           : "Operator and registered contact details will be published here before public launch.",
       paper: "bg-lavender/50",
-      sticker: "bg-lavender text-[#4a3170]",
+      sticker: "bg-lavender text-lavender-ink",
       rotate: "-rotate-1",
       tape: "right-8 rotate-6",
       lift: "",
@@ -101,9 +120,9 @@ export default async function ContactPage({
     <>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <DecorativeElement src="/images/bg-element-sun-doodle.png" className="left-6 top-10 hidden w-20 opacity-80 sm:block" />
-        <DecorativeElement src="/images/bg-element-doodle-cluster.png" className="right-8 top-14 hidden w-28 -rotate-12 opacity-60 md:block" />
-        <DecorativeElement src="/images/bg-element-leaf-sprig.png" className="-left-16 bottom-0 hidden w-44 -rotate-12 opacity-35 lg:block" />
+        <DecorativeElement src="/images/bg-element-sun-doodle.webp" className="left-6 top-10 hidden w-20 opacity-80 sm:block" />
+        <DecorativeElement src="/images/bg-element-doodle-cluster.webp" className="right-8 top-14 hidden w-28 -rotate-12 opacity-60 md:block" />
+        <DecorativeElement src="/images/bg-element-leaf-sprig.webp" className="-left-16 bottom-0 hidden w-44 -rotate-12 opacity-35 lg:block" />
         <Container className="relative py-14 text-center sm:py-20">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-surface px-4 py-1.5 text-xs font-bold text-primary">
@@ -122,12 +141,13 @@ export default async function ContactPage({
 
       {/* Contact form — the primary way to reach us */}
       <section className="relative overflow-hidden">
-        <DecorativeElement src="/images/bg-element-blush-swash.png" className="-left-40 top-8 hidden w-[30rem] opacity-20 lg:block" />
+        <DecorativeElement src="/images/bg-element-blush-swash.webp" className="-left-40 top-8 hidden w-[30rem] opacity-20 lg:block" />
         <Container className="relative max-w-4xl pb-2">
+          {pkg && <PackageEnquirySummary pkg={pkg} />}
           <Reveal>
-            <div className="relative overflow-hidden rounded-[2rem] border-2 border-border bg-surface card-shadow md:grid md:grid-cols-[0.8fr_1.2fr]">
+            <div className="relative overflow-hidden rounded-panel border-2 border-border bg-surface card-shadow md:grid md:grid-cols-[0.8fr_1.2fr]">
               <div className="relative flex flex-col justify-center gap-4 bg-primary p-8 text-primary-foreground sm:p-10">
-                <DecorativeElement src="/images/bg-element-toy-accent.png" className="right-4 top-4 hidden w-20 opacity-40 md:block" />
+                <DecorativeElement src="/images/bg-element-toy-accent.webp" className="right-4 top-4 hidden w-20 opacity-40 md:block" />
                 <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary-foreground/15">
                   <Mail className="h-7 w-7" strokeWidth={1.5} />
                 </span>
@@ -140,7 +160,7 @@ export default async function ContactPage({
                     : "Questions about an order, a listing, or selling on the marketplace? Drop us a note and we'll get back to you."}
                 </p>
               </div>
-              <ContactForm service={service?.value ?? null} />
+              <ContactForm service={service?.value ?? null} packageId={pkg?.id ?? null} />
             </div>
           </Reveal>
         </Container>
@@ -148,8 +168,8 @@ export default async function ContactPage({
 
       {/* Contact routes — scrapbook cards */}
       <section className="relative overflow-hidden">
-        <DecorativeElement src="/images/bg-element-dotted-trail.png" className="-right-24 top-8 hidden w-[26rem] opacity-30 xl:block" />
-        <DecorativeElement src="/images/bg-element-peach-onesie.png" className="-left-8 bottom-8 hidden w-28 -rotate-6 opacity-35 lg:block" />
+        <DecorativeElement src="/images/bg-element-dotted-trail.webp" className="-right-24 top-8 hidden w-[26rem] opacity-30 xl:block" />
+        <DecorativeElement src="/images/bg-element-peach-onesie.webp" className="-left-8 bottom-8 hidden w-28 -rotate-6 opacity-35 lg:block" />
         <Container className="relative max-w-4xl pb-16">
           {!published && (
             <Reveal>
@@ -160,7 +180,7 @@ export default async function ContactPage({
             {details.map((d, i) => (
               <Reveal key={d.label} delay={i * 0.08} className={d.lift}>
                 <div
-                  className={`group relative flex h-full flex-col rounded-[1.75rem] border-2 border-border ${d.paper} p-6 card-shadow transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${d.rotate} hover:-translate-y-1.5 hover:rotate-0 sm:p-7`}
+                  className={`group relative flex h-full flex-col rounded-card border-2 border-border ${d.paper} p-6 card-shadow transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${d.rotate} hover:-translate-y-1.5 hover:rotate-0 sm:p-7`}
                 >
                   <span aria-hidden className={`absolute -top-3 h-6 w-20 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm ${d.tape}`} />
                   <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl border-2 border-surface transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-110 ${d.sticker}`}>
@@ -182,8 +202,8 @@ export default async function ContactPage({
 
       {/* CTA band */}
       <section className="relative overflow-hidden bg-primary text-primary-foreground">
-        <DecorativeElement src="/images/bg-element-blush-swash.png" className="-left-40 -top-20 w-[34rem] opacity-20" />
-        <DecorativeElement src="/images/bg-element-toy-accent.png" className="right-8 top-6 hidden w-24 opacity-60 sm:block" />
+        <DecorativeElement src="/images/bg-element-blush-swash.webp" className="-left-40 -top-20 w-[34rem] opacity-20" />
+        <DecorativeElement src="/images/bg-element-toy-accent.webp" className="right-8 top-6 hidden w-24 opacity-60 sm:block" />
         <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
         <Container className="relative flex flex-col items-center gap-6 py-16 text-center">
           <h2 className="max-w-2xl font-display text-3xl font-semibold leading-tight text-primary-foreground sm:text-4xl">

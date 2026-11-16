@@ -23,7 +23,15 @@ export type AnalyticsEvent =
   /** A marketplace action from the Preloved pillar. */
   | "preloved_click"
   /** A free guide downloaded. Carries the guide slug and where it was clicked. */
-  | "resource_download";
+  | "resource_download"
+  /** Book Now on a priced package. Carries the package id, group and channel. */
+  | "package_book_click"
+  /** Enquire on a priced package — the on-site form, with the package attached. */
+  | "package_enquire_click"
+  /** A partner coupon code copied on /offers. */
+  | "offer_copy"
+  /** Shop Now on a partner offer — the click-out to the brand's site. */
+  | "offer_click";
 
 type EventProps = Record<string, string | number | boolean | null>;
 

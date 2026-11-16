@@ -1,12 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, XCircle, Info, X } from "lucide-react";
-import { useToastStore, type ToastVariant } from "@/lib/toast-store";
+import { consumeFlashToast, useToastStore, type ToastVariant } from "@/lib/toast-store";
 import { cn } from "@/lib/utils";
 
 const styles: Record<ToastVariant, { icon: typeof Info; classes: string }> = {
-  success: { icon: CheckCircle2, classes: "bg-sage/95 text-[#1f3a1c]" },
+  success: { icon: CheckCircle2, classes: "bg-sage/95 text-sage-ink" },
   error: { icon: XCircle, classes: "bg-accent/95 text-accent-foreground" },
   info: { icon: Info, classes: "bg-foreground/95 text-background" },
 };
@@ -15,8 +16,17 @@ export function Toaster() {
   const toasts = useToastStore((s) => s.toasts);
   const dismiss = useToastStore((s) => s.dismiss);
 
+  // A toast queued before a full page load (logout, expired session).
+  useEffect(() => {
+    consumeFlashToast();
+  }, []);
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[70] flex flex-col items-center gap-2 px-4">
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 bottom-5 z-[70] flex flex-col items-center gap-2 px-4"
+    >
       <AnimatePresence initial={false}>
         {toasts.map((t) => {
           const { icon: Icon, classes } = styles[t.variant];

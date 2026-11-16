@@ -26,7 +26,7 @@ export default function CartPage() {
           icon={ShoppingBag}
           title="Your bag is empty"
           description="Find a preloved treasure and it will wait here while you decide."
-          action={<Link href="/listings" className="inline-flex h-14 items-center rounded-full bg-primary px-8 font-semibold text-primary-foreground">Browse listings</Link>}
+          action={<Link href="/listings" className={buttonVariants({ size: "lg" })}>Browse listings</Link>}
         />
       </Container>
     );
@@ -44,10 +44,10 @@ export default function CartPage() {
               </div>
               <div className="flex flex-1 flex-col">
                 <div className="flex items-start justify-between gap-3">
-                  <Link href={`/listings/${item.listingId}`} className="font-display text-lg font-semibold leading-snug text-foreground hover:text-accent">
+                  <Link href={`/listings/${item.listingId}`} className="font-display text-lg font-semibold leading-snug text-foreground hover:text-accent-text">
                     {item.title}
                   </Link>
-                  <button aria-label="Remove" onClick={() => removeItem(item.listingId)} className="text-muted-foreground transition-colors hover:text-accent">
+                  <button aria-label="Remove" onClick={() => removeItem(item.listingId)} className="text-muted-foreground transition-colors hover:text-accent-text">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -80,7 +80,7 @@ export default function CartPage() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Bag total</p><p className="text-lg font-bold text-foreground">{formatPaise(subtotal)}</p></div>
-          <Link href="/checkout" className="inline-flex h-12 items-center rounded-full bg-primary px-7 font-semibold text-primary-foreground">Checkout</Link>
+          <Link href="/checkout" className={buttonVariants()}>Checkout</Link>
         </div>
       </div>
     </Container>

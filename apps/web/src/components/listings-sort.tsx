@@ -85,7 +85,7 @@ export function ListingsSort({ sp }: { sp: SP }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute right-0 z-30 mt-2 w-60 origin-top-right overflow-hidden rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]"
+            className="absolute right-0 z-30 mt-2 w-60 origin-top-right overflow-hidden rounded-2xl border border-border bg-surface p-1.5 shadow-pop"
           >
             {sorts.map((sort) => {
               const selected = sort.value === current;

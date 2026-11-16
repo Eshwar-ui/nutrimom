@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw, UserCheck, CalendarClock } from "lucide-react";
+import { CheckCheck, Tag, PackageCheck, XCircle, ShoppingBag, RotateCcw, UserCheck, CalendarClock, Gift } from "lucide-react";
 import type { Notification, NotificationType } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
@@ -22,6 +22,7 @@ const icons: Record<NotificationType, typeof Tag> = {
   SELLER_REGISTERED: UserCheck,
   MEMBERSHIP_EXPIRING: CalendarClock,
   MEMBERSHIP_EXPIRED: CalendarClock,
+  DONATION_OFFERED: Gift,
 };
 
 export default function NotificationsPage() {
@@ -113,7 +114,12 @@ export default function NotificationsPage() {
                   ? `/admin/orders/${n.orderId}`
                   : `/orders/${n.orderId}`
                 : n.relatedUserId && user?.role === "ADMIN"
-                  ? `/admin/users/${n.relatedUserId}`
+                  ? // A donation offer links through its donor (no column
+                    // points at the offer itself): open the donation queue
+                    // filtered to her offers rather than her user profile.
+                    n.type === "DONATION_OFFERED"
+                    ? `/admin/donations?donor=${encodeURIComponent(n.relatedUserId)}`
+                    : `/admin/users/${n.relatedUserId}`
                   : // Membership notices carry no listing/order/user id — the
                     // action they want is always "go renew".
                     n.type === "MEMBERSHIP_EXPIRING" || n.type === "MEMBERSHIP_EXPIRED"

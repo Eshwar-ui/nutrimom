@@ -2,6 +2,7 @@ import { request } from "./api";
 import type {
   Category,
   Listing,
+  ListingLocations,
   ListingQuery,
   Paginated,
   Review,
@@ -45,5 +46,18 @@ export function getSellerProfile(id: string): Promise<SellerProfile> {
 export function getSellerReviews(id: string): Promise<Review[]> {
   return request<Review[]>(`/sellers/${encodeURIComponent(id)}/reviews`, {
     revalidate: 20,
+  });
+}
+
+/**
+ * Where live listings are: cities with counts, and the localities of `city`
+ * when one is given. Feeds the city combobox and locality suggestions. Public
+ * and usable from client components too (`revalidate` only applies on the
+ * server).
+ */
+export function getListingLocations(city?: string): Promise<ListingLocations> {
+  const qs = city ? `?city=${encodeURIComponent(city)}` : "";
+  return request<ListingLocations>(`/listings/locations${qs}`, {
+    revalidate: 300,
   });
 }

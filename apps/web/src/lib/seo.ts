@@ -26,8 +26,16 @@ export const SITE_URL = (
 export const SITE_NAME = "The Nurture Moms";
 export const SITE_TAGLINE = "For every stage of motherhood";
 
+/**
+ * The brief's positioning (§1): a welcoming, trustworthy and affordable
+ * motherhood platform across all four services — not a marketplace with
+ * extras. Kept under ~155 characters, the length Google shows untruncated.
+ */
 export const SITE_DESCRIPTION =
-  "Yoga, nutrition, mom support and preloved essentials for Indian moms — from pregnancy and Garbhasanskar to starting solids, toddlerhood and passing it on.";
+  "A welcoming, affordable motherhood platform for Indian moms: yoga & Garbhasanskar, maternal & child nutrition, a mom community and a preloved marketplace.";
+
+/** The founders' hero line — also the line on the default social card. */
+export const HERO_LINE = "From pregnancy to toddlerhood, you’re not alone.";
 
 /** Absolute URL for a site-relative path (crawlers and social cards need one). */
 export function absoluteUrl(path: string): string {
@@ -37,13 +45,29 @@ export function absoluteUrl(path: string): string {
 /**
  * The default social card. A single committed 1200×630 PNG rather than a
  * generated one: every crawler that matters caches it, and a static file can't
- * fail to render at request time.
+ * fail to render at request time. Regenerate it (and the service cards below)
+ * with `node scripts/generate-og-images.mjs` — each stays under 300 KB, the
+ * size above which WhatsApp tends to drop the preview.
  */
 export const OG_IMAGE = {
   url: "/og-default.png",
   width: 1200,
   height: 630,
-  alt: `${SITE_NAME} — ${SITE_TAGLINE}`,
+  alt: `${SITE_NAME} — ${HERO_LINE}`,
+} as const;
+
+const serviceCard = (slug: string, alt: string) =>
+  ({ url: `/og/${slug}.png`, width: 1200, height: 630, alt: `${alt} · ${SITE_NAME}` }) as const;
+
+/**
+ * Per-service social cards, so a shared /yoga link previews as yoga rather
+ * than the generic brand card. Passed as `images` to `pageMetadata`.
+ */
+export const SERVICE_OG_IMAGES = {
+  yoga: serviceCard("yoga", "Yoga & Garbhasanskar"),
+  nutrition: serviceCard("nutrition", "Nutrition for Mom & Baby"),
+  community: serviceCard("community", "Mom Community"),
+  preloved: serviceCard("preloved", "Preloved Marketplace"),
 } as const;
 
 type OgImage = string | { url: string; alt?: string; width?: number; height?: number };

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Camera, CircleDollarSign, PackageOpen } from "lucide-react";
-import { conditionLabels, deliveryLabels, listingInputSchema, type Category, type Listing } from "@nutrimom/shared";
+import { conditionLabels, deliveryLabels, listingFormSchema, type Category, type OwnerListing } from "@nutrimom/shared";
 import { getCategories } from "@/lib/listings";
 import { authedRequest } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -12,10 +12,11 @@ import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/image-uploader";
+import { CityCombobox } from "@/components/city-combobox";
 
 const rupees = (paise?: number | null) => (paise ? String(paise / 100) : "");
 
-export function ListingForm({ initial, listingId }: { initial?: Listing; listingId?: string }) {
+export function ListingForm({ initial, listingId }: { initial?: OwnerListing; listingId?: string }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
@@ -26,7 +27,11 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
     description: initial?.description ?? "",
     originalRupees: rupees(initial?.originalPriceInPaise),
     sellingRupees: rupees(initial?.sellingPriceInPaise),
-    city: initial?.city ?? "",
+    // Editing shows the listing's own location; a new listing starts from the
+    // seller's last-used one (saved on their profile by each create).
+    city: initial ? initial.city : (user?.city ?? ""),
+    locality: initial ? (initial.locality ?? "") : (user?.locality ?? ""),
+    pincode: initial ? (initial.pincode ?? "") : (user?.pincode ?? ""),
     deliveryOption: initial?.deliveryOption ?? "PICKUP",
     usageDuration: initial?.usageDuration ?? "",
     reasonForSelling: initial?.reasonForSelling ?? "",
@@ -50,13 +55,16 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
       originalPriceInPaise: form.originalRupees ? Math.round(parseFloat(form.originalRupees) * 100) : undefined,
       sellingPriceInPaise: form.sellingRupees ? Math.round(parseFloat(form.sellingRupees) * 100) : NaN,
       city: form.city,
+      locality: form.locality,
+      pincode: form.pincode,
       deliveryOption: form.deliveryOption,
       usageDuration: form.usageDuration || undefined,
       reasonForSelling: form.reasonForSelling || undefined,
       whatsappNumber: form.whatsappNumber || undefined,
       images,
     };
-    const parsed = listingInputSchema.safeParse(payload);
+    // The web form requires the PIN; the API keeps it optional for the app.
+    const parsed = listingFormSchema.safeParse(payload);
     if (!parsed.success) {
       const nextIssues: Record<string, string> = {};
       for (const issue of parsed.error.issues) nextIssues[String(issue.path[0] ?? "form")] ??= issue.message;
@@ -125,7 +133,7 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
 
       <fieldset className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
         <legend className="sr-only">Price and handover</legend>
-        <div className="sm:col-span-2"><SectionHeading icon={CircleDollarSign} title="Price and handover" description="Set the price, location and best way for the buyer to receive it." /></div>
+        <div className="sm:col-span-2"><SectionHeading icon={CircleDollarSign} title="Price and handover" description="Set the price, where the item is, and the best way for the buyer to receive it." /></div>
         <Field label="Original price" id="originalRupees" helper="Optional, in Rs." error={issues.originalPriceInPaise}>
           <Input id="originalRupees" type="number" min="1" value={form.originalRupees} onChange={(event) => set("originalRupees", event.target.value)} aria-invalid={!!issues.originalPriceInPaise} />
         </Field>
@@ -133,7 +141,15 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
           <Input id="sellingRupees" type="number" min="1" value={form.sellingRupees} onChange={(event) => set("sellingRupees", event.target.value)} aria-invalid={!!issues.sellingPriceInPaise} />
         </Field>
         <Field label="City" id="city" error={issues.city}>
-          <Input id="city" value={form.city} onChange={(event) => set("city", event.target.value)} autoComplete="address-level2" aria-invalid={!!issues.city} placeholder="Bengaluru" />
+          <CityCombobox id="city" mode="form" value={form.city} onChange={(value) => set("city", value)} invalid={!!issues.city} describedBy={describedBy("city")} />
+        </Field>
+        <Field label="Locality" id="locality" helper="Optional" error={issues.locality}>
+          <Input id="locality" value={form.locality} onChange={(event) => set("locality", event.target.value)} autoComplete="off" aria-invalid={!!issues.locality} aria-describedby={describedBy("locality", issues.locality ? undefined : "locality-help")} placeholder="e.g. Koramangala" />
+          {!issues.locality && <p id="locality-help" className="mt-1.5 text-xs text-muted-foreground">Area or neighbourhood only — never your house address.</p>}
+        </Field>
+        <Field label="PIN code" id="pincode" error={issues.pincode}>
+          <Input id="pincode" value={form.pincode} onChange={(event) => set("pincode", event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="postal-code" maxLength={6} aria-invalid={!!issues.pincode} aria-describedby={describedBy("pincode", issues.pincode ? undefined : "pincode-help")} placeholder="e.g. 560034" />
+          {!issues.pincode && <p id="pincode-help" className="mt-1.5 text-xs text-muted-foreground">Helps nearby buyers find you. Never shown publicly.</p>}
         </Field>
         <Field label="Delivery" id="deliveryOption" error={issues.deliveryOption}>
           <CustomSelect
@@ -149,6 +165,11 @@ export function ListingForm({ initial, listingId }: { initial?: Listing; listing
         </Field>
       </fieldset>
 
+      {initial?.status === "APPROVED" && (
+        <p className="mx-6 mt-6 rounded-xl bg-sage/40 px-4 py-3 text-sm text-sage-ink sm:mx-8">
+          Changing only the city, locality, PIN or delivery keeps your listing live. Any other change sends it back for a quick review first.
+        </p>
+      )}
       {error && <p role="alert" className="mx-6 mt-6 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger sm:mx-8">{error}</p>}
       <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-border bg-surface/95 p-5 backdrop-blur-xl sm:flex-row sm:justify-end sm:p-6">
         <Button size="lg" variant="ghost" onClick={() => router.back()}>Cancel</Button>

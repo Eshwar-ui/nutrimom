@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const metadata = pageMetadata({
   title: "Marketplace policies",
   description:
-    "How The Nurture Moms marketplace works in plain English — what we check before a listing goes live, what buyers and sellers each owe, and how payments and shipping are handled.",
+    "How our preloved marketplace works in plain English: what we check before a listing goes live, what buyers and sellers each owe, and how payment and delivery work.",
   path: "/policies",
 });
 
@@ -17,19 +17,19 @@ const points = [
     icon: HandHeart,
     tint: "bg-blush/60",
     title: "We're a platform, not the seller",
-    body: "The Nurture Moms connects buyers and sellers. Each item is owned and described by an individual mom, not by us.",
+    body: "The Nurture Moms connects buyers and sellers. Each item is owned and described by an individual mom, not by us. We review every listing before it goes live, and we can remove listings or suspend sellers who break these rules.",
   },
   {
     icon: Search,
     tint: "bg-sky/60",
     title: "Buyers: check before you buy",
-    body: "Review photos and details carefully, and message the seller with any questions before completing a purchase.",
+    body: "Read the description, look at every photo, and message the seller with any questions before you order.",
   },
   {
     icon: Camera,
     tint: "bg-sage/60",
     title: "Sellers: keep it genuine",
-    body: "Upload real photos of the actual item and describe its condition honestly. Trust is what keeps this community thriving.",
+    body: "Use real photos of the actual item and describe its condition honestly, including any wear or defects. Pack it safely, send it on time with the address label we give you, and be kind to buyers.",
   },
   {
     icon: ShieldCheck,
@@ -38,7 +38,7 @@ const points = [
     // Online-only. This used to offer "cash on pickup", which the marketplace
     // has never supported since COD was removed — a public promise checkout
     // could not honour.
-    body: "Every purchase is paid online through our secure gateway, so your order is confirmed the moment payment clears. Verified sellers carry a badge.",
+    body: "Every purchase is paid online — by UPI, card or net banking — so your order is confirmed the moment the payment goes through. Verified sellers carry a badge.",
   },
 ];
 
@@ -54,6 +54,11 @@ export default function PoliciesPage() {
         </h1>
         <p className="mt-3 text-lg leading-relaxed text-muted-foreground">
           A few simple promises that keep our community kind, honest, and safe.
+          For fees, delivery and refunds step by step, see{" "}
+          <Link href="/preloved#how-it-works" className="font-semibold text-accent-text underline-offset-4 hover:underline">
+            how preloved works
+          </Link>
+          .
         </p>
       </header>
 
@@ -61,7 +66,7 @@ export default function PoliciesPage() {
         {points.map((p) => (
           <div
             key={p.title}
-            className="flex gap-4 rounded-[1.5rem] border-2 border-border bg-surface p-6 card-shadow transition-transform duration-300 hover:-translate-y-1"
+            className="flex gap-4 rounded-card border-2 border-border bg-surface p-6 card-shadow transition-transform duration-300 hover:-translate-y-1"
           >
             <span className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-foreground/70", p.tint)}>
               <p.icon className="h-6 w-6" strokeWidth={1.6} />
@@ -75,7 +80,7 @@ export default function PoliciesPage() {
       </div>
 
       {/* The fine print — into the formal legal docs */}
-      <section className="mt-12">
+      <section className="mt-section">
         <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-accent-text">The fine print</p>
         <div className="grid gap-3 sm:grid-cols-3">
           {formalDocs.map((doc) => (

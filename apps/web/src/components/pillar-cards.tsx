@@ -30,10 +30,10 @@ const PILLAR_STYLE: Record<PillarKey, { wash: string; hover: string }> = {
 };
 
 const PILLAR_IMAGE: Record<PillarKey, string> = {
-  move: "/images/pillars/pillar-move.png",
-  nourish: "/images/pillars/pillar-nourish.png",
-  connect: "/images/pillars/pillar-connect.png",
-  "pass-it-on": "/images/pillars/pillar-pass-it-on.png",
+  move: "/images/pillars/pillar-move.webp",
+  nourish: "/images/pillars/pillar-nourish.webp",
+  connect: "/images/pillars/pillar-connect.webp",
+  "pass-it-on": "/images/pillars/pillar-pass-it-on.webp",
 };
 
 export function PillarCards({
@@ -58,7 +58,7 @@ export function PillarCards({
               eventProps={{ pillar: pillar.key, to: pillar.href, source }}
               href={pillar.href}
               className={cn(
-                "group relative flex h-full min-h-[24rem] flex-col overflow-hidden rounded-[1.75rem] border-2 border-border bg-surface p-7 card-shadow",
+                "group relative flex h-full min-h-[24rem] flex-col overflow-hidden rounded-card border-2 border-border bg-surface p-7 card-shadow",
                 "transition-[transform,border-color] duration-300 hover:-translate-y-1",
                 style.hover,
               )}

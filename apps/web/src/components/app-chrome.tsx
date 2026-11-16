@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FlyToCart } from "@/components/fly-to-cart";
+import type { SocialLinks } from "@/lib/site-nav";
 
 /**
  * Picks the shell for the current route. The admin panel is a separate product
@@ -15,7 +16,14 @@ import { FlyToCart } from "@/components/fly-to-cart";
  * where they are — moving every page into a group would rewrite the whole app
  * directory for no user-visible gain.
  */
-export function AppChrome({ children }: { children: React.ReactNode }) {
+export function AppChrome({
+  children,
+  social,
+}: {
+  children: React.ReactNode;
+  /** Resolved server-side in the root layout (admin-editable SiteContent). */
+  social: SocialLinks;
+}) {
   const pathname = usePathname();
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
 
@@ -25,7 +33,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <>
       <SiteHeader />
       <main className="flex-1">{children}</main>
-      <SiteFooter />
+      <SiteFooter social={social} />
       <FlyToCart />
     </>
   );

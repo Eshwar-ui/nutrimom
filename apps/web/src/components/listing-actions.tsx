@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, ShoppingBag, Check, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatPaise, whatsappLink, type Listing, type SellerContact } from "@nutrimom/shared";
-import { Button } from "./ui/button";
+import { Button, buttonVariants } from "./ui/button";
 import { useCartStore } from "@/lib/cart-store";
 import { useWishlistStore } from "@/lib/wishlist-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { authedRequest } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
 import { flyToCart } from "@/lib/fly-to-cart";
+import { useAuthHydrated } from "@/lib/use-store-hydrated";
+import { loginHref, takeIntentFromUrl, type AuthIntent } from "@/lib/auth-redirect";
+import { cn } from "@/lib/utils";
 
 /* WhatsApp's brand green, darkened from the #25D366 of their own UI so it holds
    contrast as a glyph on this site's cream surface and stays visible on the
@@ -27,7 +30,15 @@ export function ListingActions({ listing }: { listing: Listing }) {
   const inCart = useCartStore((s) => s.items.some((i) => i.listingId === listing.id));
   const wished = useWishlistStore((s) => s.ids.includes(listing.id));
   const toggleWish = useWishlistStore((s) => s.toggle);
+  const ensureSaved = useWishlistStore((s) => s.ensureSaved);
+  const hydrated = useAuthHydrated();
   const [contacting, setContacting] = useState(false);
+  // The seller's chat link, fetched for a "contact" resumed after sign-in.
+  // Rendered as a plain link rather than opened: a window.open() that no
+  // click started is a popup, and browsers block it.
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+  const whatsappLinkRef = useRef<HTMLAnchorElement>(null);
+  const resumed = useRef(false);
 
   const sold = listing.status === "SOLD";
   // A buyer's checkout hold on this listing — not purchasable by anyone
@@ -43,8 +54,13 @@ export function ListingActions({ listing }: { listing: Listing }) {
     sellerName: listing.seller.name,
   };
 
+  // Signed-out clicks go to sign-in and come back here with the action named,
+  // so it happens instead of just landing the user on the page again.
+  const signInTo = (intent: AuthIntent) =>
+    router.push(loginHref(`/listings/${listing.id}`, intent));
+
   const heart = () => {
-    if (!user) return router.push(`/login?next=/listings/${listing.id}`);
+    if (!user) return signInTo("save");
     toggleWish(listing.id);
   };
 
@@ -53,28 +69,78 @@ export function ListingActions({ listing }: { listing: Listing }) {
     flyToCart(target ?? null, listing.images[0] ?? null);
   };
 
+  const sellerFirstName = listing.seller.name.split(" ")[0];
+
+  /** The seller's number is only released to signed-in buyers. */
+  const fetchWhatsappUrl = async (): Promise<string | null> => {
+    const { whatsappNumber } = await authedRequest<SellerContact>(
+      `/listings/${listing.id}/contact`,
+    );
+    if (!whatsappNumber) return null;
+    return whatsappLink(
+      whatsappNumber,
+      `Hi ${sellerFirstName}, is "${listing.title}" still available on The Nurture Moms?`,
+    );
+  };
+
   const chatOnWhatsapp = async () => {
-    if (!user) return router.push(`/login?next=/listings/${listing.id}`);
+    if (!user) return signInTo("contact");
     setContacting(true);
     try {
-      const { whatsappNumber } = await authedRequest<SellerContact>(
-        `/listings/${listing.id}/contact`,
-      );
-      if (!whatsappNumber) return;
-      window.open(
-        whatsappLink(
-          whatsappNumber,
-          `Hi ${listing.seller.name.split(" ")[0]}, is "${listing.title}" still available on The Nurture Moms?`,
-        ),
-        "_blank",
-        "noopener,noreferrer",
-      );
+      const url = await fetchWhatsappUrl();
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       toast.error("Couldn't reach the seller right now — try again shortly.");
     } finally {
       setContacting(false);
     }
   };
+
+  /*
+    Resume the action that sent the user to sign in (`?intent=` — see
+    lib/auth-redirect). Runs once per page view: the ref guards React's
+    double-run effects, the parameter is stripped from the URL with
+    history.replaceState (no history entry, no server re-render) so a refresh
+    or Back can't repeat it, and "save" is ensure-saved, never a toggle.
+  */
+  useEffect(() => {
+    if (!hydrated || resumed.current) return;
+    const { pathname, search, hash } = window.location;
+    const { intent, cleanUrl } = takeIntentFromUrl(pathname, search, hash);
+    if (!cleanUrl) return;
+    resumed.current = true;
+    window.history.replaceState(null, "", cleanUrl);
+    // An unknown intent, or a shared link opened while signed out: drop it.
+    if (!intent || !user || sold) return;
+
+    if (intent === "save") {
+      ensureSaved(listing.id)
+        .then(() => toast.success("Saved to your wishlist."))
+        .catch(() => toast.error("Couldn't save this item — try again."));
+      return;
+    }
+    if (intent === "contact" && listing.seller.hasWhatsapp) {
+      const resume = async () => {
+        setContacting(true);
+        try {
+          const url = await fetchWhatsappUrl();
+          if (url) setWhatsappUrl(url);
+        } catch {
+          toast.error("Couldn't reach the seller right now — try again shortly.");
+        } finally {
+          setContacting(false);
+        }
+      };
+      void resume();
+    }
+    // Runs on hydration only; the ref makes later dependency changes inert.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  // Put the ready chat link where the user's attention (and keyboard) is.
+  useEffect(() => {
+    whatsappLinkRef.current?.focus();
+  }, [whatsappUrl]);
 
   if (sold) {
     return (
@@ -87,7 +153,7 @@ export function ListingActions({ listing }: { listing: Listing }) {
   return (
     <div className="space-y-3">
       {held && (
-        <p className="rounded-2xl bg-gold/20 px-4 py-3 text-sm font-medium text-[#5c4410]">
+        <p className="rounded-2xl bg-gold/20 px-4 py-3 text-sm font-medium text-gold-ink">
           Someone&apos;s completing checkout on this item right now — check back in a bit.
         </p>
       )}
@@ -142,17 +208,30 @@ export function ListingActions({ listing }: { listing: Listing }) {
            takes the same subordinate outline the Save button uses. The WhatsApp
            green survives on the glyph, where it still identifies the channel
            without a saturated slab competing with the primary CTA in a palette
-           built on cream and forest green. */
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full hover:border-[#1da851]"
-          onClick={() => void chatOnWhatsapp()}
-          disabled={contacting}
-        >
-          <MessageCircle className="h-5 w-5 text-[#1da851]" />
-          {contacting ? "Opening…" : "Chat with seller on WhatsApp"}
-        </Button>
+           built on cream and sage. */
+        whatsappUrl ? (
+          <a
+            ref={whatsappLinkRef}
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full hover:border-[#1da851]")}
+          >
+            <MessageCircle className="h-5 w-5 text-[#1da851]" />
+            Open WhatsApp chat with {sellerFirstName}
+          </a>
+        ) : (
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full hover:border-[#1da851]"
+            onClick={() => void chatOnWhatsapp()}
+            disabled={contacting}
+          >
+            <MessageCircle className="h-5 w-5 text-[#1da851]" />
+            {contacting ? "Opening…" : "Chat with seller on WhatsApp"}
+          </Button>
+        )
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">

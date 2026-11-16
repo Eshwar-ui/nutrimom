@@ -1,5 +1,6 @@
 import type { AuthTokens } from "@nutrimom/shared";
 import { useAuthStore } from "./auth-store";
+import { loginHref } from "./auth-redirect";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:1133";
@@ -64,6 +65,83 @@ export async function request<T>(
   return data as T;
 }
 
+export const SESSION_EXPIRED_MESSAGE = "Your session expired — please sign in again";
+
+// One refresh at a time: a page that fires several requests with a stale
+// token shares a single /auth/refresh instead of racing N of them.
+let refreshInFlight: Promise<AuthTokens> | null = null;
+// Set once the session has been declared over, so N failing requests produce
+// one logout, one toast and one redirect.
+let sessionEnding = false;
+
+function refreshTokens(refreshToken: string): Promise<AuthTokens> {
+  refreshInFlight ??= request<AuthTokens>("/auth/refresh", {
+    method: "POST",
+    body: { refreshToken },
+  }).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+/**
+ * The refresh endpoint answered and refused the token (expired, revoked,
+ * malformed, user gone). A network failure (status 0), a rate limit (429) or
+ * a 5xx says nothing about the session, so those must not sign anyone out.
+ */
+function isSessionRejection(err: unknown): boolean {
+  return err instanceof ApiError && [400, 401, 403].includes(err.status);
+}
+
+/**
+ * Ends a session the server no longer accepts: clears it, tells the user, and
+ * sends them to sign in with a way back to where they were. Client-only and
+ * idempotent. On /login or /register it clears the session in place instead
+ * of redirecting — the user is already where they need to be.
+ */
+function endExpiredSession() {
+  if (typeof window === "undefined" || sessionEnding) return;
+  // Concurrent requests that shared the refused refresh: the first one has
+  // already signed out, so the rest have nothing left to end.
+  if (!useAuthStore.getState().tokens) return;
+  sessionEnding = true;
+  const { pathname, search } = window.location;
+  const onAuthPage = pathname === "/login" || pathname === "/register";
+  useAuthStore.getState().logout({
+    redirectTo: onAuthPage ? null : loginHref(pathname + search),
+    notice: { message: SESSION_EXPIRED_MESSAGE, variant: "info" },
+  });
+  // Only reachable without a navigation; the session is already gone.
+  if (onAuthPage) sessionEnding = false;
+}
+
+/**
+ * Runs an authenticated call; on a 401 refreshes once (shared across
+ * concurrent callers) and retries. If the refresh is refused the session is
+ * over: see `endExpiredSession`. The caller still gets an error, worded for
+ * the user, for the moment before the page navigates away.
+ */
+async function withRefresh<T>(call: (token: string | undefined) => Promise<T>): Promise<T> {
+  const store = useAuthStore.getState();
+  try {
+    return await call(store.tokens?.accessToken);
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 401 || !store.tokens) {
+      throw err;
+    }
+    let refreshed: AuthTokens;
+    try {
+      refreshed = await refreshTokens(store.tokens.refreshToken);
+    } catch (refreshErr) {
+      if (!isSessionRejection(refreshErr)) throw err;
+      endExpiredSession();
+      throw new ApiError(401, SESSION_EXPIRED_MESSAGE, err.body);
+    }
+    useAuthStore.getState().setTokens(refreshed);
+    return call(refreshed.accessToken);
+  }
+}
+
 /**
  * Authenticated client request with transparent refresh: if the access token
  * has expired (401), refresh once and retry before giving up.
@@ -72,29 +150,7 @@ export async function authedRequest<T>(
   path: string,
   opts: Omit<RequestOptions, "token"> = {},
 ): Promise<T> {
-  const store = useAuthStore.getState();
-  const token = store.tokens?.accessToken;
-
-  try {
-    return await request<T>(path, { ...opts, token });
-  } catch (err) {
-    if (!(err instanceof ApiError) || err.status !== 401 || !store.tokens) {
-      throw err;
-    }
-    // Try a single refresh, then retry the original request.
-    let refreshed: AuthTokens;
-    try {
-      refreshed = await request<AuthTokens>("/auth/refresh", {
-        method: "POST",
-        body: { refreshToken: store.tokens.refreshToken },
-      });
-    } catch {
-      store.logout();
-      throw err;
-    }
-    useAuthStore.getState().setTokens(refreshed);
-    return request<T>(path, { ...opts, token: refreshed.accessToken });
-  }
+  return withRefresh((token) => request<T>(path, { ...opts, token }));
 }
 
 export async function authedFormRequest<T>(
@@ -102,28 +158,7 @@ export async function authedFormRequest<T>(
   formData: FormData,
   method = "POST",
 ): Promise<T> {
-  const store = useAuthStore.getState();
-  const token = store.tokens?.accessToken;
-
-  try {
-    return await formRequest<T>(path, formData, method, token);
-  } catch (err) {
-    if (!(err instanceof ApiError) || err.status !== 401 || !store.tokens) {
-      throw err;
-    }
-    let refreshed: AuthTokens;
-    try {
-      refreshed = await request<AuthTokens>("/auth/refresh", {
-        method: "POST",
-        body: { refreshToken: store.tokens.refreshToken },
-      });
-    } catch {
-      store.logout();
-      throw err;
-    }
-    useAuthStore.getState().setTokens(refreshed);
-    return formRequest<T>(path, formData, method, refreshed.accessToken);
-  }
+  return withRefresh((token) => formRequest<T>(path, formData, method, token));
 }
 
 /**

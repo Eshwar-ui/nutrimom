@@ -57,6 +57,11 @@ export interface Pillar {
   cta: string;
 }
 
+/**
+ * The four services. Titles, descriptions and button labels are the founders'
+ * own wording from the 2026-11 redesign brief (§2 and §7), so the home page,
+ * /about and anything else listing the services say the same thing.
+ */
 export const PILLARS: readonly Pillar[] = [
   {
     key: "move",
@@ -64,8 +69,8 @@ export const PILLARS: readonly Pillar[] = [
     title: "Yoga & Garbhasanskar",
     href: "/yoga",
     blurb:
-      "Prenatal, postnatal, Garbhasanskar and personalised sessions for every stage of pregnancy and recovery.",
-    cta: "Explore Yoga",
+      "Prenatal yoga, postnatal yoga, breathing, relaxation and mindful pregnancy practices.",
+    cta: "Explore Yoga & Garbhasanskar",
   },
   {
     key: "nourish",
@@ -73,17 +78,17 @@ export const PILLARS: readonly Pillar[] = [
     title: "Maternal & Child Nutrition",
     href: "/nutrition",
     blurb:
-      "Pregnancy, postpartum, starting solids, baby and toddler nutrition — practical and judgment-free.",
+      "Nutrition guidance for pregnancy, postpartum recovery, babies and toddlers.",
     cta: "Explore Nutrition",
   },
   {
     key: "connect",
     eyebrow: "Connect",
-    title: "Mom Support Community",
+    title: "Mom Community",
     href: "/community",
     blurb:
-      "A supportive space for pregnancy, postpartum, babies, toddlers and everything else mom life brings.",
-    cta: "Join the Community",
+      "A supportive space where mothers can connect, learn, share experiences and discover helpful resources.",
+    cta: "Join Our Community",
   },
   {
     key: "pass-it-on",
@@ -91,7 +96,7 @@ export const PILLARS: readonly Pillar[] = [
     title: "Preloved Marketplace",
     href: "/preloved",
     blurb:
-      "Buy, sell or donate gently used baby and maternity essentials. Loved before, loved again.",
+      "A platform to buy, sell and donate eligible baby clothes, toys, books and other products.",
     cta: "Shop Preloved",
   },
 ] as const;
@@ -174,72 +179,119 @@ export function isNavItemActive(pathname: string, item: Pick<NavItem, "href" | "
  * page rail already rely on rather than a new list to keep in step.
  */
 const PRELOVED_CHILDREN: NavLink[] = [
-  { href: "/preloved", label: "Why preloved" },
-  { href: "/listings", label: "Shop all" },
+  { href: "/preloved", label: "How It Works" },
+  { href: "/listings", label: "Shop Preloved" },
   { href: "/categories/strollers", label: "Strollers" },
   { href: "/categories/baby-clothes", label: "Baby Clothes" },
   { href: "/categories/maternity-wear", label: "Maternity Wear" },
   { href: "/categories/toys", label: "Toys" },
-  { href: "/sell", label: "Sell an item" },
+  { href: "/sell", label: "Sell an Item" },
+  { href: "/preloved/donate", label: "Donate an Item" },
+];
+
+/** Under Resources: the free guides and the blog (the Journal). */
+const RESOURCES_CHILDREN: NavLink[] = [
+  { href: "/resources", label: "Free Guides" },
+  { href: "/journal", label: "Blog" },
+];
+
+/** Under About: the brand's story, and the questions people ask first. */
+const ABOUT_CHILDREN: NavLink[] = [
+  { href: "/about", label: "Our Story" },
+  { href: "/faq", label: "FAQs" },
 ];
 
 /**
- * Under About: the brand, and the pages people reach for once they are curious
- * about it. The Journal and FAQs had no header entry before this.
+ * The main menu, in the order the founders' brief sets (REDESIGN-PLAN
+ * decision 6): Home · Yoga & Garbhasanskar · Nutrition · Mom Community ·
+ * Preloved Marketplace · Resources / Blog · Discounts / Exclusive Offers ·
+ * About Us · Contact / Book a Session.
+ *
+ * The last one is not in this list: the header renders it as the highlighted
+ * "Book a Session" button (BOOK_SESSION_HREF), so it stays visible next to the
+ * account controls instead of competing with the eight links. Labels are the
+ * short forms the brief allows ("Preloved", "Offers"), which is what lets all
+ * eight fit on one line at 1280px.
  */
-const ABOUT_CHILDREN: NavLink[] = [
-  { href: "/about", label: "Our story" },
-  { href: "/journal", label: "Journal" },
-  { href: "/faq", label: "FAQs" },
-  { href: "/contact", label: "Contact us" },
-];
-
 export const PRIMARY_NAV: readonly NavItem[] = [
-  { href: "/yoga", label: "Yoga" },
+  { href: "/", label: "Home" },
+  { href: "/yoga", label: "Yoga & Garbhasanskar" },
   { href: "/nutrition", label: "Nutrition" },
-  { href: "/community", label: "Community" },
+  { href: "/community", label: "Mom Community" },
   { href: "/preloved", label: "Preloved", children: PRELOVED_CHILDREN },
-  { href: "/resources", label: "Free Guides" },
+  { href: "/resources", label: "Resources", children: RESOURCES_CHILDREN },
+  { href: "/offers", label: "Offers" },
   { href: "/about", label: "About", children: ABOUT_CHILDREN },
 ] as const;
 
+/** Where every "Book a Session" button goes — the enquiry form and WhatsApp. */
+export const BOOK_SESSION_HREF = "/contact";
+
+/**
+ * The brand's channels, resolved: the admin-edited SiteContent value when it
+ * is set, the constants above when it isn't (or the API is unreachable). One
+ * resolver so the footer, /about and anything else can't disagree about which
+ * WhatsApp group "join the community" means.
+ */
+export interface SocialLinks {
+  instagram: string;
+  youtube: string;
+  whatsappCommunity: string;
+  whatsappPreloved: string;
+}
+
+export function resolveSocialLinks(
+  content: {
+    instagramUrl?: string | null;
+    youtubeUrl?: string | null;
+    whatsappCommunityUrl?: string | null;
+    whatsappPrelovedUrl?: string | null;
+  } | null,
+): SocialLinks {
+  return {
+    instagram: content?.instagramUrl?.trim() || SOCIAL_LINKS.instagram,
+    youtube: content?.youtubeUrl?.trim() || SOCIAL_LINKS.youtube,
+    whatsappCommunity:
+      content?.whatsappCommunityUrl?.trim() || WHATSAPP_COMMUNITY_URL,
+    whatsappPreloved:
+      content?.whatsappPrelovedUrl?.trim() || WHATSAPP_PRELOVED_URL,
+  };
+}
+
+/**
+ * Footer link columns. The social column is built at render time from
+ * resolveSocialLinks(), because those URLs are admin-editable.
+ */
 export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
   {
-    title: "Explore",
+    title: "Our services",
     links: [
-      { href: "/yoga", label: "Yoga" },
+      { href: "/yoga", label: "Yoga & Garbhasanskar" },
       { href: "/nutrition", label: "Nutrition" },
       { href: "/nutrition/starting-solids", label: "Starting Solids" },
-      { href: "/community", label: "Community" },
-      { href: "/resources", label: "Free guides" },
-      { href: "/journal", label: "Journal" },
-      { href: "/faq", label: "FAQs" },
+      { href: "/community", label: "Mom Community" },
+      { href: "/offers", label: "Offers" },
     ],
   },
   {
-    title: "Marketplace",
+    title: "Preloved",
     links: [
-      { href: "/listings", label: "Shop all" },
-      { href: "/categories/strollers", label: "Strollers" },
-      { href: "/categories/maternity-wear", label: "Maternity" },
-      { href: "/sell", label: "Sell an item" },
-    ],
-  },
-  {
-    title: "Your space",
-    links: [
-      { href: "/account", label: "My account" },
-      { href: "/account/listings", label: "My listings" },
+      { href: "/listings", label: "Shop Preloved" },
+      { href: "/preloved", label: "How It Works" },
+      { href: "/sell", label: "Sell an Item" },
+      { href: "/preloved/donate", label: "Donate an Item" },
       { href: "/wishlist", label: "Wishlist" },
-      { href: "/contact", label: "Contact us" },
     ],
   },
   {
-    title: "Socials",
+    title: "Help",
     links: [
-      { href: SOCIAL_LINKS.instagram, label: "Instagram", external: true },
-      { href: SOCIAL_LINKS.youtube, label: "YouTube", external: true },
-      { href: WHATSAPP_COMMUNITY_URL, label: "WhatsApp community", external: true },
+      { href: "/about", label: "About Us" },
+      { href: "/faq", label: "FAQs" },
+      { href: "/resources", label: "Free Guides" },
+      { href: "/journal", label: "Blog" },
+      { href: "/contact", label: "Contact Us" },
+      { href: "/account", label: "My Account" },
     ],
   },
 ] as const;
@@ -249,6 +301,7 @@ export const LEGAL_LINKS: readonly NavLink[] = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
   { href: "/refunds", label: "Refunds" },
+  { href: "/account-deletion", label: "Delete account" },
 ] as const;
 
 /**
@@ -270,13 +323,16 @@ export const STATIC_SITEMAP_ROUTES: readonly {
   { path: "/nutrition/starting-solids", changeFrequency: "monthly", priority: 0.9 },
   { path: "/community", changeFrequency: "weekly", priority: 0.8 },
   { path: "/preloved", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/preloved/donate", changeFrequency: "monthly", priority: 0.6 },
   { path: "/listings", changeFrequency: "hourly", priority: 0.9 },
   { path: "/resources", changeFrequency: "monthly", priority: 0.7 },
   { path: "/journal", changeFrequency: "weekly", priority: 0.6 },
   { path: "/sell", changeFrequency: "monthly", priority: 0.5 },
+  { path: "/offers", changeFrequency: "weekly", priority: 0.6 },
   { path: "/about", changeFrequency: "monthly", priority: 0.4 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.5 },
   { path: "/contact", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/account-deletion", changeFrequency: "yearly", priority: 0.2 },
   // Not gated on the BusinessProfile: a plain-English guidelines hub, not a
   // statutory document, so it publishes regardless of the operator's details.
   { path: "/policies", changeFrequency: "yearly", priority: 0.3 },

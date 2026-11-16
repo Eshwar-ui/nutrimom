@@ -43,6 +43,13 @@ declare global {
   }
 }
 
+/**
+ * Our brand colour inside Razorpay's hosted modal (header + pay button) — the
+ * deep sage `--primary` from globals.css. A literal because the gateway takes
+ * a hex string, not a CSS variable; keep it in step with the token.
+ */
+export const RAZORPAY_THEME_COLOR = "#55704d";
+
 const SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 export function loadRazorpay(): Promise<void> {

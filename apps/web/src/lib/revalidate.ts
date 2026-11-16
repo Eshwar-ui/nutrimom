@@ -1,7 +1,13 @@
 import { useAuthStore } from "./auth-store";
 
 /** Public page groups that an admin save can make stale. */
-export type RevalidateScope = "blog" | "legal";
+export type RevalidateScope =
+  | "blog"
+  | "legal"
+  | "services"
+  | "offers"
+  | "faqs"
+  | "content";
 
 /**
  * Purges the cached public pages behind `scope` after an admin mutation. Call

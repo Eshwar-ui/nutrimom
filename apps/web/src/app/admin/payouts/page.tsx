@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const statusStyles: Record<PayoutStatus, string> = {
   PENDING: "bg-muted text-muted-foreground",
-  PAYABLE: "bg-gold/20 text-gold",
+  PAYABLE: "bg-gold/20 text-gold-ink",
   PAID: "bg-primary/15 text-primary",
   CANCELLED: "bg-danger/10 text-danger",
 };

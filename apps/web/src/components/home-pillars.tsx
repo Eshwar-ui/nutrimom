@@ -1,22 +1,16 @@
 import Link from "next/link";
 import { TrackedLink } from "./tracked-link";
 import { buttonVariants } from "./ui/button";
-import { MEMBERSHIP_PLANS, formatPaise } from "@nutrimom/shared";
-import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { Container } from "./ui/primitives";
-import { Reveal } from "./reveal";
 import { STAGES } from "@/lib/site-nav";
-import { PillarCards } from "./pillar-cards";
 
 /**
- * The two sections that turn the home page from a shop into an ecosystem
- * entrance: pick your stage, or pick your pillar.
- *
- * Both render above the marketplace blocks, because the founders' brief (§3)
- * asks for the four pillars to be obvious within the first screen — a visitor
- * arriving from a pregnancy-yoga reel should not have to scroll past a product
- * grid to learn that yoga is offered at all.
+ * Home page sections around the four services (service-showcase.tsx): pick
+ * your stage, and the closing band. Both sit above or after the marketplace
+ * block, because the brief asks for the four services to be obvious first — a
+ * visitor arriving from a pregnancy-yoga reel should not have to scroll past a
+ * product grid to learn that yoga is offered at all.
  */
 
 export function StageSelector() {
@@ -24,7 +18,10 @@ export function StageSelector() {
     <section className="relative">
       <Container className="py-14">
         <div className="max-w-2xl">
-          <h2 className="font-display text-3xl font-semibold text-foreground sm:text-4xl">
+          <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
+            Start where you are
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-foreground sm:text-4xl">
             Where are you right now?
           </h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
@@ -34,14 +31,13 @@ export function StageSelector() {
         </div>
 
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {STAGES.map((stage, i) => (
-            <Reveal key={stage.label} delay={(i % 3) * 0.06}>
-              <li className="h-full list-none">
+          {STAGES.map((stage) => (
+              <li key={stage.label} className="h-full list-none">
                 <TrackedLink
                   event="stage_click"
                   eventProps={{ stage: stage.label, to: stage.href }}
                   href={stage.href}
-                  className="group flex h-full flex-col rounded-[1.75rem] border-2 border-border bg-surface p-6 card-shadow transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-primary/45"
+                  className="group flex h-full flex-col rounded-card border-2 border-border bg-surface p-6 card-shadow transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-primary/45"
                 >
                   <span className="font-display text-xl font-semibold leading-snug text-foreground">
                     {stage.label}
@@ -55,113 +51,8 @@ export function StageSelector() {
                   </span>
                 </TrackedLink>
               </li>
-            </Reveal>
           ))}
         </ul>
-      </Container>
-    </section>
-  );
-}
-
-export function PillarGrid() {
-  return (
-    <section className="relative">
-      <Container className="py-14">
-        <div className="max-w-2xl">
-          <h2 className="font-display text-3xl font-semibold text-foreground sm:text-4xl">
-            One place for your motherhood journey
-          </h2>
-          <p className="mt-3 leading-relaxed text-muted-foreground">
-            Four kinds of support, built around the same idea — that motherhood
-            is easier when someone practical is in your corner.
-          </p>
-        </div>
-
-        <div className="mt-10">
-          <PillarCards source="home" />
-        </div>
-
-      </Container>
-    </section>
-  );
-}
-
-/**
- * The brief's "Affordable support for real motherhood" (§14).
- *
- * Three proof points rather than the claim alone, because "affordable" asserted
- * on its own is what every marketplace says. Each figure is real: the yoga
- * trial price from /yoga, the community's actual cost, and the seller plan from
- * the shared constants the billing gate enforces.
- *
- * §10's affordability language is deliberate here — accessible and practical,
- * never "cheap" or "low-cost", which the brief says weakens perceived
- * expertise.
- */
-export function AffordableSupport() {
-  const proof = [
-    { figure: "from ₹299", label: "A first yoga session", href: "/yoga" },
-    { figure: "Free", label: "The mom community", href: "/community" },
-    {
-      figure: `from ${formatPaise(MEMBERSHIP_PLANS.MONTHLY.priceInPaise)}`,
-      label: "To sell on the marketplace",
-      href: "/sell",
-    },
-  ];
-
-  return (
-    <section className="relative">
-      <Container className="py-14">
-        <div className="relative overflow-visible rounded-[2rem] border-2 border-border bg-surface-2 p-8 sm:p-12">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[2rem]"
-          >
-            <span
-              className="absolute -bottom-14 -right-14 h-64 w-64 rounded-full bg-blush/35 blur-3xl"
-            />
-          </span>
-          <div className="pointer-events-none absolute right-2 top-2 z-0 hidden w-48 sm:block lg:right-16 lg:top-[-100] lg:w-72">
-            <Image
-              src="/images/affordable-support-motherhood.png"
-              alt=""
-              width={560}
-              height={560}
-              aria-hidden="true"
-              className="relative h-auto w-full object-contain"
-            />
-          </div>
-          <div className="relative z-10">
-            <div className="max-w-2xl">
-            <h2 className="font-display text-3xl font-semibold text-foreground sm:text-4xl">
-              Affordable support for real motherhood
-            </h2>
-            <p className="mt-3 leading-relaxed text-muted-foreground">
-              Professional guidance, practical resources and thoughtful choices
-              designed with moms in mind — priced so that asking for help is
-              never the expensive option.
-            </p>
-            </div>
-
-
-          <dl className="mt-9 grid gap-4 sm:grid-cols-3">
-            {proof.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="group rounded-[1.5rem] border-2 border-border bg-surface p-6 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-primary/45"
-              >
-                <dt className="font-display text-2xl font-semibold text-foreground">
-                  {item.figure}
-                </dt>
-                <dd className="mt-1 text-sm font-semibold text-muted-foreground">
-                  {item.label}
-                </dd>
-              </Link>
-            ))}
-          </dl>
-          </div>
-        </div>
       </Container>
     </section>
   );
@@ -183,7 +74,7 @@ export function AffordableSupport() {
 export function FindYourVillage() {
   return (
     <section className="relative">
-      <Container className="py-16">
+      <Container className="py-band">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-3xl font-semibold text-foreground sm:text-4xl">
             Find your village
@@ -199,13 +90,13 @@ export function FindYourVillage() {
               href="/community"
               className={buttonVariants({ size: "lg" })}
             >
-              Join our community
+              Join Our Community
             </TrackedLink>
             <Link
               href="/about"
               className={buttonVariants({ variant: "outline", size: "lg" })}
             >
-              Meet the founders
+              Meet the Founders
             </Link>
           </div>
         </div>

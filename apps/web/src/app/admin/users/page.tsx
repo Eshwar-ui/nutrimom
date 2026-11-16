@@ -88,7 +88,7 @@ export default function AdminUsersPage() {
                     <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">System</span>
                   )}
                   {!u.isSellerVerified && u.sellerVerificationRequestedAt && (
-                    <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase text-gold">Requested</span>
+                    <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase text-gold-ink">Requested</span>
                   )}
                   {u.membership && (
                     <span

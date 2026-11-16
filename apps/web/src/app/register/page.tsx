@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type AuthResponse, type RegisterInput } from "@nutrimom/shared";
 import { request, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { loginHref, postAuthDestination, readAuthReturn, type AuthIntent } from "@/lib/auth-redirect";
 import { Container, Card, Input, Label, PasswordInput } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 
@@ -15,15 +16,16 @@ export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
-  const [next, setNext] = useState<string | null>(null);
+  const [authReturn, setAuthReturn] = useState<{ next: string | null; intent: AuthIntent | null }>({ next: null, intent: null });
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
 
   // Read client-side only (avoids an SSR/hydration mismatch) — carries a
-  // "come back here after signing in" destination through to both the
-  // post-register redirect and the "already have an account" link below.
+  // validated "come back here after signing in" destination, and the action
+  // to resume there, through to both the post-register redirect and the
+  // "already have an account" link below.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNext(new URLSearchParams(window.location.search).get("next"));
+    setAuthReturn(readAuthReturn(window.location.search));
   }, []);
 
   const onSubmit = async (data: RegisterInput) => {
@@ -31,13 +33,14 @@ export default function RegisterPage() {
     try {
       const response = await request<AuthResponse>("/auth/register", { method: "POST", body: data });
       setAuth(response.user, response.tokens);
-      router.push(next ?? "/account");
+      const { next, intent } = readAuthReturn(window.location.search);
+      router.push(postAuthDestination(next, intent, "/account"));
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Something went wrong");
     }
   };
 
-  const signInHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+  const signInHref = loginHref(authReturn.next, authReturn.intent);
 
   return (
     <Container className="grid min-h-[calc(100dvh-8rem)] items-center gap-10 py-12 lg:grid-cols-[0.9fr_1.1fr]">

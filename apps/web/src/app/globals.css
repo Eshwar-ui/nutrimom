@@ -21,13 +21,26 @@
   --color-danger-foreground: var(--danger-foreground);
   --color-gold: var(--gold);
 
-  /* Soft pastel tints — playful category tiles & section washes. */
-  --color-cream: #fff8f2;
+  /* Soft tints — category tiles, stickers & section washes. The names are
+     historical (the brief's palette has no pink, lavender or sky); the values
+     are retuned to it: blush = terracotta tint, sky = pale sage, lavender =
+     sage-stone. Kept so no component breaks. */
+  --color-cream: #f7f3ea;
   --color-blush: var(--blush);
   --color-lavender: var(--lavender);
   --color-sky: var(--sky);
   --color-sage: var(--sage);
   --color-beige: var(--beige);
+
+  /* Ink for text/icons sitting ON a tint (`bg-sage text-sage-ink`). Fixed in
+     both themes because the tints are too — every pair is >= 5.6:1 on the
+     full-strength tint, and higher on its translucent washes. */
+  --color-blush-ink: #7a3a22;
+  --color-sky-ink: #2e4a2b;
+  --color-sage-ink: #273d22;
+  --color-lavender-ink: #434526;
+  --color-beige-ink: #5c4024;
+  --color-gold-ink: #3f2d0c;
 
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
@@ -38,77 +51,97 @@
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 
+  /* One shape scale (brief: "rounded cards, consistent buttons").
+     rounded-card  — every card, tile and sheet (= rounded-2xl).
+     rounded-panel — section bands, framed blocks, dialogs (= rounded-3xl).
+     Inputs are rounded-xl; buttons and chips are always rounded-full. */
   --radius-xl: 1.25rem;
   --radius-2xl: 1.75rem;
-  --radius-3xl: 2.25rem;
+  --radius-3xl: 2rem;
+  --radius-card: 1.75rem;
+  --radius-panel: 2rem;
+
+  /* Vertical rhythm. mt-section between stacked sections inside a page;
+     py-band inside a full-bleed band. */
+  --spacing-section: 3.5rem;
+  --spacing-band: 4rem;
 }
 
 :root {
-  /* Brand palette — soft, warm, nurturing (blush / sage / cream + coral & gold). */
-  --background: #fdf6ee; /* cream */
-  --foreground: #241c18; /* warm near-black */
-  --surface: #ffffff;
-  --surface-2: #f6ece0;
+  /* Brand palette — the founders' brief (REDESIGN-PLAN.md, decision 2):
+     sage, cream, warm beige, soft terracotta, dark olive text. Sage #A8BFA0
+     and cream #F7F3EA are the brief's own codes; the rest are the approved
+     proposals. Contrast ratios are listed in the redesign hand-off. */
+  --background: #f7f3ea; /* cream */
+  --foreground: #333d29; /* dark olive */
+  --surface: #fffdf8;
+  --surface-2: #efe6d6;
 
-  --primary: #456f50; /* forest green — grounding CTA / brand */
-  --primary-foreground: #fdf6ee;
-  --accent: #ef8377; /* coral — warm pop */
-  --accent-foreground: #3a2318; /* deep brown, for AA contrast on coral */
-  --accent-text: #a94740;
+  /* Deep sage: the brief's #A8BFA0 can't carry button text (1.98:1). */
+  --primary: #55704d;
+  --primary-foreground: #f7f3ea;
+  --accent: #d08a6c; /* soft terracotta */
+  --accent-foreground: #2b2119;
+  --accent-text: #a0512e; /* terracotta readable on cream (offer prices, eyebrows) */
   --danger: #a43f39;
   --danger-foreground: #fffaf5;
-  --gold: #d8a84c; /* mustard gold */
+  --gold: #c9a55a;
 
-  --muted: #f3e9dd;
-  --muted-foreground: #75645a;
-  --border: #ecdecd;
-  --border-control: #9a8371;
-  --ring: #ef8377;
+  --muted: #f0e9dc;
+  --muted-foreground: #66684f;
+  --border: #e4daca;
+  --border-control: #878a6e;
+  /* Terracotta, deepened so a focus ring holds 3:1 on cream (4.0) and card (4.4). */
+  --ring: #b0643f;
 
-  --blush: #f7c6d0;
-  --lavender: #d9c8f2;
-  --sky: #cfe8f9;
-  --sage: #a8c3a0;
-  --beige: #efdcc8;
+  --blush: #edd3c4; /* terracotta tint */
+  --lavender: #dedcc6; /* sage-stone */
+  --sky: #d5dfcb; /* pale sage */
+  --sage: #a8bfa0;
+  --beige: #e6d7bf;
 
-  /* Tinted diffusion shadows — depth without clutter. */
+  /* Tinted diffusion shadows — depth without clutter. Built from the tokens,
+     so they follow the palette. */
   --shadow-soft: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
     0 18px 40px -22px color-mix(in oklab, var(--primary) 30%, transparent);
   --shadow-lift: 0 2px 4px color-mix(in oklab, var(--foreground) 8%, transparent),
     0 30px 60px -24px color-mix(in oklab, var(--primary) 38%, transparent);
+  /* Popovers, menus and toasts. */
+  --shadow-pop: 0 18px 40px -20px color-mix(in oklab, var(--foreground) 45%, transparent);
 }
 
+/*
+  Dark theme — deep olive-charcoal ground, warm cream text, lifted sage
+  primary, terracotta accent. Every text pairing is >= 6:1 (see hand-off).
+  The tints (blush/sage/…) and their inks are NOT overridden: they are
+  identical in both themes, so a tint + ink pair reads the same either way.
+*/
 [data-theme="dark"] {
-  --background: #1b1613;
-  --foreground: #f5ece3;
-  --surface: #241d18;
-  --surface-2: #2e251f;
+  --background: #1c2019;
+  --foreground: #f1ece0;
+  --surface: #242a21;
+  --surface-2: #2d3429;
 
-  --primary: #8fc79b; /* lifted sage-green for dark bg */
-  --primary-foreground: #14100d;
-  --accent: #f4a196;
-  --accent-foreground: #14100d;
-  --accent-text: #ffb4aa;
-  --danger: #f28b82;
-  --danger-foreground: #1b1613;
-  --gold: #e2b768;
+  --primary: #a3c096; /* lifted sage */
+  --primary-foreground: #18200f;
+  --accent: #de9a7c;
+  --accent-foreground: #231710;
+  --accent-text: #ebaa8c;
+  --danger: #ee9088;
+  --danger-foreground: #1c2019;
+  --gold: #d9b96e;
 
-  --muted: #2e251f;
-  --muted-foreground: #b3a596;
-  --border: #3a2f27;
-  --border-control: #8c7768;
-  --ring: #f4a196;
-
-  --blush: #f7c6d0;
-  --lavender: #d9c8f2;
-  --sky: #cfe8f9;
-  --sage: #a8c3a0;
-  --beige: #efdcc8;
+  --muted: #2d3429;
+  --muted-foreground: #bdbba4;
+  --border: #3a4234;
+  --border-control: #7e8770;
+  --ring: #de9a7c;
 
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4),
     0 18px 40px -22px rgba(0, 0, 0, 0.6);
   --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5),
     0 30px 60px -24px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 18px 40px -20px rgba(0, 0, 0, 0.7);
 }
 
 @layer base {
@@ -161,6 +194,10 @@ body {
 
 @utility card-shadow-lift {
   box-shadow: var(--shadow-lift);
+}
+
+@utility shadow-pop {
+  box-shadow: var(--shadow-pop);
 }
 
 /* Flat marker highlight — used sparingly on a single word. No gradient. */

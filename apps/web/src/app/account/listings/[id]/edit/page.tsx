@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Listing } from "@nutrimom/shared";
+import type { OwnerListing } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
 import { useRequireAuth } from "@/lib/use-auth";
 import { Container } from "@/components/ui/primitives";
@@ -16,7 +16,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
   // Fetch from the seller's own listings so PENDING items are editable too.
   const { data, isLoading } = useQuery({
     queryKey: ["my-listings"],
-    queryFn: () => authedRequest<Listing[]>("/seller/listings"),
+    queryFn: () => authedRequest<OwnerListing[]>("/seller/listings"),
     enabled: ready,
   });
 

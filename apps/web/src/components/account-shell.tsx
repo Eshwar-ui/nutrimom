@@ -136,7 +136,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
 
             <button
               type="button"
-              onClick={logout}
+              onClick={() => logout()}
               className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger"
             >
               <LogOut className="h-4 w-4" /> Sign out

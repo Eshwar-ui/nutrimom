@@ -16,7 +16,8 @@ import {
 } from "@nutrimom/shared";
 import { authedRequest, ApiError } from "@/lib/api";
 import { toast } from "@/lib/toast-store";
-import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
+import { loadRazorpay, openRazorpay, RAZORPAY_THEME_COLOR } from "@/lib/razorpay";
+import { loginHref } from "@/lib/auth-redirect";
 import {
   classifyPaymentError,
   declinedOutcome,
@@ -110,7 +111,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
           email: user?.email,
           contact: order.shippingAddress.phone,
         },
-        theme: { color: "#e8756a" },
+        theme: { color: RAZORPAY_THEME_COLOR },
         handler: async (resp) => {
           // The money is captured by now — a failure here is a confirmation
           // problem, not a payment failure.
@@ -246,7 +247,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         onClose={() => setOutcome(null)}
         secondary={
           outcome?.kind === "session-expired" ? (
-            <Link href={`/login?next=/orders/${id}`} className={buttonVariants()}>
+            <Link href={loginHref(`/orders/${id}`)} className={buttonVariants()}>
               Sign in
             </Link>
           ) : undefined

@@ -38,6 +38,7 @@ const TOPICS: { topic: string; service: EnquiryService | null }[] = [
   { topic: "Listing question", service: null },
   { topic: "Payment safety", service: null },
   { topic: "Selling on the marketplace", service: "PRELOVED" },
+  { topic: "Account deletion request", service: null },
   { topic: "Something else", service: null },
 ];
 
@@ -51,9 +52,18 @@ function topicForService(service: EnquiryService | null): string {
 export function ContactForm({
   /** The service page this visitor came from, from `/contact?service=`. */
   service = null,
+  /** Preselects a topic directly (e.g. the account-deletion page). Wins over `service`. */
+  initialTopic,
+  /**
+   * The package from `/contact?package=`, already checked server-side to be
+   * active. The page also sets `service` to that package's own service.
+   */
+  packageId = null,
 }: {
   service?: EnquiryService | null;
-}) {
+  initialTopic?: string;
+  packageId?: string | null;
+} = {}) {
   const [sent, setSent] = useState<string | null>(null);
   const {
     register,
@@ -63,16 +73,24 @@ export function ContactForm({
     formState: { errors, isSubmitting },
   } = useForm<ContactInput>({
     resolver: zodResolver(contactSchema),
-    defaultValues: { topic: topicForService(service) },
+    defaultValues: { topic: initialTopic ?? topicForService(service) },
   });
 
   const onSubmit = async (data: ContactInput) => {
     // What they picked beats where they came from: someone who opened this
-    // from /yoga and then chose "Order support" has an order problem. The URL
-    // only speaks when the chosen topic maps to no service of its own, which
-    // is how "Something else" from /yoga still reaches the yoga enquiries.
+    // from /yoga and then chose "Order support" has an order problem, so it is
+    // filed with no service. The URL only speaks for the one topic that says
+    // nothing about itself — "Something else" — which is how a vague question
+    // asked from /yoga still reaches the yoga enquiries.
     const chosen = TOPICS.find((t) => t.topic === data.topic);
-    const attributed = chosen?.service ?? (chosen ? service : null);
+    const attributed =
+      chosen?.service ?? (chosen?.topic === "Something else" ? service : null);
+    // The package is stricter than the service: it travels only while the
+    // chosen topic is the package's own service topic (the one preselected),
+    // so "Something else" from /yoga is a yoga enquiry but carries no quoted
+    // price. Never sent as "" either — the shared schema rejects an empty id.
+    const attachedPackage =
+      packageId && service && chosen?.service === service ? packageId : null;
 
     try {
       await request("/contact", {
@@ -83,6 +101,7 @@ export function ContactForm({
           subject: data.topic,
           message: data.message,
           ...(attributed ? { service: attributed } : {}),
+          ...(attachedPackage ? { packageId: attachedPackage } : {}),
         },
       });
       setSent(data.name.split(" ")[0]);

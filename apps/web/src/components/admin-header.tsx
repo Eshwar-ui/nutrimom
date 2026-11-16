@@ -91,7 +91,7 @@ export function AdminHeader() {
                     style={{ transformOrigin: "top right" }}
                     className="absolute right-0 top-full z-50 w-60 pt-2"
                   >
-                    <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.35)]">
+                    <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-pop">
                       <div className="flex items-center gap-3 border-b border-border px-3 py-3">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/12 text-sm font-bold uppercase text-primary">
                           {user.name[0]}

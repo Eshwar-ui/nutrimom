@@ -1,11 +1,13 @@
 import { orderStatusLabel, type OrderStatus, type PaymentMethod } from "@nutrimom/shared";
 import { cn } from "@/lib/utils";
 
+// Tint + readable ink from the palette tokens. (Was gold-on-gold, terracotta-
+// on-terracotta and a stock emerald — all under 3:1.)
 const styles: Record<OrderStatus, string> = {
-  PENDING: "bg-gold/20 text-gold",
-  PAID: "bg-accent/15 text-accent",
-  SHIPPED: "bg-primary/15 text-primary",
-  DELIVERED: "bg-emerald-500/15 text-emerald-600",
+  PENDING: "bg-gold/20 text-gold-ink",
+  PAID: "bg-accent/15 text-accent-text",
+  SHIPPED: "bg-primary/10 text-primary",
+  DELIVERED: "bg-sage/50 text-sage-ink",
   CANCELLED: "bg-muted text-muted-foreground",
 };
 

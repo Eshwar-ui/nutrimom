@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Role } from "@nutrimom/shared";
 import { useAuthStore } from "./auth-store";
 import { useAuthHydrated } from "./use-store-hydrated";
+import { loginHref } from "./auth-redirect";
 
 /**
  * Client-side auth gate. Waits for the persisted store to hydrate, then
@@ -19,8 +20,8 @@ export function useRequireAuth(role?: Role) {
   useEffect(() => {
     if (!hydrated) return;
     if (!user) {
-      const next = encodeURIComponent(window.location.pathname);
-      router.replace(`/login?next=${next}`);
+      // Path + query, so a filtered or paginated page comes back as it was.
+      router.replace(loginHref(window.location.pathname + window.location.search));
     } else if (role && user.role !== role) {
       router.replace("/");
     }

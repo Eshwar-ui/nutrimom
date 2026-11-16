@@ -128,7 +128,7 @@ export function SearchOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-50 bg-[#4b3a30]/55 px-4 pt-24 backdrop-blur-md sm:pt-28"
+          className="fixed inset-0 z-50 bg-foreground/45 px-4 pt-24 backdrop-blur-md sm:pt-28"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) close();
           }}
@@ -143,9 +143,9 @@ export function SearchOverlay({
             <form
               onSubmit={submitSearch}
               role="search"
-              className="relative flex h-16 items-center rounded-full bg-surface px-5 shadow-[0_24px_70px_-30px_rgba(36,28,24,0.65)] ring-1 ring-white/40"
+              className="relative flex h-16 items-center rounded-full bg-surface px-5 shadow-[0_24px_70px_-30px_color-mix(in_oklab,var(--foreground)_65%,transparent)] ring-1 ring-white/40"
             >
-              <Search className="h-5 w-5 shrink-0 text-[#8b5a23]" />
+              <Search className="h-5 w-5 shrink-0 text-accent-text" />
               <input
                 ref={inputRef}
                 type="search"
@@ -223,7 +223,7 @@ function SearchResultsPanel({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 10, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="mt-5 overflow-hidden rounded-[1.75rem] border border-white/35 bg-surface/95 shadow-[0_26px_80px_-36px_rgba(36,28,24,0.7)] backdrop-blur-xl"
+      className="mt-5 overflow-hidden rounded-card border border-white/35 bg-surface/95 shadow-[0_26px_80px_-36px_color-mix(in_oklab,var(--foreground)_70%,transparent)] backdrop-blur-xl"
     >
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <p className="text-sm font-bold text-foreground">Search results</p>

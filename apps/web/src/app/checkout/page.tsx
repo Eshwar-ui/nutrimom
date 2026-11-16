@@ -13,7 +13,7 @@ import {
   type ShippingAddress,
 } from "@nutrimom/shared";
 import { authedRequest } from "@/lib/api";
-import { loadRazorpay, openRazorpay } from "@/lib/razorpay";
+import { loadRazorpay, openRazorpay, RAZORPAY_THEME_COLOR } from "@/lib/razorpay";
 import { toast } from "@/lib/toast-store";
 import {
   classifyPaymentError,
@@ -28,6 +28,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore, cartSubtotal } from "@/lib/cart-store";
 import { Container, Card, Input, Label } from "@/components/ui/primitives";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { loginHref } from "@/lib/auth-redirect";
 import { PageSkeleton, StatePanel } from "@/components/ui/states";
 import { useAuthHydrated, useCartHydrated } from "@/lib/use-store-hydrated";
 import { ShoppingBag } from "lucide-react";
@@ -52,7 +53,7 @@ export default function CheckoutPage() {
   const cartHydrated = useCartHydrated();
 
   useEffect(() => {
-    if (authHydrated && !user) router.replace("/login?next=/checkout");
+    if (authHydrated && !user) router.replace(loginHref("/checkout"));
   }, [authHydrated, user, router]);
 
   const {
@@ -119,7 +120,7 @@ export default function CheckoutPage() {
           email: user?.email,
           contact: address.phone,
         },
-        theme: { color: "#e8756a" },
+        theme: { color: RAZORPAY_THEME_COLOR },
         handler: async (resp) => {
           // From here on the gateway HAS captured the money. Any failure below
           // is a confirmation problem, never a payment failure — say so.
@@ -313,7 +314,7 @@ export default function CheckoutPage() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Pay securely online</p><p className="text-lg font-bold text-foreground">{formatPaise(subtotal)}</p></div>
-          <button type="submit" form="checkout-form" disabled={submitting} className="inline-flex h-12 items-center rounded-full bg-primary px-7 font-semibold text-primary-foreground disabled:opacity-50">{submitting ? "Opening…" : "Pay now"}</button>
+          <Button type="submit" form="checkout-form" disabled={submitting}>{submitting ? "Opening…" : "Pay now"}</Button>
         </div>
       </div>
 
@@ -334,7 +335,7 @@ export default function CheckoutPage() {
         }}
         secondary={
           outcome?.kind === "session-expired" ? (
-            <Link href="/login?next=/checkout" className={buttonVariants()}>
+            <Link href={loginHref("/checkout")} className={buttonVariants()}>
               Sign in
             </Link>
           ) : outcome?.kind === "item-unavailable" ? (

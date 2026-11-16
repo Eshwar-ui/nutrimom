@@ -13,10 +13,10 @@ import { getResources, type FreeResource } from "@/lib/resources";
  */
 
 const PAPERS = [
-  { paper: "bg-blush/45", tint: "bg-blush", ink: "text-[#7a2447]" },
-  { paper: "bg-sky/50", tint: "bg-sky", ink: "text-[#215172]" },
-  { paper: "bg-sage/45", tint: "bg-sage", ink: "text-[#2f5236]" },
-  { paper: "bg-lavender/45", tint: "bg-lavender", ink: "text-[#4a3170]" },
+  { paper: "bg-blush/45", tint: "bg-blush", ink: "text-blush-ink" },
+  { paper: "bg-sky/50", tint: "bg-sky", ink: "text-sky-ink" },
+  { paper: "bg-sage/45", tint: "bg-sage", ink: "text-sage-ink" },
+  { paper: "bg-lavender/45", tint: "bg-lavender", ink: "text-lavender-ink" },
 ] as const;
 
 function DownloadLink({
@@ -56,7 +56,7 @@ export function ResourceCard({
   return (
     <article
       className={cn(
-        "relative flex h-full flex-col rounded-[1.75rem] border-2 border-border p-7 card-shadow",
+        "relative flex h-full flex-col rounded-card border-2 border-border p-7 card-shadow",
         stock.paper,
       )}
     >
@@ -119,7 +119,7 @@ export function FreeGuideCallout({
   if (resources.length === 0) return null;
 
   return (
-    <section className="mt-14 rounded-[1.75rem] border-2 border-border bg-surface p-6 card-shadow sm:p-8">
+    <section className="mt-section rounded-card border-2 border-border bg-surface p-6 card-shadow sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-text">
@@ -143,7 +143,7 @@ export function FreeGuideCallout({
           return (
             <li
               key={r.slug}
-              className={cn("flex flex-col rounded-2xl border border-border p-5", stock.paper)}
+              className={cn("flex flex-col rounded-card border border-border p-5", stock.paper)}
             >
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent-text">
                 {r.stage}

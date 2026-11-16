@@ -2,8 +2,14 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * The one button shape (brief: consistent button styles). Always a pill,
+ * always semibold, three heights: sm 36px · md 44px (default, the touch
+ * minimum) · lg 56px for hero/primary page actions. Links that look like
+ * buttons use `buttonVariants(...)` rather than re-typing these classes.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-[transform,filter,background-color,box-shadow] duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.95]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition-[transform,filter,background-color,box-shadow] duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.95]",
   {
     variants: {
       variant: {
@@ -11,10 +17,12 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground shadow-[0_10px_28px_-10px_color-mix(in_oklab,var(--primary)_70%,transparent)] hover:-translate-y-0.5 hover:brightness-[1.08]",
         accent:
           "bg-accent text-accent-foreground shadow-[0_10px_28px_-10px_color-mix(in_oklab,var(--accent)_75%,transparent)] hover:-translate-y-0.5 hover:brightness-[1.06]",
+        /* A real outline (the approved mock's secondary button), not the
+           near-invisible decorative border it used to borrow. */
         outline:
-          "border border-border bg-surface/70 text-foreground backdrop-blur-sm hover:-translate-y-0.5 hover:border-primary/45 hover:bg-surface",
+          "border-[1.5px] border-foreground/70 bg-surface/70 text-foreground backdrop-blur-sm hover:-translate-y-0.5 hover:border-foreground hover:bg-surface",
         ghost: "text-foreground hover:bg-muted",
-        gold: "bg-gold text-foreground shadow-[0_10px_28px_-10px_color-mix(in_oklab,var(--gold)_70%,transparent)] hover:-translate-y-0.5 hover:brightness-[1.05]",
+        gold: "bg-gold text-gold-ink shadow-[0_10px_28px_-10px_color-mix(in_oklab,var(--gold)_70%,transparent)] hover:-translate-y-0.5 hover:brightness-[1.05]",
       },
       size: {
         sm: "h-9 px-4 text-sm",

@@ -12,29 +12,38 @@ import {
   Video,
   Wind,
 } from "lucide-react";
+import Link from "next/link";
+import type { ServiceGroup } from "@nutrimom/shared";
 import { Container } from "@/components/ui/primitives";
 import { HeroWave } from "@/components/section-wave";
 import {
   ServiceHero,
   CredentialStrip,
   OfferingGrid,
-  PricingTable,
   SafetyNote,
   BookingCta,
   ClosingCta,
   type Offering,
 } from "@/components/service-sections";
 import { FreeGuideCallout } from "@/components/resource-cards";
-import { bookingWhatsappUrl } from "@/lib/booking";
-import { pageMetadata } from "@/lib/seo";
+import { PackagePricing } from "@/components/package-pricing";
+import { ServiceFaqs } from "@/components/service-faqs";
+import { MarkdownContent } from "@/components/markdown-content";
+import { TrackedExternalLink, TrackedLink } from "@/components/tracked-link";
+import { bookingPhone, bookingWhatsappUrl } from "@/lib/booking";
+import { getFaqs, getServicePackages, getSiteContent } from "@/lib/content";
+import { ENQUIRY_SERVICE_SLUGS } from "@/lib/site-nav";
+import { SERVICE_OG_IMAGES, pageMetadata } from "@/lib/seo";
 import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
 import { JsonLd } from "@/components/json-ld";
+import { ArtDirectedImage } from "@/components/art-directed-image";
 
 export const metadata = pageMetadata({
   title: "Yoga & Garbhasanskar",
   description:
-    "Prenatal yoga, postnatal recovery, Garbhasanskar and 1:1 sessions for Indian moms — live group batches and recorded practice, guided through pregnancy and beyond.",
+    "Prenatal & postnatal yoga, Garbhasanskar and 1:1 sessions for Indian moms — live group batches and recorded practice, through pregnancy and beyond.",
   path: "/yoga",
+  images: [SERVICE_OG_IMAGES.yoga],
 });
 
 // Credentials the founders' brief lists for the yoga pillar. Flagged there as
@@ -56,7 +65,7 @@ const offerings: Offering[] = [
       label: "Move + breathe",
       detail: "Gentle movement shaped around each trimester.",
       surface: "bg-blush/45",
-      image: "/images/yoga/prenatal-yoga.png",
+      image: "/images/yoga/prenatal-yoga.webp",
     },
     title: "Prenatal Yoga",
     body: "Trimester-aware movement, breathwork, relaxation and mobility for pregnancy.",
@@ -70,7 +79,7 @@ const offerings: Offering[] = [
       label: "Restore + rebuild",
       detail: "Steady recovery, mobility and strength after birth.",
       surface: "bg-sage/45",
-      image: "/images/yoga/postnatal-yoga.png",
+      image: "/images/yoga/postnatal-yoga.webp",
     },
     title: "Postnatal Yoga",
     body: "Gentle recovery, mobility, strength and core-focused movement as appropriate.",
@@ -84,7 +93,7 @@ const offerings: Offering[] = [
       label: "Connect + calm",
       detail: "Mindful practices for a calmer pregnancy experience.",
       surface: "bg-lavender/45",
-      image: "/images/yoga/garbhasanskar.png",
+      image: "/images/yoga/garbhasanskar.webp",
     },
     title: "Garbhasanskar",
     body: "Breathwork, affirmations, relaxation and mindful pregnancy practices.",
@@ -98,7 +107,7 @@ const offerings: Offering[] = [
       label: "Together, live",
       detail: "Small groups with guidance and a clear sequence.",
       surface: "bg-sky/45",
-      image: "/images/yoga/live-group-yoga.png",
+      image: "/images/yoga/live-group-yoga.webp",
     },
     title: "Live Group Batches",
     body: "Small-group sessions with live guidance and structured sequencing.",
@@ -112,7 +121,7 @@ const offerings: Offering[] = [
       label: "Your time",
       detail: "Press play whenever your day gives you space.",
       surface: "bg-beige/70",
-      image: "/images/yoga/recorded-yoga.png",
+      image: "/images/yoga/recorded-yoga.webp",
     },
     title: "Recorded Sessions",
     body: "Practise at a time that suits you, with pregnancy and postpartum resources.",
@@ -126,23 +135,46 @@ const offerings: Offering[] = [
       label: "Just for you",
       detail: "A focused session around your goals and needs.",
       surface: "bg-blush/45",
-      image: "/images/yoga/one-to-one-yoga.png",
+      image: "/images/yoga/one-to-one-yoga.webp",
     },
     title: "1:1 Sessions",
     body: "Personalised sessions for individual goals and needs, with medical clearance where appropriate.",
   },
 ];
 
-const pricing = [
-  { label: "Trial / intro session", price: "₹299", from: true },
-  { label: "Group class", price: "₹199", from: true, unit: "per class" },
-  { label: "Monthly batch", price: "₹799", from: true, unit: "per month" },
-  { label: "Garbhasanskar", price: "₹499", from: true },
-  { label: "1:1 session", price: "₹699", from: true },
+/**
+ * The brief's page order (§8): A Prenatal Yoga, B Garbhasanskar, C the two
+ * together, D 1:1. The Best value package (the Monthly Combo) is lifted into
+ * the Recommended block above all four, so C only shows here if it holds
+ * anything else.
+ */
+const YOGA_GROUPS: readonly ServiceGroup[] = [
+  "PRENATAL_YOGA",
+  "GARBHASANSKAR",
+  "COMBO",
+  "ONE_TO_ONE_YOGA",
 ];
 
+// Brief §8's own wording for each group.
+const GROUP_COPY: Partial<Record<ServiceGroup, string>> = {
+  PRENATAL_YOGA:
+    "Classes may include pregnancy-appropriate movement, breathing practices and relaxation.",
+  GARBHASANSKAR:
+    "Sessions may include guided affirmations, relaxation, mindful pregnancy practices and emotional bonding activities.",
+  COMBO: "Prenatal Yoga and Garbhasanskar together, in one package.",
+  ONE_TO_ONE_YOGA: "Personalised support adapted to your needs and comfort level.",
+};
+
 export default async function YogaPage() {
-  const whatsappUrl = await bookingWhatsappUrl("yoga");
+  const [whatsappUrl, phone, packages, content, faqs] = await Promise.all([
+    bookingWhatsappUrl("yoga"),
+    bookingPhone(),
+    getServicePackages(),
+    getSiteContent(),
+    getFaqs("SESSIONS"),
+  ]);
+  const yogaPackages = packages.filter((p) => YOGA_GROUPS.includes(p.group));
+  const sessionPolicy = content?.sessionPolicy?.trim();
 
   return (
     <>
@@ -163,15 +195,14 @@ export default async function YogaPage() {
         ]}
       />
       <section className="relative overflow-hidden">
-        <picture>
-          <source media="(min-width: 1024px)" srcSet="/hero-images/yoga-desktop.png" />
-          <source media="(min-width: 768px)" srcSet="/hero-images/yoga-tablet.png" />
-          <img
-            src="/hero-images/yoga-mobile.png"
-            alt="A mother practicing gentle prenatal yoga"
-            className="block w-full"
-          />
-        </picture>
+        <ArtDirectedImage
+          alt="A mother practicing gentle prenatal yoga"
+          desktop={{ src: "/hero-images/yoga-desktop.webp", width: 1600, height: 600 }}
+          tablet={{ src: "/hero-images/yoga-tablet.webp", width: 1536, height: 1024 }}
+          mobile={{ src: "/hero-images/yoga-mobile.webp", width: 941, height: 1672 }}
+          eager
+          className="block h-auto w-full"
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/80 to-transparent"
@@ -187,7 +218,11 @@ export default async function YogaPage() {
           intent="yoga"
                 label="View classes & book a session"
                 whatsappUrl={whatsappUrl}
-                secondary={{ href: "/nutrition", label: "Explore Nutrition" }}
+                secondary={
+                  yogaPackages.length > 0
+                    ? { href: "#packages", label: "See packages & prices" }
+                    : { href: "/nutrition", label: "Explore Nutrition" }
+                }
               />
             </ServiceHero>
           </Container>
@@ -200,10 +235,66 @@ export default async function YogaPage() {
 
         <OfferingGrid heading="What we offer" items={offerings} />
 
-        <PricingTable
-          rows={pricing}
-          note="Starting prices. Final fees vary by batch, session length and format — we'll confirm before you book."
-        />
+        <PackagePricing
+          heading="Packages & pricing"
+          intro="Choose one practice, or bring both together. Book Now opens WhatsApp with your package and price already filled in — there's nothing to pay online here."
+          packages={yogaPackages}
+          groups={YOGA_GROUPS}
+          groupCopy={GROUP_COPY}
+          phone={phone}
+          featureBestValue
+          footnote="We'll confirm your batch timings with you on WhatsApp after you book."
+        >
+          {sessionPolicy && (
+            <div className="mx-auto mt-10 max-w-3xl rounded-card border border-border bg-surface-2 p-6 sm:p-8">
+              <h3 className="font-display text-xl font-semibold text-foreground">
+                Session policy
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cancellations, rescheduling and refunds.
+              </p>
+              <MarkdownContent
+                markdown={sessionPolicy}
+                headingOffset={3}
+                className="mt-4 text-sm"
+              />
+            </div>
+          )}
+          <p className="mt-8 text-center leading-relaxed text-foreground">
+            Not sure which to choose?{" "}
+            {whatsappUrl ? (
+              <TrackedExternalLink
+                event="booking_cta_click"
+                eventProps={{ intent: "yoga", via: "whatsapp" }}
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-accent-text underline-offset-4 hover:underline"
+              >
+                Ask us on WhatsApp
+              </TrackedExternalLink>
+            ) : (
+              <TrackedLink
+                event="booking_cta_click"
+                eventProps={{ intent: "yoga", via: "contact_form" }}
+                href={`/contact?service=${ENQUIRY_SERVICE_SLUGS.yoga}`}
+                className="font-bold text-accent-text underline-offset-4 hover:underline"
+              >
+                Ask us
+              </TrackedLink>
+            )}{" "}
+            — or read the{" "}
+            <Link
+              href="/faq"
+              className="font-bold text-accent-text underline-offset-4 hover:underline"
+            >
+              FAQs
+            </Link>
+            .
+          </p>
+        </PackagePricing>
+
+        <ServiceFaqs heading="Sessions & booking" faqs={faqs} />
 
         <FreeGuideCallout
           slugs={["prenatal-yoga-starter-guide", "pregnancy-wellness-guide"]}
@@ -222,11 +313,11 @@ export default async function YogaPage() {
           body="Tell us your stage and what you're hoping for, and we'll point you to the right class."
           decorations={[
             {
-              src: "/images/yoga/prenatal-yoga.png",
+              src: "/images/yoga/prenatal-yoga.webp",
               className: "left-8 top-8 w-60",
             },
             {
-              src: "/images/yoga/live-group-yoga.png",
+              src: "/images/yoga/live-group-yoga.webp",
               className: "right-12 top-8 w-64",
             },
           ]}

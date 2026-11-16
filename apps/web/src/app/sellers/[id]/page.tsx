@@ -48,7 +48,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
           { name: `${seller.name}'s shop`, path: `/sellers/${seller.id}` },
         ])}
       />
-      <div className="flex flex-col items-center rounded-[2rem] border-2 border-border bg-surface p-8 text-center card-shadow">
+      <div className="flex flex-col items-center rounded-panel border-2 border-border bg-surface p-8 text-center card-shadow">
         <span className="grid h-20 w-20 place-items-center rounded-full bg-primary/12 font-display text-3xl font-bold text-primary">
           {seller.name[0]}
         </span>

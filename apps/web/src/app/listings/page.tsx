@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import {
-  Search, SearchX, SlidersHorizontal, Store, LayoutGrid, ChevronDown,
+  Search, SearchX, Store, LayoutGrid, ChevronDown,
   Shirt, ToyBrick, BookOpen, Utensils, Baby, Footprints, CarFront,
   RockingChair, Bed, Armchair, Backpack, Milk, Heart, PersonStanding,
   Moon, Lamp, Package,
 } from "lucide-react";
 import {
-  conditionLabels,
   type Category,
   type Listing,
   type Paginated,
@@ -19,12 +18,20 @@ import { Container, Input } from "@/components/ui/primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing-card";
 import { ListingsSort } from "@/components/listings-sort";
+import { ListingsFilters, ListingsFilterSheet } from "@/components/listings-filters";
+import { ActiveFilterChips } from "@/components/active-filter-chips";
+import {
+  FILTER_KEYS,
+  cleanListingsParams,
+  hasActiveFilters,
+  type ListingsSearchParams,
+} from "@/lib/listings-url";
 import { StatePanel } from "@/components/ui/states";
 import { ProductCardSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const BROWSE_DESCRIPTION =
-  "Browse every preloved listing on The Nurture Moms — strollers, car seats, baby clothes, toys, feeding gear and maternity wear, all gently used, condition-graded and listed by verified moms across India.";
+  "Shop preloved strollers, car seats, baby clothes, toys, feeding gear and maternity wear — gently used, condition-graded and listed by verified moms across India.";
 
 /** Per-category sidebar icons, keyed by slug. Unmapped categories fall back
  *  to Store, so new categories still render without a code change. */
@@ -48,16 +55,7 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
   "other-baby-essentials": Package,
 };
 
-type SP = {
-  category?: string;
-  condition?: string;
-  city?: string;
-  search?: string;
-  min?: string;
-  max?: string;
-  sort?: string;
-  page?: string;
-};
+type SP = ListingsSearchParams;
 
 /**
  * Filter, sort and pagination params multiply this one page into thousands of
@@ -72,13 +70,9 @@ export async function generateMetadata({
   searchParams: Promise<SP>;
 }): Promise<Metadata> {
   const sp = await searchParams;
+  // Any filter (location included), a sort or a later page is a facet.
   const isFaceted = Boolean(
-    sp.category ||
-      sp.condition ||
-      sp.city ||
-      sp.search ||
-      sp.min ||
-      sp.max ||
+    FILTER_KEYS.some((key) => sp[key]) ||
       sp.sort ||
       (Number(sp.page) || 1) > 1,
   );
@@ -150,7 +144,10 @@ function ListingsSkeleton() {
   );
 }
 
-async function ListingsResults({ sp }: { sp: SP }) {
+async function ListingsResults({ sp: raw }: { sp: SP }) {
+  // Values the API would 400 on (a malformed PIN in a hand-edited URL) are
+  // dropped, so the page shows "no such filter" rather than failing to load.
+  const sp = cleanListingsParams(raw);
   const page = Math.max(1, Number(sp.page) || 1);
 
   let data: Paginated<Listing> = { items: [], page, pageSize: 12, total: 0, totalPages: 1 };
@@ -161,7 +158,10 @@ async function ListingsResults({ sp }: { sp: SP }) {
       getListings({
         category: sp.category,
         condition: sp.condition as never,
+        delivery: sp.delivery as never,
         city: sp.city,
+        locality: sp.locality,
+        pincode: sp.pincode,
         search: sp.search,
         minPrice: sp.min ? Number(sp.min) * 100 : undefined,
         maxPrice: sp.max ? Number(sp.max) * 100 : undefined,
@@ -214,7 +214,7 @@ async function ListingsResults({ sp }: { sp: SP }) {
 
             <div className="border-t border-border" />
 
-            <FiltersForm sp={sp} />
+            <ListingsFilters key={JSON.stringify(sp)} sp={sp} />
           </div>
         </aside>
 
@@ -262,16 +262,13 @@ async function ListingsResults({ sp }: { sp: SP }) {
                 ))}
               </div>
             </details>
-            <details className="group rounded-2xl border border-border-control/45 bg-surface">
-              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-semibold text-foreground">
-                <span className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4" /> Filters</span>
-                <span className="text-xs text-muted-foreground group-open:hidden">Condition, city and price</span>
-              </summary>
-              <div className="border-t border-border p-4">
-                <FiltersForm sp={sp} />
-              </div>
-            </details>
+            <ListingsFilterSheet
+              sp={sp}
+              activeCount={FILTER_KEYS.filter((key) => key !== "category" && key !== "search" && sp[key]).length}
+            />
           </div>
+
+          <ActiveFilterChips sp={sp} categories={categories} />
 
           {loadFailed ? (
             <StatePanel tone="error" title="The shop could not load" description="The marketplace service is unavailable right now. Refresh the page in a moment." action={<Link href="/listings" className={buttonVariants()}>Try again</Link>} />
@@ -280,7 +277,12 @@ async function ListingsResults({ sp }: { sp: SP }) {
               {data.items.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
             </div>
           ) : (
-            <StatePanel icon={SearchX} title="No treasures found" description="Try another collection, remove a filter, or search a nearby city." />
+            <StatePanel
+              icon={SearchX}
+              title="No treasures found"
+              description="Try another collection, remove a filter, or search a nearby city."
+              action={hasActiveFilters(sp) ? <Link href="/listings" className={buttonVariants({ variant: "outline" })}>Clear all filters</Link> : undefined}
+            />
           )}
 
           {data.totalPages > 1 && (
@@ -334,66 +336,4 @@ function CollectionLink({
       {children}
     </Link>
   );
-}
-
-const conditionOptions = [{ value: "", label: "Any" }, ...Object.entries(conditionLabels).map(([value, label]) => ({ value, label }))];
-
-function FiltersForm({ sp }: { sp: SP }) {
-  return (
-    <form action="/listings" method="get" className="space-y-5">
-      <PreservedFields sp={sp} except={["condition", "city", "min", "max", "page"]} />
-
-      <fieldset>
-        <legend className="mb-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Condition</legend>
-        <div className="flex flex-wrap gap-2">
-          {conditionOptions.map((option) => (
-            <label key={option.value} className="cursor-pointer">
-              <input
-                type="radio"
-                name="condition"
-                value={option.value}
-                defaultChecked={(sp.condition ?? "") === option.value}
-                className="peer sr-only"
-              />
-              <span className="inline-flex rounded-full border border-border-control/45 bg-surface px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring/40">
-                {option.label}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <div>
-        <label htmlFor="filter-city" className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">City</label>
-        <Input id="filter-city" name="city" defaultValue={sp.city ?? ""} placeholder="Any city" />
-      </div>
-
-      <div>
-        <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Price (₹)</span>
-        <div className="flex items-center gap-2">
-          <Input aria-label="Minimum price" name="min" type="number" min="0" defaultValue={sp.min ?? ""} placeholder="Min" />
-          <span className="text-muted-foreground">–</span>
-          <Input aria-label="Maximum price" name="max" type="number" min="0" defaultValue={sp.max ?? ""} placeholder="Max" />
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <button type="submit" className={cn(buttonVariants(), "flex-1")}>Apply</button>
-        {(sp.condition || sp.city || sp.min || sp.max) && (
-          <Link
-            href={{ pathname: "/listings", query: cleanQuery({ ...sp, condition: undefined, city: undefined, min: undefined, max: undefined, page: undefined }) }}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Clear
-          </Link>
-        )}
-      </div>
-    </form>
-  );
-}
-
-function cleanQuery(sp: SP): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(sp)) if (value) out[key] = String(value);
-  return out;
 }

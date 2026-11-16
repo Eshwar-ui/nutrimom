@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { TrackedLink, TrackedExternalLink } from "./tracked-link";
-import { MessageCircle, ArrowRight, BadgeCheck, Tag, Check, ClipboardCheck } from "lucide-react";
+import { MessageCircle, ArrowRight, BadgeCheck, Check, ClipboardCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Container } from "./ui/primitives";
 import { buttonVariants } from "./ui/button";
@@ -63,7 +63,7 @@ export function CredentialStrip({ items }: { items: readonly string[] }) {
   return (
     <section
       aria-label="Credentials"
-      className="mt-8 rounded-3xl border border-border bg-surface/70 p-3 sm:p-4"
+      className="mt-8 rounded-panel border border-border bg-surface/70 p-3 sm:p-4"
     >
       <div className="flex items-center gap-2 px-2 pb-3">
         <BadgeCheck className="h-4 w-4 text-accent-text" strokeWidth={1.8} />
@@ -189,7 +189,7 @@ export function OfferingGrid({
   equalCards?: boolean;
 }) {
   return (
-    <section className="mt-14">
+    <section className="mt-section">
       {heading && (
         <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
           {heading}
@@ -236,7 +236,7 @@ export function OfferingGrid({
             equalCards
               ? "flex h-full min-h-[18rem] flex-col"
               : "block",
-            "rounded-2xl bg-surface p-6 card-shadow transition-transform",
+            "rounded-card bg-surface p-6 card-shadow transition-transform",
             item.borderColor ? cn("border-2", item.borderColor) : "border border-border",
             item.href && "hover:-translate-y-0.5 hover:border-primary/40",
           );
@@ -262,18 +262,18 @@ export function OfferingGrid({
 }
 
 /**
- * The pastel-and-ink pairs the paper world is built from.
+ * The tint-and-ink pairs the paper world is built from.
  *
- * The ink is a fixed dark tone rather than a token because the pastel under it
- * is defined identically in light and dark mode, so dark ink stays correct in
- * both — the same reason the home page's testimonial stickers do it.
+ * Each ink is the `*-ink` token for its tint (globals.css): the tints are
+ * defined identically in light and dark mode, so a fixed dark ink stays
+ * correct in both, and every pair clears 5.6:1.
  */
 const PASTEL_INK = [
-  { tint: "bg-blush", ink: "text-[#7a2447]" },
-  { tint: "bg-sky", ink: "text-[#215172]" },
-  { tint: "bg-sage", ink: "text-[#2f5236]" },
-  { tint: "bg-lavender", ink: "text-[#4a3170]" },
-  { tint: "bg-gold", ink: "text-[#5c4410]" },
+  { tint: "bg-blush", ink: "text-blush-ink" },
+  { tint: "bg-sky", ink: "text-sky-ink" },
+  { tint: "bg-sage", ink: "text-sage-ink" },
+  { tint: "bg-lavender", ink: "text-lavender-ink" },
+  { tint: "bg-gold", ink: "text-gold-ink" },
 ] as const;
 
 /**
@@ -296,12 +296,12 @@ export function IncludesList({
   items: readonly string[];
 }) {
   return (
-    <section className="mt-14">
+    <section className="mt-section">
       <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
         {heading}
       </h2>
 
-      <div className="relative mt-8 rounded-[1.75rem] border-2 border-border bg-surface p-7 card-shadow sm:p-9">
+      <div className="relative mt-8 rounded-card border-2 border-border bg-surface p-7 card-shadow sm:p-9">
         {/* washi tape pinning the sheet */}
         <span
           aria-hidden
@@ -310,7 +310,7 @@ export function IncludesList({
         {/* corner sticker */}
         <span
           aria-hidden
-          className="absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface bg-sage text-[#2f5236]"
+          className="absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface bg-sage text-sage-ink"
         >
           <ClipboardCheck className="h-5 w-5" strokeWidth={1.8} />
         </span>
@@ -342,178 +342,10 @@ export function IncludesList({
   );
 }
 
-export interface PriceRow {
-  label: string;
-  /** The figure alone — "₹799". The "from" qualifier is `from`, not prose. */
-  price: string;
-  /** Marks a starting price, so the qualifier is set in type rather than
-   *  buried at the same size as the number it changes the meaning of. */
-  from?: boolean;
-  /** What the figure buys — "per class", "per month". Without it a ₹199 class
-   *  rate sits beside a ₹799 monthly batch as though they were comparable. */
-  unit?: string;
-}
-
-/**
- * Prices are shown as "starting from" ranges, because the founders' brief
- * (§10) flags every figure in it as a planning range rather than a published
- * fee. The note under the table says so in the visitor's words rather than
- * leaving them to discover it at checkout.
- */
-/**
- * Paper stock for the price notes — the same vocabulary as the home page's
- * testimonial cards: a tinted sheet, a slight rotation that straightens under
- * the cursor, washi tape and a corner sticker. Cycled by index so the
- * component takes any number of prices without a per-page palette.
- *
- * The sticker's ink is a fixed dark tone rather than a token because the
- * pastel it sits on is defined identically in light and dark mode, so a dark
- * ink stays correct in both — the same reason the testimonial cards do it.
- */
-const PRICE_PAPERS = [
-  { paper: "bg-blush/45", rotate: "-rotate-2" },
-  { paper: "bg-sky/50", rotate: "rotate-1" },
-  { paper: "bg-sage/45", rotate: "-rotate-1" },
-  { paper: "bg-lavender/45", rotate: "rotate-2" },
-  { paper: "bg-beige", rotate: "-rotate-1" },
-] as const;
-
-export function PricingTable({
-  heading = "Pricing",
-  rows,
-  note,
-}: {
-  heading?: string;
-  rows: readonly PriceRow[];
-  note?: string;
-}) {
-  // One price is a statement, several are a comparison. A lone row in a
-  // three-column row reads as two missing cards, so it gets the wider
-  // treatment instead of a third of a row.
-  const single = rows.length === 1;
-
-  return (
-    <section className="mt-14">
-      <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
-        {heading}
-      </h2>
-
-      {/* Centred wrap rather than a grid: five prices in three columns left an
-          empty third on the second row, and the block read as a failed load.
-          Wrapping and centring balances whatever the last row holds, for any
-          number of prices. Bases are computed against the gap so the cards
-          still line up in columns. */}
-      <div
-        className={cn(
-          "mt-8 flex flex-wrap justify-center gap-5",
-          single && "block",
-        )}
-      >
-        {rows.map((row, i) => {
-          const stock = PRICE_PAPERS[i % PRICE_PAPERS.length];
-          return (
-            <div
-              key={row.label}
-              className={cn(
-                "relative rounded-[1.75rem] border-2 border-border card-shadow",
-                single
-                  ? "overflow-hidden bg-surface p-8 sm:flex sm:items-end sm:justify-between sm:gap-8"
-                  : cn(
-                      // Nothing is clipped here: the tape and the sticker are
-                      // meant to sit off the sheet, the way they would if
-                      // someone had actually stuck them on.
-                      "flex basis-full flex-col p-7 pt-9 transition-transform duration-500",
-                      "[transition-timing-function:cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1.5 hover:rotate-0",
-                      "sm:basis-[calc((100%-1.25rem)/2)] lg:basis-[calc((100%-2.5rem)/3)]",
-                      stock.paper,
-                      stock.rotate,
-                    ),
-              )}
-            >
-              {single ? (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -bottom-16 -right-16 h-52 w-52 rounded-full bg-sage/40 blur-2xl"
-                />
-              ) : (
-                <>
-                  {/* washi tape pinning the note */}
-                  <span
-                    aria-hidden
-                    className="absolute -top-3 left-8 h-6 w-20 -rotate-6 rounded-[4px] border border-white/50 bg-surface/60 shadow-sm backdrop-blur-sm"
-                  />
-                  {/* corner sticker */}
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "absolute -right-3 -top-3 grid h-11 w-11 rotate-6 place-items-center rounded-full border-2 border-surface",
-                      PASTEL_INK[i % PASTEL_INK.length].tint,
-                      PASTEL_INK[i % PASTEL_INK.length].ink,
-                    )}
-                  >
-                    <Tag className="h-5 w-5" strokeWidth={1.8} />
-                  </span>
-                  {/* oversized currency glyph, the note's watermark */}
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute bottom-3 right-5 select-none font-display text-7xl leading-none text-foreground/[0.07]"
-                  >
-                    ₹
-                  </span>
-                </>
-              )}
-
-              <h3
-                className={cn(
-                  "relative text-xs font-bold uppercase tracking-[0.08em] text-accent-text",
-                  single && "sm:text-sm",
-                )}
-              >
-                {row.label}
-              </h3>
-              <p
-                className={cn(
-                  "relative flex items-baseline gap-1.5",
-                  single ? "mt-3 sm:mt-0" : "mt-auto pt-6",
-                )}
-              >
-                {row.from && (
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    from
-                  </span>
-                )}
-                <span
-                  className={cn(
-                    "font-display font-semibold leading-none tracking-[-0.02em] text-foreground",
-                    single ? "text-4xl sm:text-5xl" : "text-3xl",
-                  )}
-                >
-                  {row.price}
-                </span>
-                {row.unit && (
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    {row.unit}
-                  </span>
-                )}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-      {note && (
-        <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
-          {note}
-        </p>
-      )}
-    </section>
-  );
-}
-
 /** Wellness services are not medical care; every service page has to say so. */
 export function SafetyNote({ children }: { children: React.ReactNode }) {
   return (
-    <aside className="mt-14 rounded-2xl border border-border bg-muted/50 p-6">
+    <aside className="mt-section rounded-card border border-border bg-muted/50 p-6">
       <h2 className="font-display text-lg font-semibold text-foreground">
         Before you join a session
       </h2>
@@ -605,7 +437,7 @@ export function ClosingCta({
   decorations?: readonly { src: string; className: string }[];
 }) {
   return (
-    <section className="relative mt-20 overflow-hidden rounded-3xl border border-border bg-surface-2 py-14">
+    <section className="relative mt-20 overflow-hidden rounded-panel border border-border bg-surface-2 py-14">
       {/* Floating illustrations need room either side of the copy, which only
           exists once the card is desktop-wide. Below xl they would sit on the
           heading (at 1024px the yoga art still clips the subtitle), so there

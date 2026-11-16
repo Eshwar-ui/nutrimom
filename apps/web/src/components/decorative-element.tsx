@@ -13,6 +13,10 @@ export function DecorativeElement({
       aria-hidden="true"
       src={src}
       alt=""
+      // Most of these are `hidden lg:block`: a lazy image that is display:none
+      // is never fetched, so phones skip the desktop-only doodles entirely.
+      loading="lazy"
+      decoding="async"
       className={`pointer-events-none absolute z-0 select-none ${className}`}
     />
   );
