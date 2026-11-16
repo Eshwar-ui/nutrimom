@@ -264,36 +264,36 @@ export function resolveSocialLinks(
  */
 export const FOOTER_COLUMNS: readonly { title: string; links: NavLink[] }[] = [
   {
-    title: "Our services",
+    title: "Explore",
     links: [
-      { href: "/yoga", label: "Yoga & Garbhasanskar" },
+      { href: "/yoga", label: "Yoga" },
       { href: "/nutrition", label: "Nutrition" },
       { href: "/nutrition/starting-solids", label: "Starting Solids" },
-      { href: "/community", label: "Mom Community" },
-      { href: "/offers", label: "Offers" },
-    ],
-  },
-  {
-    title: "Preloved",
-    links: [
-      { href: "/listings", label: "Shop Preloved" },
-      { href: "/preloved", label: "How It Works" },
-      { href: "/sell", label: "Sell an Item" },
-      { href: "/preloved/donate", label: "Donate an Item" },
-      { href: "/wishlist", label: "Wishlist" },
-    ],
-  },
-  {
-    title: "Help",
-    links: [
-      { href: "/about", label: "About Us" },
+      { href: "/community", label: "Community" },
+      { href: "/resources", label: "Free guides" },
+      { href: "/journal", label: "Journal" },
       { href: "/faq", label: "FAQs" },
-      { href: "/resources", label: "Free Guides" },
-      { href: "/journal", label: "Blog" },
-      { href: "/contact", label: "Contact Us" },
-      { href: "/account", label: "My Account" },
     ],
   },
+  {
+    title: "Marketplace",
+    links: [
+      { href: "/listings", label: "Shop all" },
+      { href: "/categories/strollers", label: "Strollers" },
+      { href: "/categories/maternity-wear", label: "Maternity" },
+      { href: "/sell", label: "Sell an item" },
+    ],
+  },
+  {
+    title: "Your space",
+    links: [
+      { href: "/account", label: "My account" },
+      { href: "/account/listings", label: "My listings" },
+      { href: "/wishlist", label: "Wishlist" },
+      { href: "/contact", label: "Contact us" },
+    ],
+  },
+  // The fourth column, Socials, is built in the footer from the layout's resolved links.
 ] as const;
 
 export const LEGAL_LINKS: readonly NavLink[] = [
