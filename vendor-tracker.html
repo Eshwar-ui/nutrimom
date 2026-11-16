@@ -1,0 +1,215 @@
+<title>Nutrimom Vendor Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: summary band on top, stage filter row, then one expandable card per vendor with a 7-step progress meter. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#14171c; --muted:#5d6572; --line:#dfe3e9;
+  --accent:#2a4fd6; --accent-soft:#e8edfc; --good:#14803c; --good-soft:#e2f4e8; --warn:#9a5b00; --warn-soft:#fdf0d8; --bad:#b4281f;
+  --meter-off:#e1e5ec;
+  --font-display:"Space Grotesk","Inter",system-ui,sans-serif; --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218; --surface:#171b23; --fg:#e8ebf0; --muted:#98a1b0; --line:#2a303b;
+  --accent:#7f9bff; --accent-soft:#1f2745; --good:#58c77d; --good-soft:#15291d; --warn:#e6b25a; --warn-soft:#2e2412; --bad:#f08a82; --meter-off:#2a303b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1218; --surface:#171b23; --fg:#e8ebf0; --muted:#98a1b0; --line:#2a303b;
+  --accent:#7f9bff; --accent-soft:#1f2745; --good:#58c77d; --good-soft:#15291d; --warn:#e6b25a; --warn-soft:#2e2412; --bad:#f08a82; --meter-off:#2a303b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.5;margin:0;
+  padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--font-display);font-size:28px;line-height:1.15;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.tile .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font-family:var(--font-display);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.tile .n{font-size:12px;color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .chip[aria-pressed="true"]{color:#0f1218}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#0f1218}}
+.chip .c{opacity:.7;margin-left:4px;font-variant-numeric:tabular-nums}
+.sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.list{display:flex;flex-direction:column;gap:10px}
+details.v{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.v[open]{border-color:var(--accent)}
+summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:10px 16px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary:focus-visible,.chip:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.nm{font-weight:600;font-size:15px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cat{color:var(--muted);font-size:12px;margin-top:2px}
+.tag{font-size:11px;border-radius:5px;padding:1px 7px;font-weight:500;background:var(--accent-soft);color:var(--accent)}
+.tag.rec{background:var(--warn-soft);color:var(--warn)}
+.tag.ok{background:var(--good-soft);color:var(--good)}
+.meter{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.meter i{height:6px;border-radius:2px;background:var(--meter-off)}
+.meter i.on{background:var(--accent)}
+.meter.done i.on{background:var(--good)}
+.stg{font-size:12px;color:var(--muted);margin-top:4px}
+.cost{font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.cost small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.body{border-top:1px solid var(--line);padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 20px}
+.body>div{min-width:0}
+.lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;display:block}
+.txt{margin:0}
+.scale{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-variant-numeric:tabular-nums}
+.scale b{display:block;font-size:15px}
+.scale span{font-size:11px;color:var(--muted)}
+select,input[type=text],input[type=number],textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+textarea{min-height:68px;resize:vertical}
+.full{grid-column:1/-1}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted)}
+.note{color:var(--muted);font-size:12px}
+.ro{color:var(--muted);font-size:12px}
+a{color:var(--accent)}
+@media (max-width:640px){summary{grid-template-columns:1fr auto}.meterbox{grid-column:1/-1;order:3}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Nutrimom Vendor Tracker</h1>
+    <p class="sub">Every outside service the Preloved marketplace depends on or still needs: what it does, how far the setup has got, and what it costs. Open a vendor to change its stage, add what you pay, or note what the client still has to provide.</p>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Summary"></section>
+
+  <section class="bar" id="filters" aria-label="Filter vendors"></section>
+
+  <section class="list" id="list" aria-live="polite">
+    <div class="empty" id="empty">Loading vendors…</div>
+  </section>
+
+  <p class="note">Costs are planning estimates in ₹ (USD at about ₹85), shown at launch and at 100 and 1,000 orders a month on an average ₹800 order. Courier freight is a pass-through to the buyer and left out of totals. Confirm every figure on the vendor's own pricing page before you commit.</p>
+  <p class="ro" id="mode"></p>
+</div>
+
+<script>
+var STAGES=["Connect with vendor","Need more details of client","Applied for vendor","Account created","Test keys","Integrated","Live"];
+var vendors=[],openIds={},filterStage="all",filterKind="all",canWrite=true,db=null,pendingRender=false,loaded=false;
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function inr(n){n=Number(n)||0;return "₹"+n.toLocaleString("en-IN")}
+function stageIdx(s){var i=STAGES.indexOf(s);return i<0?0:i}
+
+function totals(list){
+  var t={m0:0,m100:0,m1000:0,actual:0};
+  list.forEach(function(v){
+    if(!v.passThrough){t.m0+=+v.m0||0;t.m100+=+v.m100||0;t.m1000+=+v.m1000||0}
+    t.actual+=+v.actual||0;
+  });return t;
+}
+function filtered(){
+  return vendors.filter(function(v){
+    return (filterStage==="all"||v.stage===filterStage)&&(filterKind==="all"||v.kind===filterKind);
+  });
+}
+function renderTiles(){
+  var scope=vendors.filter(function(v){return filterKind==="all"||v.kind===filterKind});
+  var t=totals(scope),live=scope.filter(function(v){return v.stage==="Live"}).length;
+  var tiles=[
+    ["Vendors live",live+" / "+scope.length,"fully in production"],
+    ["Est. per month, launch",inr(t.m0),"low volume"],
+    ["Est. at 100 orders",inr(t.m100),"per month"],
+    ["Est. at 1,000 orders",inr(t.m1000),"per month"],
+    ["Actual you pay",inr(t.actual),"from the Actual field"]
+  ];
+  document.getElementById("tiles").innerHTML=tiles.map(function(x){
+    return '<div class="tile"><div class="k">'+x[0]+'</div><div class="v">'+x[1]+'</div><div class="n">'+x[2]+'</div></div>'}).join("");
+}
+function renderFilters(){
+  var kinds=[["all","All"],["In use","In use"],["Recommended","Recommended"]];
+  var h=kinds.map(function(k){
+    var n=vendors.filter(function(v){return k[0]==="all"||v.kind===k[0]}).length;
+    return '<button class="chip" data-kind="'+k[0]+'" aria-pressed="'+(filterKind===k[0])+'">'+k[1]+'<span class="c">'+n+'</span></button>'}).join("");
+  h+='<span class="sep"></span>';
+  h+='<button class="chip" data-stage="all" aria-pressed="'+(filterStage==="all")+'">Any stage</button>';
+  STAGES.forEach(function(s){
+    var n=vendors.filter(function(v){return v.stage===s}).length;
+    h+='<button class="chip" data-stage="'+esc(s)+'" aria-pressed="'+(filterStage===s)+'">'+esc(s)+'<span class="c">'+n+'</span></button>'});
+  document.getElementById("filters").innerHTML=h;
+}
+function field(v,key,label,type){
+  var val=v[key]==null?"":v[key];
+  if(!canWrite)return '<div><span class="lbl">'+label+'</span><p class="txt">'+(esc(val)||"—")+'</p></div>';
+  if(type==="area")return '<div><label class="lbl" for="'+key+'-'+v.id+'">'+label+'</label><textarea id="'+key+'-'+v.id+'" data-id="'+v.id+'" data-key="'+key+'">'+esc(val)+'</textarea></div>';
+  return '<div><label class="lbl" for="'+key+'-'+v.id+'">'+label+'</label><input id="'+key+'-'+v.id+'" type="'+(type||"text")+'" data-id="'+v.id+'" data-key="'+key+'" '+(type==="number"?'min="0" ':'')+'value="'+esc(val)+'"></div>';
+}
+function card(v){
+  var i=stageIdx(v.stage),live=v.stage==="Live",meter="";
+  for(var k=0;k<7;k++)meter+='<i class="'+(k<=i?"on":"")+'"></i>';
+  var sel=canWrite?'<div><label class="lbl" for="stage-'+v.id+'">Stage</label><select id="stage-'+v.id+'" data-id="'+v.id+'" data-key="stage">'+
+    STAGES.map(function(s){return '<option'+(s===v.stage?' selected':'')+'>'+esc(s)+'</option>'}).join("")+'</select></div>'
+    :'<div><span class="lbl">Stage</span><p class="txt">'+esc(v.stage)+'</p></div>';
+  var link=v.link?'<a href="'+esc(v.link)+'" target="_blank" rel="noopener">'+esc(v.link.replace(/^https?:\/\//,""))+'</a>':"—";
+  return '<details class="v" data-open="'+v.id+'"'+(openIds[v.id]?" open":"")+'>'+
+    '<summary><div><div class="nm">'+esc(v.name)+' <span class="tag'+(v.kind==="Recommended"?" rec":"")+'">'+esc(v.kind)+'</span>'+
+      (v.inCode?'<span class="tag ok">'+esc(v.inCode)+'</span>':"")+'</div><div class="cat">'+esc(v.category)+'</div></div>'+
+    '<div class="meterbox"><div class="meter'+(live?" done":"")+'">'+meter+'</div><div class="stg">Step '+(i+1)+' of 7 · '+esc(v.stage)+'</div></div>'+
+    '<div class="cost">'+inr(v.m0)+'<small>per month, launch</small></div></summary>'+
+    '<div class="body">'+
+      '<div><span class="lbl">Use case</span><p class="txt">'+esc(v.useCase)+'</p></div>'+
+      '<div><span class="lbl">Where it plugs in</span><p class="txt">'+esc(v.where)+'</p></div>'+
+      '<div><span class="lbl">Pricing model</span><p class="txt">'+esc(v.pricing)+'</p></div>'+
+      '<div><span class="lbl">Estimated per month</span><div class="scale"><div><b>'+inr(v.m0)+'</b><span>launch</span></div><div><b>'+inr(v.m100)+'</b><span>100 orders</span></div><div><b>'+inr(v.m1000)+'</b><span>1,000 orders</span></div></div></div>'+
+      '<div><span class="lbl">Setup link</span><p class="txt">'+link+'</p></div>'+
+      '<div><span class="lbl">Env keys in the repo</span><p class="txt">'+(esc(v.envKeys)||"none yet")+'</p></div>'+
+      sel+
+      field(v,"actual","Actual cost you pay, ₹ per month","number")+
+      field(v,"needs","Details still needed from the client","area")+
+      field(v,"notes","Notes","area")+
+    '</div></details>';
+}
+function render(){
+  var el=document.getElementById("list"),list=filtered();
+  renderTiles();renderFilters();
+  if(!vendors.length){el.innerHTML='<div class="empty">No vendors saved yet. Ask Claude to seed the list.</div>';return}
+  if(!list.length){el.innerHTML='<div class="empty">Nothing matches that filter.</div>';return}
+  el.innerHTML=list.map(card).join("");
+}
+function maybeRender(){
+  var a=document.activeElement;
+  if(a&&(a.tagName==="TEXTAREA"||a.tagName==="INPUT"||a.tagName==="SELECT")&&document.getElementById("list").contains(a)){pendingRender=true;return}
+  pendingRender=false;render();
+}
+document.addEventListener("focusout",function(){if(pendingRender)setTimeout(maybeRender,50)});
+document.addEventListener("click",function(e){
+  var b=e.target.closest("button.chip");if(!b)return;
+  if(b.dataset.kind!=null)filterKind=b.dataset.kind;
+  if(b.dataset.stage!=null)filterStage=b.dataset.stage;
+  render();
+});
+document.addEventListener("toggle",function(e){
+  var d=e.target;if(d&&d.dataset&&d.dataset.open)openIds[d.dataset.open]=d.open;
+},true);
+document.addEventListener("change",function(e){
+  var t=e.target;if(!t.dataset||!t.dataset.id||!db||!canWrite)return;
+  var val=t.type==="number"?(t.value===""?0:Number(t.value)):t.value,patch={};patch[t.dataset.key]=val;
+  var v=vendors.filter(function(x){return x.id===t.dataset.id})[0];if(v&&v[t.dataset.key]===val)return;
+  db.doc("vendors/"+t.dataset.id).update(patch).catch(function(err){
+    document.getElementById("mode").textContent="Could not save that change ("+(err&&err.code||"error")+"). Your edit was not kept.";
+  });
+});
+
+(async function(){
+  var timer=setTimeout(function(){if(!loaded)document.getElementById("empty")&&(document.getElementById("empty").textContent="Can't reach saved vendors yet. Check your connection.")},10000);
+  try{
+    db=await claude.use("db");
+    var user=await claude.use("user");
+    if(user&&user.can&&user.can("data.write")===false)canWrite=false;
+  }catch(e){db=null}
+  if(!db){clearTimeout(timer);document.getElementById("list").innerHTML='<div class="empty">Saved vendors are unavailable in this view. Sign in to see and edit the list.</div>';return}
+  document.getElementById("mode").textContent=canWrite?"Changes save automatically and are shared with everyone who has access.":"You can read this tracker but not edit it.";
+  db.collection("vendors").orderBy("order").onSnapshot(function(snap){
+    loaded=true;clearTimeout(timer);
+    vendors=snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o});
+    maybeRender();
+  },function(err){
+    clearTimeout(timer);
+    document.getElementById("list").innerHTML='<div class="empty">Could not load vendors ('+esc(err&&err.code||"error")+').</div>';
+  });
+})();
+</script>
