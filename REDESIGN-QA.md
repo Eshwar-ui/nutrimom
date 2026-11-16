@@ -43,7 +43,6 @@ stored; results below are from DOM and HTTP checks plus spot screenshots.
 
 ## Open
 
-- **Migration drift:** `20260808094732_route_payouts` is recorded in the dev database but missing
-  from the repo. The database still holds its leftovers — `SellerPayout.transferId`,
-  `User.razorpayAccountId` and the `PAYOUT_PAID` notification value — none of which the schema uses.
+- **Migration drift: resolved.** `20260808094732_route_payouts` is reconstructed (idempotent) from the leftovers
+  the dev database still holds. Prisma will report it as checksum-modified on dev; `migrate deploy` is unaffected.
 - Client content (photos, founders, testimonials, partner offers, session durations, policy text).

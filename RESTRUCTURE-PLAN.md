@@ -183,7 +183,7 @@ exist in `prisma/migrations`**: `20260808094732_route_payouts`. It predates this
 (there is a `stash@{0}` on master named "route payouts on razorpay route") and nothing
 here caused it, but it means the repo cannot reproduce the live schema from scratch —
 `migrate deploy` on a fresh database would build something subtly different from dev.
-Not fixed: recovering it needs whoever wrote it to say what it did. Worth resolving
+**Resolved 2026-11-16:** the SQL is reconstructed from the columns the database still carries (`SellerPayout.transferId`, `User.razorpayAccountId`, `PAYOUT_PAID`), idempotent, committed as `20260808094732_route_payouts`. `prisma migrate status` on dev will report it as modified after applying (the original checksum is unrecoverable); `migrate deploy` is unaffected. Previously: recovering it needed whoever wrote it to say what it did. Worth resolving
 before the next deploy, either by committing the missing SQL or by confirming it was a
 no-op and clearing the row.
 
